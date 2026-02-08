@@ -5,7 +5,7 @@ import { verifyPassword, validateEmail, generateToken, setSessionCookie } from '
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password } = body;
+    const { email, password, rememberMe = true } = body;
 
     if (!email || !validateEmail(email)) {
       return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     });
 
     const token = generateToken({ userId: user.id, email: user.email });
-    await setSessionCookie(token);
+    await setSessionCookie(token, rememberMe);
 
     return NextResponse.json({
       user: { id: user.id, email: user.email, displayName: user.displayName },

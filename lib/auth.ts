@@ -63,13 +63,13 @@ export async function getSession() {
   return payload;
 }
 
-export async function setSessionCookie(token: string) {
+export async function setSessionCookie(token: string, rememberMe: boolean = true) {
   const cookieStore = await cookies();
   cookieStore.set('auth_token', token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    maxAge: rememberMe ? 60 * 60 * 24 * 7 : undefined, // 7 days if remember me, otherwise session cookie
     path: '/',
   });
 }

@@ -8,6 +8,7 @@ export default function LoginPage() {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
+    rememberMe: true, // Default to true per spec
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -90,6 +91,19 @@ export default function LoginPage() {
                   Forgot password?
                 </a>
               </div>
+            </div>
+
+            <div className="flex items-center">
+              <input
+                id="rememberMe"
+                type="checkbox"
+                checked={formData.rememberMe}
+                onChange={(e) => setFormData({ ...formData, rememberMe: e.target.checked })}
+                className="w-4 h-4 text-[#3B82F6] border-[#E2E8F0] dark:border-[#475569] rounded focus:ring-2 focus:ring-[#3B82F6]"
+              />
+              <label htmlFor="rememberMe" className="ml-2 text-sm text-[#1E293B] dark:text-[#F1F5F9]">
+                Remember me
+              </label>
             </div>
 
             <button
