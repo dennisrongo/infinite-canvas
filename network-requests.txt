@@ -1,0 +1,12 @@
+[GET] http://localhost:3001/auth/register => [404] Not Found
+[GET] http://localhost:3001/auth/register => [404] Not Found
+[GET] http://localhost:3001/auth/register => [404] Not Found
+[GET] http://localhost:3001/auth/register => [404] Not Found
+[GET] http://localhost:3001/auth/register => [500] Internal Server Error
+[GET] http://localhost:3001/auth/register => [500] Internal Server Error
+[POST] http://localhost:3005/api/auth/register => [409] Conflict
+[GET] http://localhost:3005/_next/static/webpack/345afc11e48afb1e.webpack.hot-update.json => [200] OK
+[GET] http://localhost:3005/_next/static/webpack/e54494cbf5f4a871.webpack.hot-update.json => [200] OK
+[POST] http://localhost:3005/api/auth/register => [404] Not Found
+[GET] http://localhost:3005/_next/static/webpack/1d9bfa66067217d1.webpack.hot-update.json => [200] OK
+[POST] http://localhost:3005/api/auth/register => [404] Not Found

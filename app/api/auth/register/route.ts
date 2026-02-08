@@ -43,12 +43,24 @@ export async function POST(request: NextRequest) {
     });
 
     const token = generateToken({ userId: user.id, email: user.email });
-    await setSessionCookie(token);
 
-    return NextResponse.json(
-      { user: { id: user.id, email: user.email, displayName: user.displayName } },
+    const response = NextResponse.json(
+      {
+        user: { id: user.id, email: user.email, displayName: user.displayName },
+        token
+      },
       { status: 201 }
     );
+
+    response.cookies.set('auth_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/',
+    });
+
+    return response;
   } catch (error) {
     console.error('Registration error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
