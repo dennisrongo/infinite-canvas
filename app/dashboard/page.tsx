@@ -45,8 +45,24 @@ export default function DashboardPage() {
   const [canvasRenameName, setCanvasRenameName] = useState('');
 
   useEffect(() => {
+    // Load expanded folders from localStorage
+    const saved = localStorage.getItem('expandedFolders');
+    if (saved) {
+      try {
+        setExpandedFolders(new Set(JSON.parse(saved)));
+      } catch (e) {
+        console.error('Error loading expanded folders:', e);
+      }
+    }
     fetchFolders();
   }, []);
+
+  // Save expanded folders to localStorage whenever they change
+  useEffect(() => {
+    if (expandedFolders.size > 0 || localStorage.getItem('expandedFolders')) {
+      localStorage.setItem('expandedFolders', JSON.stringify([...expandedFolders]));
+    }
+  }, [expandedFolders]);
 
   const fetchFolders = async () => {
     try {
