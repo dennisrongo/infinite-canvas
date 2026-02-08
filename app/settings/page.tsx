@@ -125,27 +125,69 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* Account Info Section */}
+        {/* Profile Information Section */}
         <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-lg p-6 mb-6">
           <h2 className="text-xl font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-4">
-            Account Information
+            Profile Information
           </h2>
-          <div className="space-y-3">
+          <form onSubmit={handleProfileUpdate} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9] mb-1">
+              <label htmlFor="email" className="block text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9] mb-1">
                 Email
               </label>
-              <p className="text-[#1E293B] dark:text-[#F1F5F9]">{user?.email}</p>
+              <input
+                id="email"
+                type="email"
+                value={user?.email || ''}
+                disabled
+                className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg bg-gray-100 dark:bg-gray-800 text-[#1E293B] dark:text-[#F1F5F9] cursor-not-allowed"
+                readOnly
+              />
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Email cannot be changed</p>
             </div>
-            {user?.displayName && (
+
+            <div>
+              <label htmlFor="displayName" className="block text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9] mb-1">
+                Display Name
+              </label>
+              <input
+                id="displayName"
+                type="text"
+                value={profileForm.displayName}
+                onChange={(e) =>
+                  setProfileForm({ ...profileForm, displayName: e.target.value })
+                }
+                className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9]"
+                placeholder="Enter your display name"
+              />
+              <p className="mt-1 text-xs text-[#1E293B] dark:text-[#F1F5F9]">
+                This name will be displayed in your profile and across the app
+              </p>
+            </div>
+
+            {user?.createdAt && (
               <div>
                 <label className="block text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9] mb-1">
-                  Display Name
+                  Member Since
                 </label>
-                <p className="text-[#1E293B] dark:text-[#F1F5F9]">{user.displayName}</p>
+                <p className="text-[#1E293B] dark:text-[#F1F5F9]">
+                  {new Date(user.createdAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </p>
               </div>
             )}
-          </div>
+
+            <button
+              type="submit"
+              disabled={savingProfile}
+              className="w-full py-3 px-4 bg-[#3B82F6] text-white rounded-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            >
+              {savingProfile ? 'Saving...' : 'Save Profile'}
+            </button>
+          </form>
         </div>
 
         {/* Change Password Section */}
