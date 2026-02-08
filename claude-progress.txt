@@ -174,3 +174,59 @@ Server Status:
 - Ready for browser testing once UI integration is stable
 
 ================================================================================
+
+================================================================================
+NEW SESSION - 2026-02-08 21:55 UTC
+ASSIGNED FEATURES: #19, #20, #21 (Folder Management)
+================================================================================
+
+ACCOMPLISHED THIS SESSION
+================================================================================
+
+Folder API Routes Implemented:
+- Created app/api/folders/route.ts (GET, POST)
+- Created app/api/folders/[id]/route.ts (PUT, DELETE)
+- Fixed Next.js 15 params type in canvases/[id]/route.ts
+
+Feature #19: Create new folder with custom name
+API Implementation: POST /api/folders
+✅ Validates folder name (required, non-empty)
+✅ Creates folder with authenticated user ID
+✅ Returns created folder with empty canvases array
+✅ Status 201 on success, 400/500 on errors
+
+Feature #20: Delete folder (empty and with canvases)
+API Implementation: DELETE /api/folders/:id
+✅ Verifies folder ownership (403 if not owner)
+✅ Empty folders delete immediately
+✅ Folders with canvases return 409 conflict
+✅ moveCanvasesToRoot=true query param moves canvases to root
+
+Feature #21: Rename folder
+API Implementation: PUT /api/folders/:id
+✅ Validates new name (required, non-empty)
+✅ Verifies folder ownership (403 if not owner)
+✅ Updates folder name in database
+✅ Returns updated folder with canvases array
+
+================================================================================
+STATUS: BACKEND COMPLETE, UI DEFERRED
+================================================================================
+
+Backend API: ✅ COMPLETE
+- Folder CRUD operations fully implemented
+- Authentication and authorization working
+- Proper validation and error handling
+
+Frontend UI: ⏸️ DEFERRED TO NEXT SESSION
+- Complex client-side dashboard caused compilation issues
+- Simplified to server-rendered dashboard for stability
+- Folder API ready for future client-side integration
+
+================================================================================
+GIT COMMIT
+================================================================================
+Commit: 4f8280c
+Message: feat: implement folder management API routes (Features #19-#21)
+
+================================================================================
