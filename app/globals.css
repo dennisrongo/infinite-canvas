@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --light-bg: #FFFFFF;
+  --light-canvas: #F8FAFC;
+  --light-grid: #CBD5E1;
+  --light-primary: #3B82F6;
+  --light-text: #1E293B;
+  --light-sidebar: #F1F5F9;
+  --light-note: #FFFFFF;
+  --light-note-border: #E2E8F0;
+}
+
+.dark {
+  --dark-bg: #0F172A;
+  --dark-canvas: #1E293B;
+  --dark-grid: #475569;
+  --dark-primary: #60A5FA;
+  --dark-text: #F1F5F9;
+  --dark-sidebar: #1E293B;
+  --dark-note: #1E293B;
+  --dark-note-border: #475569;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}

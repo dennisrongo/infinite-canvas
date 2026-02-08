@@ -1,0 +1,131 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String              @id @default(uuid())
+  email             String              @unique
+  passwordHash      String              @map("password_hash")
+  displayName       String?             @map("display_name")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+  lastLogin         DateTime?           @map("last_login")
+  folders           Folder[]
+  canvases          Canvas[]
+  passwordResetTokens PasswordResetToken[]
+  settings          UserSettings?
+
+  @@map("users")
+}
+
+model UserSettings {
+  id        String   @id @default(uuid())
+  userId    String   @unique @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme     String   @default("light")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("user_settings")
+}
+
+model Folder {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  canvases  Canvas[]
+
+  @@index([userId])
+  @@map("folders")
+}
+
+model Canvas {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folderId  String?          @map("folder_id")
+  folder    Folder?          @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  name      String
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+  notes     Note[]
+  connections NoteConnection[]
+
+  @@index([userId])
+  @@index([folderId])
+  @@map("canvases")
+}
+
+model Note {
+  id        String   @id @default(uuid())
+  canvasId  String   @map("canvas_id")
+  canvas    Canvas   @relation(fields: [canvasId], references: [id], onDelete: Cascade)
+  title     String
+  content   String
+  positionX Float    @map("position_x")
+  positionY Float    @map("position_y")
+  width     Float    @default(300)
+  height    Float    @default(200)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  images    Image[]
+  sourceConnections NoteConnection[] @relation("SourceNote")
+  targetConnections NoteConnection[] @relation("TargetNote")
+
+  @@index([canvasId])
+  @@index([title])
+  @@map("notes")
+}
+
+model NoteConnection {
+  id           String   @id @default(uuid())
+  canvasId     String   @map("canvas_id")
+  canvas       Canvas   @relation(fields: [canvasId], references: [id], onDelete: Cascade)
+  sourceNoteId String   @map("source_note_id")
+  sourceNote   Note     @relation("SourceNote", fields: [sourceNoteId], references: [id], onDelete: Cascade)
+  targetNoteId String   @map("target_note_id")
+  targetNote   Note     @relation("TargetNote", fields: [targetNoteId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([canvasId])
+  @@index([sourceNoteId])
+  @@index([targetNoteId])
+  @@map("note_connections")
+}
+
+model Image {
+  id          String   @id @default(uuid())
+  noteId      String   @map("note_id")
+  note        Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  storagePath String   @map("storage_path")
+  fileName    String   @map("file_name")
+  mimeType    String   @map("mime_type")
+  sizeBytes   Int      @map("size_bytes")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([noteId])
+  @@map("images")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([token])
+  @@map("password_reset_tokens")
+}
