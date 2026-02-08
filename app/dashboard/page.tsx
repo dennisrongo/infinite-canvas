@@ -35,6 +35,9 @@ export default function DashboardPage() {
   const [renameName, setRenameName] = useState('');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [showMoveModal, setShowMoveModal] = useState(false);
+  const [canvasToMove, setCanvasToMove] = useState<Canvas & { currentFolderId?: string } | null>(null);
+  const [moveTargetFolderId, setMoveTargetFolderId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchFolders();
@@ -230,6 +233,70 @@ export default function DashboardPage() {
     }
   };
 
+  const openMoveModal = (canvas: Canvas, currentFolderId?: string) => {
+    setCanvasToMove({ ...canvas, currentFolderId });
+    setMoveTargetFolderId(currentFolderId || null);
+    setShowMoveModal(true);
+  };
+
+  const moveCanvas = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canvasToMove) return;
+
+    try {
+      const body: any = { folderId: moveTargetFolderId };
+      const res = await fetch(`/api/canvases/${canvasToMove.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to move canvas');
+      }
+
+      const data = await res.json();
+      const canvas = data.canvas;
+
+      // Remove canvas from its current location
+      if (canvasToMove.currentFolderId) {
+        setFolders(folders.map(f => {
+          if (f.id === canvasToMove.currentFolderId) {
+            return { ...f, canvases: f.canvases.filter(c => c.id !== canvas.id) };
+          }
+          return f;
+        }));
+      } else {
+        setRootCanvases(rootCanvases.filter(c => c.id !== canvas.id));
+      }
+
+      // Add canvas to new location
+      if (moveTargetFolderId) {
+        setFolders(folders.map(f => {
+          if (f.id === moveTargetFolderId) {
+            return { ...f, canvases: [...f.canvases, canvas] };
+          }
+          return f;
+        }));
+      } else {
+        setRootCanvases([...rootCanvases, canvas]);
+      }
+
+      setShowMoveModal(false);
+      setCanvasToMove(null);
+      setMoveTargetFolderId(null);
+
+      const targetName = moveTargetFolderId
+        ? folders.find(f => f.id === moveTargetFolderId)?.name || 'folder'
+        : 'root';
+      showMessage('success', `Canvas moved to ${targetName}`);
+    } catch (error: any) {
+      console.error('Error moving canvas:', error);
+      showMessage('error', error.message || 'Failed to move canvas');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#1E293B] flex items-center justify-center">
@@ -365,12 +432,20 @@ export default function DashboardPage() {
                                   >
                                     {canvas.name}
                                   </a>
-                                  <button
-                                    onClick={() => deleteCanvas(canvas.id, folder.id)}
-                                    className="px-2 py-1 text-xs border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition"
-                                  >
-                                    Delete
-                                  </button>
+                                  <div className="flex gap-1">
+                                    <button
+                                      onClick={() => openMoveModal(canvas, folder.id)}
+                                      className="px-2 py-1 text-xs border border-[#E2E8F0] dark:border-[#475569] rounded hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
+                                    >
+                                      Move
+                                    </button>
+                                    <button
+                                      onClick={() => deleteCanvas(canvas.id, folder.id)}
+                                      className="px-2 py-1 text-xs border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -402,12 +477,20 @@ export default function DashboardPage() {
                             >
                               {canvas.name}
                             </a>
-                            <button
-                              onClick={() => deleteCanvas(canvas.id)}
-                              className="px-2 py-1 text-xs border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition"
-                            >
-                              Delete
-                            </button>
+                            <div className="flex gap-1">
+                              <button
+                                onClick={() => openMoveModal(canvas, undefined)}
+                                className="px-2 py-1 text-xs border border-[#E2E8F0] dark:border-[#475569] rounded hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
+                              >
+                                Move
+                              </button>
+                              <button
+                                onClick={() => deleteCanvas(canvas.id)}
+                                className="px-2 py-1 text-xs border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                              >
+                                Delete
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -542,6 +625,62 @@ export default function DashboardPage() {
                   className="px-4 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] transition"
                 >
                   Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showMoveModal && canvasToMove && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-4">
+              Move Canvas
+            </h3>
+            <p className="text-[#1E293B] dark:text-[#F1F5F9] mb-4">
+              Select destination for "{canvasToMove.name}":
+            </p>
+            <form onSubmit={moveCanvas}>
+              <div className="space-y-2 mb-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    checked={moveTargetFolderId === null}
+                    onChange={() => setMoveTargetFolderId(null)}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-[#1E293B] dark:text-[#F1F5F9]">
+                    Root (No Folder)
+                  </span>
+                </label>
+                {folders.map((folder) => (
+                  <label key={folder.id} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      checked={moveTargetFolderId === folder.id}
+                      onChange={() => setMoveTargetFolderId(folder.id)}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-[#1E293B] dark:text-[#F1F5F9]">
+                      {folder.name}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => { setShowMoveModal(false); setCanvasToMove(null); setMoveTargetFolderId(null); }}
+                  className="px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] transition"
+                >
+                  Move
                 </button>
               </div>
             </form>
