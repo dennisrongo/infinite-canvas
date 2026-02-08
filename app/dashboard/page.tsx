@@ -40,6 +40,9 @@ export default function DashboardPage() {
   const [moveTargetFolderId, setMoveTargetFolderId] = useState<string | null>(null);
   const [showCanvasDeleteModal, setShowCanvasDeleteModal] = useState(false);
   const [canvasToDelete, setCanvasToDelete] = useState<{ canvas: Canvas; folderId?: string } | null>(null);
+  const [showCanvasRenameModal, setShowCanvasRenameModal] = useState(false);
+  const [canvasToRename, setCanvasToRename] = useState<{ canvas: Canvas; folderId?: string } | null>(null);
+  const [canvasRenameName, setCanvasRenameName] = useState('');
 
   useEffect(() => {
     fetchFolders();
