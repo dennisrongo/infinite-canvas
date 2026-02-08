@@ -42,7 +42,7 @@ export default async function DashboardPage() {
               Welcome to Infinite Canvas!
             </h2>
             <p className="text-[#1E293B] dark:text-[#F1F5F9] mb-4">
-              Dashboard is loading. Folder management will be available soon.
+              You are now logged in. Start creating your canvases and notes!
             </p>
             <div className="p-4 bg-[#F8FAFC] dark:bg-[#1E293B] rounded-lg border border-[#E2E8F0] dark:border-[#475569]">
               <p className="text-sm text-[#1E293B] dark:text-[#F1F5F9]">User ID: {session.userId}</p>

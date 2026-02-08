@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 
 export default function SettingsPage() {
   const router = useRouter();
-  const [user, setUser] = useState<{ email: string; displayName?: string } | null>(null);
+  const [user, setUser] = useState<{ email: string; displayName?: string; createdAt?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -15,6 +16,10 @@ export default function SettingsPage() {
     currentPassword: '',
     newPassword: '',
     confirmNewPassword: '',
+  });
+
+  const [profileForm, setProfileForm] = useState({
+    displayName: '',
   });
 
   useEffect(() => {
@@ -30,10 +35,44 @@ export default function SettingsPage() {
       }
       const data = await response.json();
       setUser(data.user);
+      setProfileForm({ displayName: data.user.displayName || '' });
       setLoading(false);
     } catch (error) {
       setError('Failed to load user data');
       setLoading(false);
+    }
+  };
+
+  const handleProfileUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    setSavingProfile(true);
+
+    try {
+      const response = await fetch('/api/user/update-profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profileForm),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Failed to update profile');
+        setSavingProfile(false);
+        return;
+      }
+
+      setSuccess('Profile updated successfully!');
+      setUser({ ...user!, displayName: profileForm.displayName });
+      setSavingProfile(false);
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error) {
+      setError('Network error. Please try again.');
+      setSavingProfile(false);
     }
   };
 
