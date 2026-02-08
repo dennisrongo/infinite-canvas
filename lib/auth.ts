@@ -96,3 +96,14 @@ export function validateEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 }
+
+// Generate a random token for password reset
+export function generateResetToken(): string {
+  const crypto = require('crypto');
+  return crypto.randomBytes(32).toString('hex');
+}
+
+// Calculate token expiration (1 hour from now)
+export function getTokenExpiration(): Date {
+  return new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+}
