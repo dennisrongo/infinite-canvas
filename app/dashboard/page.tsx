@@ -245,6 +245,56 @@ export default function DashboardPage() {
     }
   };
 
+  const openCanvasRenameModal = (canvas: Canvas, folderId?: string) => {
+    setCanvasToRename({ canvas, folderId });
+    setCanvasRenameName(canvas.name);
+    setShowCanvasRenameModal(true);
+  };
+
+  const renameCanvas = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canvasToRename || !canvasRenameName.trim()) return;
+
+    try {
+      const res = await fetch(`/api/canvases/${canvasToRename.canvas.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: canvasRenameName.trim() }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to rename canvas');
+      }
+
+      const data = await res.json();
+      const updatedCanvas = data.canvas;
+
+      // Update the canvas in the appropriate list
+      if (canvasToRename.folderId) {
+        setFolders(folders.map(f => {
+          if (f.id === canvasToRename.folderId) {
+            return {
+              ...f,
+              canvases: f.canvases.map(c => c.id === updatedCanvas.id ? updatedCanvas : c)
+            };
+          }
+          return f;
+        }));
+      } else {
+        setRootCanvases(rootCanvases.map(c => c.id === updatedCanvas.id ? updatedCanvas : c));
+      }
+
+      setShowCanvasRenameModal(false);
+      setCanvasToRename(null);
+      setCanvasRenameName('');
+      showMessage('success', 'Canvas renamed successfully');
+    } catch (error: any) {
+      console.error('Error renaming canvas:', error);
+      showMessage('error', error.message || 'Failed to rename canvas');
+    }
+  };
+
   const openMoveModal = (canvas: Canvas, currentFolderId?: string) => {
     setCanvasToMove({ ...canvas, currentFolderId });
     setMoveTargetFolderId(currentFolderId || null);
@@ -446,6 +496,12 @@ export default function DashboardPage() {
                                   </a>
                                   <div className="flex gap-1">
                                     <button
+                                      onClick={() => openCanvasRenameModal(canvas, folder.id)}
+                                      className="px-2 py-1 text-xs border border-[#E2E8F0] dark:border-[#475569] rounded hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
+                                    >
+                                      Rename
+                                    </button>
+                                    <button
                                       onClick={() => openMoveModal(canvas, folder.id)}
                                       className="px-2 py-1 text-xs border border-[#E2E8F0] dark:border-[#475569] rounded hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
                                     >
@@ -490,6 +546,12 @@ export default function DashboardPage() {
                               {canvas.name}
                             </a>
                             <div className="flex gap-1">
+                              <button
+                                onClick={() => openCanvasRenameModal(canvas)}
+                                className="px-2 py-1 text-xs border border-[#E2E8F0] dark:border-[#475569] rounded hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
+                              >
+                                Rename
+                              </button>
                               <button
                                 onClick={() => openMoveModal(canvas, undefined)}
                                 className="px-2 py-1 text-xs border border-[#E2E8F0] dark:border-[#475569] rounded hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
@@ -730,6 +792,41 @@ export default function DashboardPage() {
                 Delete Canvas
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showCanvasRenameModal && canvasToRename && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-4">
+              Rename Canvas
+            </h3>
+            <form onSubmit={renameCanvas}>
+              <input
+                type="text"
+                value={canvasRenameName}
+                onChange={(e) => setCanvasRenameName(e.target.value)}
+                placeholder="Canvas name"
+                className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] mb-4"
+                autoFocus
+              />
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => { setShowCanvasRenameModal(false); setCanvasToRename(null); setCanvasRenameName(''); }}
+                  className="px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] transition"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
