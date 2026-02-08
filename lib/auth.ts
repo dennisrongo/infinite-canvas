@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
+import { prisma } from './prisma';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -32,11 +33,29 @@ export function verifyToken(token: string): TokenPayload | null {
   }
 }
 
+// Check if a token has been revoked
+async function isTokenRevoked(token: string): Promise<boolean> {
+  try {
+    const revoked = await prisma.revokedToken.findUnique({
+      where: { token },
+    });
+    return !!revoked;
+  } catch {
+    return false;
+  }
+}
+
 export async function getSession() {
   const cookieStore = await cookies();
   const token = cookieStore.get('auth_token')?.value;
 
   if (!token) {
+    return null;
+  }
+
+  // Check if token is revoked
+  const revoked = await isTokenRevoked(token);
+  if (revoked) {
     return null;
   }
 
