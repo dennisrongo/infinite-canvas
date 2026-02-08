@@ -38,6 +38,8 @@ export default function DashboardPage() {
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [canvasToMove, setCanvasToMove] = useState<Canvas & { currentFolderId?: string } | null>(null);
   const [moveTargetFolderId, setMoveTargetFolderId] = useState<string | null>(null);
+  const [showCanvasDeleteModal, setShowCanvasDeleteModal] = useState(false);
+  const [canvasToDelete, setCanvasToDelete] = useState<{ canvas: Canvas; folderId?: string } | null>(null);
 
   useEffect(() => {
     fetchFolders();
@@ -208,24 +210,31 @@ export default function DashboardPage() {
     }
   };
 
-  const deleteCanvas = async (canvasId: string, folderId?: string) => {
-    if (!confirm('Are you sure you want to delete this canvas?')) return;
+  const confirmDeleteCanvas = (canvas: Canvas, folderId?: string) => {
+    setCanvasToDelete({ canvas, folderId });
+    setShowCanvasDeleteModal(true);
+  };
+
+  const deleteCanvasConfirmed = async () => {
+    if (!canvasToDelete) return;
 
     try {
-      const res = await fetch(`/api/canvases/${canvasId}`, { method: 'DELETE' });
+      const res = await fetch(`/api/canvases/${canvasToDelete.canvas.id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete canvas');
 
-      if (folderId) {
+      if (canvasToDelete.folderId) {
         setFolders(folders.map(f => {
-          if (f.id === folderId) {
-            return { ...f, canvases: f.canvases.filter(c => c.id !== canvasId) };
+          if (f.id === canvasToDelete.folderId) {
+            return { ...f, canvases: f.canvases.filter(c => c.id !== canvasToDelete.canvas.id) };
           }
           return f;
         }));
       } else {
-        setRootCanvases(rootCanvases.filter(c => c.id !== canvasId));
+        setRootCanvases(rootCanvases.filter(c => c.id !== canvasToDelete.canvas.id));
       }
 
+      setShowCanvasDeleteModal(false);
+      setCanvasToDelete(null);
       showMessage('success', 'Canvas deleted successfully');
     } catch (error) {
       console.error('Error deleting canvas:', error);
@@ -440,7 +449,7 @@ export default function DashboardPage() {
                                       Move
                                     </button>
                                     <button
-                                      onClick={() => deleteCanvas(canvas.id, folder.id)}
+                                      onClick={() => confirmDeleteCanvas(canvas, folder.id)}
                                       className="px-2 py-1 text-xs border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition"
                                     >
                                       Delete
@@ -485,7 +494,7 @@ export default function DashboardPage() {
                                 Move
                               </button>
                               <button
-                                onClick={() => deleteCanvas(canvas.id)}
+                                onClick={() => confirmDeleteCanvas(canvas)}
                                 className="px-2 py-1 text-xs border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition"
                               >
                                 Delete
@@ -684,6 +693,40 @@ export default function DashboardPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showCanvasDeleteModal && canvasToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-4">
+              Delete Canvas
+            </h3>
+            <div className="space-y-3 mb-4">
+              <p className="text-[#1E293B] dark:text-[#F1F5F9]">
+                Are you sure you want to delete the canvas <strong>"{canvasToDelete.canvas.name}"</strong>?
+              </p>
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                <p className="text-sm text-red-800 dark:text-red-200">
+                  ⚠️ <strong>Warning:</strong> This action will permanently delete the canvas and <strong>all notes within it</strong>. This cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => { setShowCanvasDeleteModal(false); setCanvasToDelete(null); }}
+                className="px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={deleteCanvasConfirmed}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+              >
+                Delete Canvas
+              </button>
+            </div>
           </div>
         </div>
       )}
