@@ -33,6 +33,9 @@ export default function NoteEditor({ note, isOpen, onClose, onSave }: NoteEditor
   const [fontSize, setFontSize] = useState(14);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [showPreview, setShowPreview] = useState(false);
+  const [viewMode, setViewMode] = useState<'edit' | 'preview' | 'split'>('edit');
+  const [pastingImage, setPastingImage] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -173,6 +176,54 @@ export default function NoteEditor({ note, isOpen, onClose, onSave }: NoteEditor
     }
   };
 
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (const item of items) {
+      if (item.type.indexOf('image') !== -1) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (!file) continue;
+
+        setPastingImage(true);
+
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('noteId', note.id);
+
+          const response = await fetch('/api/images', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to upload image');
+          }
+
+          const data = await response.json();
+
+          // Insert markdown image syntax at cursor position
+          const textarea = textareaRef.current;
+          if (textarea) {
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const imageMarkdown = `![${data.fileName || 'Image'}](${data.url})\n`;
+            setContent(
+              content.substring(0, start) + imageMarkdown + content.substring(end)
+            );
+          }
+        } catch (error) {
+          console.error('Error pasting image:', error);
+          alert('Failed to paste image. Please try again.');
+        } finally {
+          setPastingImage(false);
+        }
+      }
+    }
+  };
+
   if (!isOpen || !note) return null;
 
   return (
@@ -246,24 +297,91 @@ export default function NoteEditor({ note, isOpen, onClose, onSave }: NoteEditor
 
           {/* Body Field */}
           <div>
-            <label
-              htmlFor="note-content"
-              className="block text-sm font-medium text-[#64748B] dark:text-[#94A3B8] mb-2"
-            >
-              Content (Markdown supported)
-            </label>
-            <textarea
-              ref={textareaRef}
-              id="note-content"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              style={{
-                fontFamily: fontFamily.includes(',') ? fontFamily : `"${fontFamily}", sans-serif`,
-                fontSize: `${fontSize}px`,
-              }}
-              className="w-full px-3 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3B82F6] bg-white dark:bg-[#0F172A] text-[#1E293B] dark:text-[#F1F5F9] min-h-[400px]"
-              placeholder="Enter note content... (Markdown supported)"
-            />
+            <div className="flex items-center justify-between mb-2">
+              <label
+                htmlFor="note-content"
+                className="block text-sm font-medium text-[#64748B] dark:text-[#94A3B8]"
+              >
+                Content (Markdown supported)
+              </label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setViewMode('edit')}
+                  className={`px-3 py-1 text-sm rounded transition ${
+                    viewMode === 'edit'
+                      ? 'bg-[#3B82F6] text-white'
+                      : 'bg-[#E2E8F0] dark:bg-[#475569] text-[#64748B] dark:text-[#94A3B8] hover:bg-[#CBD5E1] dark:hover:bg-[#64748B]'
+                  }`}
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => setViewMode('preview')}
+                  className={`px-3 py-1 text-sm rounded transition ${
+                    viewMode === 'preview'
+                      ? 'bg-[#3B82F6] text-white'
+                      : 'bg-[#E2E8F0] dark:bg-[#475569] text-[#64748B] dark:text-[#94A3B8] hover:bg-[#CBD5E1] dark:hover:bg-[#64748B]'
+                  }`}
+                >
+                  Preview
+                </button>
+                <button
+                  onClick={() => setViewMode('split')}
+                  className={`px-3 py-1 text-sm rounded transition ${
+                    viewMode === 'split'
+                      ? 'bg-[#3B82F6] text-white'
+                      : 'bg-[#E2E8F0] dark:bg-[#475569] text-[#64748B] dark:text-[#94A3B8] hover:bg-[#CBD5E1] dark:hover:bg-[#64748B]'
+                  }`}
+                >
+                  Split
+                </button>
+              </div>
+            </div>
+
+            {/* Edit Mode */}
+            {(viewMode === 'edit' || viewMode === 'split') && (
+              <textarea
+                ref={textareaRef}
+                id="note-content"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                onPaste={handlePaste}
+                style={{
+                  fontFamily: fontFamily.includes(',') ? fontFamily : `"${fontFamily}", sans-serif`,
+                  fontSize: `${fontSize}px`,
+                  height: viewMode === 'split' ? '400px' : '500px',
+                }}
+                className="w-full px-3 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3B82F6] bg-white dark:bg-[#0F172A] text-[#1E293B] dark:text-[#F1F5F9] min-h-[400px]"
+                placeholder="Enter note content... (Markdown supported, Ctrl+V to paste images)"
+                disabled={pastingImage}
+              />
+            )}
+
+            {/* Preview Mode */}
+            {(viewMode === 'preview' || viewMode === 'split') && (
+              <div
+                className={`w-full px-3 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg bg-white dark:bg-[#0F172A] text-[#1E293B] dark:text-[#F1F5F9] prose prose-sm dark:prose-invert max-w-none overflow-y-auto ${
+                  viewMode === 'split' ? 'mt-2 h-[400px]' : 'min-h-[500px]'
+                }`}
+                style={{
+                  fontFamily: fontFamily.includes(',') ? fontFamily : `"${fontFamily}", sans-serif`,
+                  fontSize: `${fontSize}px`,
+                }}
+              >
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeHighlight]}
+                >
+                  {content || '*Empty note - start typing to add content*'}
+                </ReactMarkdown>
+              </div>
+            )}
+
+            {pastingImage && (
+              <div className="mt-2 text-sm text-[#64748B] dark:text-[#94A3B8]">
+                Uploading image...
+              </div>
+            )}
           </div>
         </div>
 

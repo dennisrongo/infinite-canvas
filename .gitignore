@@ -19,6 +19,9 @@ dist/
 *.db-journal
 dev.db
 
+# Uploaded files
+public/uploads/
+
 # Test files
 test_*.mjs
 test_*.ts
