@@ -28,6 +28,12 @@ interface Note {
   height: number;
 }
 
+interface Connection {
+  id: string;
+  sourceNoteId: string;
+  targetNoteId: string;
+}
+
 interface UndoAction {
   type: 'delete';
   note: Note;
@@ -37,12 +43,15 @@ interface UndoAction {
 interface ReactFlowCanvasProps {
   canvasId: string;
   initialNotes: Note[];
+  initialConnections?: Connection[];
   initialViewport?: { x: number; y: number; zoom: number };
   onNoteCreate?: (position: { x: number; y: number }) => void;
   onNoteUpdate?: (noteId: string, position: { x: number; y: number }, size?: { width: number; height: number }) => void;
   onNoteDelete?: (noteId: string) => void;
   onViewportChange?: (viewport: { x: number; y: number; zoom: number }) => void;
   onNoteRestore?: (note: Note) => void;
+  onConnectionCreate?: (sourceNoteId: string, targetNoteId: string) => void;
+  onConnectionDelete?: (connectionId: string) => void;
 }
 
 const nodeTypes = {
@@ -52,12 +61,15 @@ const nodeTypes = {
 function ReactFlowCanvasInner({
   canvasId,
   initialNotes,
+  initialConnections,
   initialViewport,
   onNoteCreate,
   onNoteUpdate,
   onNoteDelete,
   onViewportChange,
   onNoteRestore,
+  onConnectionCreate,
+  onConnectionDelete,
 }: ReactFlowCanvasProps) {
   const { screenToFlowPosition, setViewport, getViewport } = useReactFlow();
   const lastClickTime = useRef(0);
@@ -80,7 +92,17 @@ function ReactFlowCanvasInner({
   }));
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+  // Convert connections from database to React Flow edges
+  const initialEdges: Edge[] = (initialConnections || []).map((conn) => ({
+    id: conn.id,
+    source: conn.sourceNoteId,
+    target: conn.targetNoteId,
+    type: 'smoothstep',
+    animated: false,
+  }));
+
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
   // Custom onNodesChange handler to detect deletions
   const handleNodesChange = useCallback(
@@ -161,12 +183,38 @@ function ReactFlowCanvasInner({
     [onNoteUpdate]
   );
 
-  // Handle connections (for future feature)
+  // Handle connections - create new connection
   const onConnect = useCallback(
-    (connection: Connection) => {
-      setEdges((eds) => addEdge(connection, eds));
+    async (connection: Connection) => {
+      if (onConnectionCreate) {
+        // Call the API to create the connection
+        await onConnectionCreate(connection.source, connection.target);
+      }
+
+      // Add edge to local state
+      setEdges((eds) => addEdge({
+        ...connection,
+        type: 'smoothstep',
+        animated: false,
+      }, eds));
     },
-    [setEdges]
+    [setEdges, onConnectionCreate]
+  );
+
+  // Custom onEdgesChange handler to detect deletions
+  const handleEdgesChange = useCallback(
+    (changes: any[]) => {
+      // Check if any edges are being deleted
+      changes.forEach((change) => {
+        if (change.type === 'remove' && change.id && onConnectionDelete) {
+          // Call the API to delete the connection
+          onConnectionDelete(change.id);
+        }
+      });
+
+      onEdgesChange(changes);
+    },
+    [onEdgesChange, onConnectionDelete]
   );
 
   // Update nodes when initialNotes change
@@ -187,6 +235,19 @@ function ReactFlowCanvasInner({
 
     setNodes(newNodes);
   }, [initialNotes, setNodes]);
+
+  // Update edges when initialConnections change
+  useEffect(() => {
+    const newEdges: Edge[] = (initialConnections || []).map((conn) => ({
+      id: conn.id,
+      source: conn.sourceNoteId,
+      target: conn.targetNoteId,
+      type: 'smoothstep',
+      animated: false,
+    }));
+
+    setEdges(newEdges);
+  }, [initialConnections, setEdges]);
 
   // Restore viewport state when initialViewport changes
   useEffect(() => {
@@ -271,7 +332,7 @@ function ReactFlowCanvasInner({
       nodes={nodes}
       edges={edges}
       onNodesChange={handleNodesChange}
-      onEdgesChange={onEdgesChange}
+      onEdgesChange={handleEdgesChange}
       onConnect={onConnect}
       onNodeDragStop={onNodeDragStop}
       onPaneClick={onPaneClick}

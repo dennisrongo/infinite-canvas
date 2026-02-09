@@ -271,6 +271,39 @@ export default function CanvasPage() {
     }
   }, [canvasId]);
 
+  const handleConnectionCreate = useCallback(async (sourceNoteId: string, targetNoteId: string) => {
+    try {
+      const res = await fetch(`/api/canvases/${canvasId}/connections`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sourceNoteId, targetNoteId }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        // Add new connection to state
+        setConnections(prev => [...prev, data.connection]);
+      }
+    } catch (error) {
+      console.error('Error creating connection:', error);
+    }
+  }, [canvasId]);
+
+  const handleConnectionDelete = useCallback(async (connectionId: string) => {
+    try {
+      const res = await fetch(`/api/connections/${connectionId}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        // Remove connection from state
+        setConnections(prev => prev.filter(conn => conn.id !== connectionId));
+      }
+    } catch (error) {
+      console.error('Error deleting connection:', error);
+    }
+  }, []);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#1E293B] flex items-center justify-center">
@@ -435,12 +468,15 @@ export default function CanvasPage() {
             <ReactFlowCanvas
               canvasId={canvasId}
               initialNotes={notes}
+              initialConnections={connections}
               initialViewport={viewport || undefined}
               onNoteCreate={handleNoteCreate}
               onNoteUpdate={handleNoteUpdate}
               onNoteDelete={handleNoteDelete}
               onViewportChange={handleViewportChange}
               onNoteRestore={handleNoteRestore}
+              onConnectionCreate={handleConnectionCreate}
+              onConnectionDelete={handleConnectionDelete}
             />
           )}
         </main>
