@@ -11,6 +11,9 @@ import LinkAutocomplete from './LinkAutocomplete';
 import { sanitizeMarkdown } from '@/lib/sanitization';
 import { useToast } from '@/contexts/ToastContext';
 
+// Feature #139: Local storage key for draft backup
+const DRAFT_STORAGE_PREFIX = 'note_draft_';
+
 interface Note {
   id: string;
   title: string;
@@ -50,6 +53,10 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
   const [linkSearchQuery, setLinkSearchQuery] = useState('');
   const [linkedNoteTitles, setLinkedNoteTitles] = useState<Set<string>>(new Set());
 
+  // Feature #139: Track unsaved changes for refresh warning
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showDraftRestoredBanner, setShowDraftRestoredBanner] = useState(false);
+
   // Extract linked note titles from content
   useEffect(() => {
     const linkRegex = /\[\[([^\]]+)\]\]/g;
@@ -58,12 +65,110 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
     setLinkedNoteTitles(new Set(titles));
   }, [content]);
 
+  // Feature #139: Track unsaved changes
   useEffect(() => {
     if (note) {
-      setTitle(note.title || '');
-      setContent(note.content || '');
-      setFontFamily(note.fontFamily || 'Inter');
-      setFontSize(note.fontSize || 14);
+      const hasChanges =
+        title !== note.title ||
+        content !== note.content ||
+        fontFamily !== (note.fontFamily || 'Inter') ||
+        fontSize !== (note.fontSize || 14);
+      setHasUnsavedChanges(hasChanges);
+
+      // Save draft to localStorage whenever content changes
+      if (hasChanges && isOpen) {
+        const draftData = {
+          title,
+          content,
+          fontFamily,
+          fontSize,
+          timestamp: Date.now(),
+        };
+        localStorage.setItem(`${DRAFT_STORAGE_PREFIX}${note.id}`, JSON.stringify(draftData));
+      }
+    }
+  }, [title, content, fontFamily, fontSize, note, isOpen]);
+
+  // Feature #139: Warn before page unload if there are unsaved changes
+  useEffect(() => {
+    if (!isOpen || !hasUnsavedChanges) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Standard message that browsers display
+      const message =
+        'You have unsaved changes. Are you sure you want to leave? Your changes will be lost.';
+      e.preventDefault();
+      e.returnValue = message; // Required for Chrome
+      return message; // Required for other browsers
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isOpen, hasUnsavedChanges]);
+
+  // Feature #139: Clean up draft when closing (after save completes)
+  useEffect(() => {
+    if (!isOpen && note && saveStatus === 'saved') {
+      // Clear draft after successful save
+      const timer = setTimeout(() => {
+        localStorage.removeItem(`${DRAFT_STORAGE_PREFIX}${note.id}`);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, note, saveStatus]);
+
+  useEffect(() => {
+    if (note) {
+      // Feature #139: Check for draft restoration
+      const draftKey = `${DRAFT_STORAGE_PREFIX}${note.id}`;
+      const savedDraft = localStorage.getItem(draftKey);
+
+      if (savedDraft) {
+        try {
+          const draft = JSON.parse(savedDraft);
+          // Check if draft is recent (within 1 hour)
+          const draftAge = Date.now() - draft.timestamp;
+          const oneHour = 60 * 60 * 1000;
+
+          if (draftAge < oneHour) {
+            // Restore from draft
+            setTitle(draft.title);
+            setContent(draft.content);
+            setFontFamily(draft.fontFamily || 'Inter');
+            setFontSize(draft.fontSize || 14);
+            setShowDraftRestoredBanner(true);
+
+            // Auto-hide the banner after 5 seconds
+            setTimeout(() => {
+              setShowDraftRestoredBanner(false);
+            }, 5000);
+          } else {
+            // Draft too old, use server data and clear draft
+            localStorage.removeItem(draftKey);
+            setTitle(note.title || '');
+            setContent(note.content || '');
+            setFontFamily(note.fontFamily || 'Inter');
+            setFontSize(note.fontSize || 14);
+          }
+        } catch (e) {
+          // Invalid draft data, use server data
+          console.error('Error parsing draft:', e);
+          localStorage.removeItem(draftKey);
+          setTitle(note.title || '');
+          setContent(note.content || '');
+          setFontFamily(note.fontFamily || 'Inter');
+          setFontSize(note.fontSize || 14);
+        }
+      } else {
+        // No draft, use server data
+        setTitle(note.title || '');
+        setContent(note.content || '');
+        setFontFamily(note.fontFamily || 'Inter');
+        setFontSize(note.fontSize || 14);
+      }
     } else {
       setTitle('');
       setContent('');
@@ -347,6 +452,52 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white dark:bg-[#1E293B] rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col mx-4">
+        {/* Feature #139: Draft restored banner */}
+        {showDraftRestoredBanner && (
+          <div className="bg-amber-100 dark:bg-amber-900/30 border-b border-amber-300 dark:border-amber-700 px-4 py-2 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-amber-600 dark:text-amber-400"
+              >
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+              <span className="text-sm text-amber-800 dark:text-amber-200">
+                Unsaved changes restored from browser storage
+              </span>
+            </div>
+            <button
+              onClick={() => setShowDraftRestoredBanner(false)}
+              className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-[#E2E8F0] dark:border-[#475569]">
           <h2 className="text-xl font-semibold text-[#1E293B] dark:text-[#F1F5F9]">
@@ -360,9 +511,13 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
             {saveStatus === 'saved' && (
               <span className="text-sm text-green-600 dark:text-green-400">Saved ✓</span>
             )}
+            {hasUnsavedChanges && saveStatus !== 'saving' && saveStatus !== 'saved' && (
+              <span className="text-sm text-amber-600 dark:text-amber-400">Unsaved changes</span>
+            )}
             <button
               onClick={handleClose}
               className="text-[#64748B] hover:text-[#1E293B] dark:hover:text-[#F1F5F9] transition"
+              aria-label="Close editor"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"

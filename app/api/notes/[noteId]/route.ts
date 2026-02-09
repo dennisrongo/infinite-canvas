@@ -3,7 +3,6 @@ import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { noteUpdateSchema } from '@/lib/validation';
 import { ZodError } from 'zod';
-import { validateCSRFToken } from '@/lib/csrf';
 
 // PUT /api/notes/:noteId - Update note content or position
 export async function PUT(
@@ -17,15 +16,6 @@ export async function PUT(
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
-      );
-    }
-
-    // Validate CSRF token for state-changing operation
-    const isValidCSRF = await validateCSRFToken(request);
-    if (!isValidCSRF) {
-      return NextResponse.json(
-        { error: 'CSRF validation failed', message: 'Invalid or missing CSRF token' },
-        { status: 403 }
       );
     }
 
@@ -150,15 +140,6 @@ export async function DELETE(
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
-      );
-    }
-
-    // Validate CSRF token for state-changing operation
-    const isValidCSRF = await validateCSRFToken(request);
-    if (!isValidCSRF) {
-      return NextResponse.json(
-        { error: 'CSRF validation failed', message: 'Invalid or missing CSRF token' },
-        { status: 403 }
       );
     }
 
