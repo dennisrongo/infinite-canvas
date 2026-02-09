@@ -61,11 +61,19 @@ const DEFAULT_CONFIG: RateLimitConfig = {
  * Get a unique identifier for the request
  * Uses IP address or email/username if available
  */
-export function getIdentifier(request: Request): string {
+export function getIdentifier(request: any): string {
   // Try to get IP from headers (for proxied requests)
-  const forwardedFor = request.headers.get('x-forwarded-for');
-  const realIp = request.headers.get('x-real-ip');
-  const cfConnectingIp = request.headers.get('cf-connecting-ip');
+  const headers = request.headers || {};
+  const getHeader = (name: string) => {
+    if (typeof headers.get === 'function') {
+      return headers.get(name);
+    }
+    return headers[name];
+  };
+
+  const forwardedFor = getHeader('x-forwarded-for');
+  const realIp = getHeader('x-real-ip');
+  const cfConnectingIp = getHeader('cf-connecting-ip');
 
   const ip = forwardedFor?.split(',')[0]?.trim() ||
              realIp ||
