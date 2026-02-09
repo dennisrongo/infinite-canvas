@@ -47,6 +47,7 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
   const [showPreview, setShowPreview] = useState(false);
   const [viewMode, setViewMode] = useState<'edit' | 'preview' | 'split'>('edit');
   const [pastingImage, setPastingImage] = useState(false);
+  const [imageUploadProgress, setImageUploadProgress] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Link autocomplete state
@@ -411,38 +412,64 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
         if (!file || !note) continue;
 
         setPastingImage(true);
+        setImageUploadProgress(0);
 
         try {
-          const formData = new FormData();
-          formData.append('file', file);
-          formData.append('noteId', note.id);
+          // Use XMLHttpRequest for upload progress tracking
+          await new Promise<void>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('noteId', note.id);
 
-          const response = await fetch('/api/images', {
-            method: 'POST',
-            body: formData,
+            // Track upload progress
+            xhr.upload.addEventListener('progress', (e) => {
+              if (e.lengthComputable) {
+                const percentComplete = Math.round((e.loaded / e.total) * 100);
+                setImageUploadProgress(percentComplete);
+              }
+            });
+
+            xhr.addEventListener('load', () => {
+              if (xhr.status === 200) {
+                try {
+                  const data = JSON.parse(xhr.responseText);
+
+                  // Insert markdown image syntax at cursor position
+                  const textarea = textareaRef.current;
+                  if (textarea) {
+                    const start = textarea.selectionStart;
+                    const end = textarea.selectionEnd;
+                    const imageMarkdown = `![${data.fileName || 'Image'}](${data.url})\n`;
+                    setContent(
+                      content.substring(0, start) + imageMarkdown + content.substring(end)
+                    );
+                  }
+
+                  // Show completion message
+                  showToast('Image uploaded successfully', 'success');
+                  resolve();
+                } catch (parseError) {
+                  reject(new Error('Invalid response from server'));
+                }
+              } else {
+                reject(new Error('Failed to upload image'));
+              }
+            });
+
+            xhr.addEventListener('error', () => {
+              reject(new Error('Network error during upload'));
+            });
+
+            xhr.open('POST', '/api/images');
+            xhr.send(formData);
           });
-
-          if (!response.ok) {
-            throw new Error('Failed to upload image');
-          }
-
-          const data = await response.json();
-
-          // Insert markdown image syntax at cursor position
-          const textarea = textareaRef.current;
-          if (textarea) {
-            const start = textarea.selectionStart;
-            const end = textarea.selectionEnd;
-            const imageMarkdown = `![${data.fileName || 'Image'}](${data.url})\n`;
-            setContent(
-              content.substring(0, start) + imageMarkdown + content.substring(end)
-            );
-          }
         } catch (error) {
           console.error('Error pasting image:', error);
-          alert('Failed to paste image. Please try again.');
+          showToast('Failed to paste image. Please try again.', 'error');
         } finally {
           setPastingImage(false);
+          setImageUploadProgress(0);
         }
       }
     }
@@ -712,8 +739,25 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
             )}
 
             {pastingImage && (
-              <div className="mt-2 text-sm text-[#64748B] dark:text-[#94A3B8]">
-                Uploading image...
+              <div className="mt-2">
+                {imageUploadProgress > 0 ? (
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm text-[#64748B] dark:text-[#94A3B8]">
+                      <span>Uploading image...</span>
+                      <span>{imageUploadProgress}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                      <div
+                        className="bg-[#3B82F6] h-2 transition-all duration-200 ease-out"
+                        style={{ width: `${imageUploadProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-[#64748B] dark:text-[#94A3B8]">
+                    Uploading image...
+                  </div>
+                )}
               </div>
             )}
           </div>
