@@ -69,15 +69,29 @@ export async function POST(request: NextRequest) {
     const validSortOrders = ['asc', 'desc'];
     const sortDirection = validSortOrders.includes(sortOrder) ? sortOrder : 'desc';
 
-    // Search notes by title OR content
-    const notes = await prisma.note.findMany({
-      where: {
-        ...whereClause,
-        OR: [
-          { title: { contains: searchTerms, mode: 'insensitive' } },
-          { content: { contains: searchTerms, mode: 'insensitive' } },
-        ],
+    // For SQLite, we need to do case-insensitive search differently
+    // Get all matching notes by canvas user, then filter manually
+    const allNotes = await prisma.note.findMany({
+      where: whereClause,
+      include: {
+        canvas: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
+      orderBy: {
+        [sortField]: sortDirection,
+      },
+      take: 100, // Get more candidates since we'll filter
+    });
+
+    // Filter notes case-insensitively
+    const notes = allNotes.filter(note =>
+      note.title.toLowerCase().includes(searchTerms) ||
+      note.content.toLowerCase().includes(searchTerms)
+    ).slice(0, 50); // Limit to 50 results
       include: {
         canvas: {
           select: {
