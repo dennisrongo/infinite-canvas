@@ -18,6 +18,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import NoteNode from './NoteNode';
 import NoteEditor from './NoteEditor';
+import DeleteConfirmationModal from './DeleteConfirmationModal';
 
 interface Note {
   id: string;
@@ -29,7 +30,7 @@ interface Note {
   height: number;
 }
 
-interface Connection {
+interface NoteConnection {
   id: string;
   sourceNoteId: string;
   targetNoteId: string;
@@ -50,15 +51,16 @@ interface RedoAction {
 interface ReactFlowCanvasProps {
   canvasId: string;
   initialNotes: Note[];
-  initialConnections?: Connection[];
+  initialConnections?: NoteConnection[];
   initialViewport?: { x: number; y: number; zoom: number };
   onNoteCreate?: (position: { x: number; y: number }) => void;
-  onNoteUpdate?: (noteId: string, position: { x: number; y: number }, size?: { width: number; height: number }, title?: string, content?: string) => void;
+  onNoteUpdate?: (noteId: string, position: { x: number; y: number }, size?: { width: number; height: number }, title?: string, content?: string, fontFamily?: string, fontSize?: number) => void;
   onNoteDelete?: (noteId: string) => void;
   onViewportChange?: (viewport: { x: number; y: number; zoom: number }) => void;
   onNoteRestore?: (note: Note) => void;
   onConnectionCreate?: (sourceNoteId: string, targetNoteId: string) => void;
   onConnectionDelete?: (connectionId: string) => void;
+  onNoteDuplicate?: (noteId: string) => void;
 }
 
 const nodeTypes = {
@@ -77,6 +79,7 @@ function ReactFlowCanvasInner({
   onNoteRestore,
   onConnectionCreate,
   onConnectionDelete,
+  onNoteDuplicate,
 }: ReactFlowCanvasProps) {
   const { screenToFlowPosition, setViewport, getViewport, fitView } = useReactFlow();
   const lastClickTime = useRef(0);
@@ -85,6 +88,22 @@ function ReactFlowCanvasInner({
   const [redoStack, setRedoStack] = React.useState<RedoAction[]>([]);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    noteId: string | null;
+    noteTitle: string;
+  }>({
+    isOpen: false,
+    noteId: null,
+    noteTitle: '',
+  });
+
+  // Handler for duplicating a note
+  const handleNoteDuplicate = useCallback((noteId: string) => {
+    if (onNoteDuplicate) {
+      onNoteDuplicate(noteId);
+    }
+  }, [onNoteDuplicate]);
 
   // Convert notes from database to React Flow nodes
   const initialNodes: Node[] = initialNotes.map((note) => ({
@@ -94,6 +113,7 @@ function ReactFlowCanvasInner({
     data: {
       title: note.title || 'Untitled Note',
       content: note.content || '',
+      onDuplicate: handleNoteDuplicate,
     },
     style: {
       width: note.width || 300,
@@ -117,42 +137,75 @@ function ReactFlowCanvasInner({
   // Custom onNodesChange handler to detect deletions
   const handleNodesChange = useCallback(
     (changes: any[]) => {
-      // Before applying changes, check if any nodes are being deleted and save them to undo stack
-      changes.forEach((change) => {
-        if (change.type === 'remove' && change.id) {
-          // Find the node being deleted
-          const nodeToDelete = nodes.find(n => n.id === change.id);
-          if (nodeToDelete && onNoteDelete) {
-            // Save to undo stack before deleting
-            const note: Note = {
-              id: nodeToDelete.id,
-              title: nodeToDelete.data.title || 'Untitled Note',
-              content: nodeToDelete.data.content || '',
-              positionX: nodeToDelete.position.x,
-              positionY: nodeToDelete.position.y,
-              width: typeof nodeToDelete.style?.width === 'number' ? nodeToDelete.style.width : 300,
-              height: typeof nodeToDelete.style?.height === 'number' ? nodeToDelete.style.height : 200,
-            };
+      // Filter out removal changes - we'll handle them via confirmation modal
+      const nonRemoveChanges = changes.filter((change) => change.type !== 'remove');
 
-            setUndoStack(prev => [...prev, {
-              type: 'delete',
-              note,
-              timestamp: Date.now(),
-            }]);
+      // Check if any nodes are being deleted and show confirmation
+      const deleteChanges = changes.filter((change) => change.type === 'remove' && change.id);
 
-            // Clear redo stack when new action is performed (Feature #56)
-            setRedoStack([]);
+      if (deleteChanges.length > 0) {
+        // Show confirmation modal for first deletion
+        const change = deleteChanges[0];
+        const nodeToDelete = nodes.find(n => n.id === change.id);
 
-            // Call the delete API
-            onNoteDelete(change.id);
-          }
+        if (nodeToDelete) {
+          setDeleteConfirmation({
+            isOpen: true,
+            noteId: change.id,
+            noteTitle: (nodeToDelete.data as any).title || 'Untitled Note',
+          });
         }
-      });
+      }
 
-      onNodesChange(changes);
+      // Apply non-removal changes immediately
+      if (nonRemoveChanges.length > 0) {
+        onNodesChange(nonRemoveChanges);
+      }
     },
-    [onNodesChange, onNoteDelete, nodes]
+    [onNodesChange, nodes]
   );
+
+  // Handle confirmed deletion
+  const handleConfirmDelete = useCallback(() => {
+    if (!deleteConfirmation.noteId || !onNoteDelete) return;
+
+    const nodeToDelete = nodes.find(n => n.id === deleteConfirmation.noteId);
+    if (!nodeToDelete) return;
+
+    // Save to undo stack before deleting
+    const note: Note = {
+      id: nodeToDelete.id,
+      title: (nodeToDelete.data as any).title || 'Untitled Note',
+      content: (nodeToDelete.data as any).content || '',
+      positionX: nodeToDelete.position.x,
+      positionY: nodeToDelete.position.y,
+      width: typeof nodeToDelete.style?.width === 'number' ? nodeToDelete.style.width : 300,
+      height: typeof nodeToDelete.style?.height === 'number' ? nodeToDelete.style.height : 200,
+    };
+
+    setUndoStack(prev => [...prev, {
+      type: 'delete',
+      note,
+      timestamp: Date.now(),
+    }]);
+
+    // Clear redo stack when new action is performed (Feature #56)
+    setRedoStack([]);
+
+    // Call the delete API
+    onNoteDelete(deleteConfirmation.noteId);
+
+    // Remove node from local state
+    setNodes((nds) => nds.filter((n) => n.id !== deleteConfirmation.noteId));
+
+    // Close modal
+    setDeleteConfirmation({ isOpen: false, noteId: null, noteTitle: '' });
+  }, [deleteConfirmation.noteId, nodes, onNoteDelete, setNodes]);
+
+  // Handle cancelled deletion
+  const handleCancelDelete = useCallback(() => {
+    setDeleteConfirmation({ isOpen: false, noteId: null, noteTitle: '' });
+  }, []);
 
   // Handle click on canvas to detect double-click
   const onPaneClick = useCallback(
@@ -345,7 +398,7 @@ function ReactFlowCanvasInner({
         if (undoStack.length > 0) {
           const lastAction = undoStack[undoStack.length - 1];
 
-          if (lastAction.type === 'delete' && onNoteDelete) {
+          if (lastAction.type === 'delete' && onNoteDelete && onNoteRestore) {
             // Restore the deleted note
             onNoteRestore(lastAction.note);
 
@@ -393,6 +446,29 @@ function ReactFlowCanvasInner({
         }
       }
 
+      // Check for Delete or Backspace keys to delete selected nodes (Feature #71)
+      if (event.key === 'Delete' || event.key === 'Backspace') {
+        // Don't trigger if in an input field
+        if (
+          (event.target as HTMLElement).tagName !== 'INPUT' &&
+          (event.target as HTMLElement).tagName !== 'TEXTAREA' &&
+          !(event.target as HTMLElement).isContentEditable
+        ) {
+          // Get selected nodes from React Flow
+          const selectedNodes = nodes.filter(n => n.selected);
+          if (selectedNodes.length > 0) {
+            event.preventDefault();
+            // Show confirmation modal for first selected node
+            const nodeToDelete = selectedNodes[0];
+            setDeleteConfirmation({
+              isOpen: true,
+              noteId: nodeToDelete.id,
+              noteTitle: (nodeToDelete.data as any).title || 'Untitled Note',
+            });
+          }
+        }
+      }
+
       // Check for 'N' key to create a new note (Feature #54)
       // Only trigger if no modifier keys are pressed and not in an input field
       if (event.key === 'n' || event.key === 'N') {
@@ -425,7 +501,7 @@ function ReactFlowCanvasInner({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undoStack, redoStack, onNoteRestore, onNoteDelete, setNodes, onNoteCreate, getViewport]);
+  }, [undoStack, redoStack, onNoteRestore, onNoteDelete, setNodes, onNoteCreate, getViewport, nodes]);
 
   // Handle node resize events from NoteNode
   useEffect(() => {
@@ -510,7 +586,11 @@ function ReactFlowCanvasInner({
         onPaneClick={onPaneClick}
         onMoveEnd={onMoveEnd}
         nodeTypes={nodeTypes}
-        deleteKeyCode="Delete"
+        deleteKeyCode={['Delete', 'Backspace']}
+        selectionKeyCode={null}
+        multiSelectionKeyCode="Shift"
+        panOnScroll
+        selectionOnDrag
         className="bg-[#F8FAFC] dark:bg-[#1E293B]"
       >
         <Background
@@ -530,6 +610,15 @@ function ReactFlowCanvasInner({
         isOpen={isEditorOpen}
         onClose={handleEditorClose}
         onSave={handleNoteContentSave}
+        canvasId={canvasId}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={deleteConfirmation.isOpen}
+        noteTitle={deleteConfirmation.noteTitle}
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
       />
     </>
   );

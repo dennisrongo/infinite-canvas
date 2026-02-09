@@ -6,6 +6,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import 'highlight.js/styles/github-dark.css';
 import RichTextToolbar from './RichTextToolbar';
+import LinkAutocomplete from './LinkAutocomplete';
 
 interface Note {
   id: string;
@@ -24,9 +25,10 @@ interface NoteEditorProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (noteId: string, title: string, content: string, fontFamily?: string, fontSize?: number) => void;
+  canvasId: string;
 }
 
-export default function NoteEditor({ note, isOpen, onClose, onSave }: NoteEditorProps) {
+export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId }: NoteEditorProps) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [fontFamily, setFontFamily] = useState('Inter');
@@ -37,6 +39,10 @@ export default function NoteEditor({ note, isOpen, onClose, onSave }: NoteEditor
   const [viewMode, setViewMode] = useState<'edit' | 'preview' | 'split'>('edit');
   const [pastingImage, setPastingImage] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Link autocomplete state
+  const [showLinkAutocomplete, setShowLinkAutocomplete] = useState(false);
+  const [linkSearchQuery, setLinkSearchQuery] = useState('');
 
   useEffect(() => {
     if (note) {
@@ -176,6 +182,58 @@ export default function NoteEditor({ note, isOpen, onClose, onSave }: NoteEditor
     }
   };
 
+  // Handle content change and detect [[ for link autocomplete
+  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value;
+    setContent(newValue);
+
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const cursorPosition = textarea.selectionStart;
+    const textBeforeCursor = newValue.substring(0, cursorPosition);
+
+    // Check if user just typed [[
+    const doubleBracketMatch = textBeforeCursor.match(/\[\[([^\[]*)$/);
+    if (doubleBracketMatch) {
+      setLinkSearchQuery(doubleBracketMatch[1]);
+      setShowLinkAutocomplete(true);
+    } else {
+      setShowLinkAutocomplete(false);
+      setLinkSearchQuery('');
+    }
+  };
+
+  const handleLinkSelect = (noteTitle: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const cursorPosition = textarea.selectionStart;
+    const textBeforeCursor = content.substring(0, cursorPosition);
+
+    // Find the [[ position
+    const doubleBracketIndex = textBeforeCursor.lastIndexOf('[[');
+    if (doubleBracketIndex !== -1) {
+      // Replace [[searchQuery with [[noteTitle]]
+      const beforeLink = content.substring(0, doubleBracketIndex);
+      const afterCursor = content.substring(cursorPosition);
+      const newContent = `${beforeLink}[[${noteTitle}]]${afterCursor}`;
+      setContent(newContent);
+
+      // Move cursor after the closing ]]
+      const newCursorPosition = doubleBracketIndex + noteTitle.length + 4;
+      setTimeout(() => {
+        if (textarea) {
+          textarea.focus();
+          textarea.setSelectionRange(newCursorPosition, newCursorPosition);
+        }
+      }, 0);
+    }
+
+    setShowLinkAutocomplete(false);
+    setLinkSearchQuery('');
+  };
+
   const handlePaste = async (e: React.ClipboardEvent) => {
     const items = e.clipboardData?.items;
     if (!items) return;
@@ -184,7 +242,7 @@ export default function NoteEditor({ note, isOpen, onClose, onSave }: NoteEditor
       if (item.type.indexOf('image') !== -1) {
         e.preventDefault();
         const file = item.getAsFile();
-        if (!file) continue;
+        if (!file || !note) continue;
 
         setPastingImage(true);
 
@@ -340,21 +398,36 @@ export default function NoteEditor({ note, isOpen, onClose, onSave }: NoteEditor
 
             {/* Edit Mode */}
             {(viewMode === 'edit' || viewMode === 'split') && (
-              <textarea
-                ref={textareaRef}
-                id="note-content"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                onPaste={handlePaste}
-                style={{
-                  fontFamily: fontFamily.includes(',') ? fontFamily : `"${fontFamily}", sans-serif`,
-                  fontSize: `${fontSize}px`,
-                  height: viewMode === 'split' ? '400px' : '500px',
-                }}
-                className="w-full px-3 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3B82F6] bg-white dark:bg-[#0F172A] text-[#1E293B] dark:text-[#F1F5F9] min-h-[400px]"
-                placeholder="Enter note content... (Markdown supported, Ctrl+V to paste images)"
-                disabled={pastingImage}
-              />
+              <div className="relative">
+                <textarea
+                  ref={textareaRef}
+                  id="note-content"
+                  value={content}
+                  onChange={handleContentChange}
+                  onPaste={handlePaste}
+                  style={{
+                    fontFamily: fontFamily.includes(',') ? fontFamily : `"${fontFamily}", sans-serif`,
+                    fontSize: `${fontSize}px`,
+                    height: viewMode === 'split' ? '400px' : '500px',
+                  }}
+                  className="w-full px-3 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3B82F6] bg-white dark:bg-[#0F172A] text-[#1E293B] dark:text-[#F1F5F9] min-h-[400px]"
+                  placeholder="Enter note content... (Markdown supported, Ctrl+V to paste images, type [[ for note links)"
+                  disabled={pastingImage}
+                />
+
+                {/* Link Autocomplete */}
+                {showLinkAutocomplete && (
+                  <LinkAutocomplete
+                    textareaRef={textareaRef}
+                    canvasId={canvasId}
+                    onSelect={handleLinkSelect}
+                    onClose={() => {
+                      setShowLinkAutocomplete(false);
+                      setLinkSearchQuery('');
+                    }}
+                  />
+                )}
+              </div>
             )}
 
             {/* Preview Mode */}
