@@ -728,6 +728,14 @@ export default function DashboardPage() {
               <div className="flex gap-2 justify-end">
                 <button
                   type="button"
+                  onClick={() => setNewFolderName('')}
+                  disabled={isCreatingFolder}
+                  className="px-4 py-2 border border-[#64748B] dark:border-[#64748B] text-[#64748B] dark:text-[#94A3B8] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Reset
+                </button>
+                <button
+                  type="button"
                   onClick={() => { setShowNewFolderModal(false); setNewFolderName(''); }}
                   disabled={isCreatingFolder}
                   className="px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition disabled:opacity-50 disabled:cursor-not-allowed"
@@ -840,6 +848,18 @@ export default function DashboardPage() {
                 autoFocus
               />
               <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (folderToRename) {
+                      setRenameName(folderToRename.name);
+                    }
+                  }}
+                  disabled={isRenamingFolder}
+                  className="px-4 py-2 border border-[#64748B] dark:border-[#64748B] text-[#64748B] dark:text-[#94A3B8] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Reset
+                </button>
                 <button
                   type="button"
                   onClick={() => { setShowRenameModal(false); setFolderToRename(null); setRenameName(''); }}
@@ -995,6 +1015,18 @@ export default function DashboardPage() {
                 autoFocus
               />
               <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (canvasToRename) {
+                      setCanvasRenameName(canvasToRename.canvas.name);
+                    }
+                  }}
+                  disabled={isRenamingCanvas}
+                  className="px-4 py-2 border border-[#64748B] dark:border-[#64748B] text-[#64748B] dark:text-[#94A3B8] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Reset
+                </button>
                 <button
                   type="button"
                   onClick={() => { setShowCanvasRenameModal(false); setCanvasToRename(null); setCanvasRenameName(''); }}

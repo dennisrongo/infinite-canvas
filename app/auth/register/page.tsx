@@ -278,18 +278,33 @@ export default function RegisterPage() {
               )}
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 px-4 bg-[#3B82F6] text-white rounded-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <LoadingSpinner size="sm" />
-                  Creating account...
-                </>
-              ) : 'Create Account'}
-            </button>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setFormData({ email: '', password: '', confirmPassword: '' });
+                  setFieldErrors({});
+                  setTouched(new Set());
+                  setErrors([]);
+                }}
+                disabled={loading}
+                className="flex-1 py-3 px-4 border border-[#E2E8F0] dark:border-[#475569] text-[#1E293B] dark:text-[#F1F5F9] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                Reset
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 py-3 px-4 bg-[#3B82F6] text-white rounded-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <LoadingSpinner size="sm" />
+                    Creating account...
+                  </>
+                ) : 'Create Account'}
+              </button>
+            </div>
           </form>
 
           <p className="mt-6 text-center text-sm text-[#1E293B] dark:text-[#F1F5F9]">
