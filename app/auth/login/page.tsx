@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 interface ValidationErrors {
   email?: string;
@@ -61,7 +62,9 @@ export default function LoginPage() {
 
   const handleFieldBlur = (fieldName: string) => {
     setTouched(prev => new Set(prev).add(fieldName));
-    const error = validateField(fieldName, formData[fieldName as keyof typeof formData]);
+    const value = formData[fieldName as keyof typeof formData];
+    // Only validate string fields (rememberMe is boolean)
+    const error = typeof value === 'string' ? validateField(fieldName, value) : undefined;
     setFieldErrors(prev => ({ ...prev, [fieldName]: error }));
   };
 
@@ -197,9 +200,14 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 bg-[#3B82F6] text-white rounded-lg hover:bg-opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="w-full py-3 px-4 bg-[#3B82F6] text-white rounded-lg hover:bg-opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
             >
-              {loading ? 'Logging in...' : 'Login'}
+              {loading ? (
+                <>
+                  <LoadingSpinner size="sm" />
+                  Logging in...
+                </>
+              ) : 'Login'}
             </button>
           </form>
 

@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 // Client-side password validation matching the server-side validation
 function validatePasswordClient(password: string): string[] {
@@ -30,6 +31,12 @@ function validatePasswordClient(password: string): string[] {
   return errors;
 }
 
+interface ValidationErrors {
+  email?: string;
+  password?: string;
+  confirmPassword?: string;
+}
+
 export default function RegisterPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
@@ -38,6 +45,8 @@ export default function RegisterPage() {
     confirmPassword: '',
   });
   const [errors, setErrors] = useState<string[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<ValidationErrors>({});
+  const [touched, setTouched] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
 
   // Client-side password validation for real-time feedback
@@ -51,9 +60,62 @@ export default function RegisterPage() {
     passwordErrors.length === 0 ? 'valid' : 'invalid'
   ) : '';
 
+  const validateField = (name: string, value: string): string | undefined => {
+    if (!value || value.trim() === '') {
+      if (name === 'email') return 'Email is required';
+      if (name === 'password') return 'Password is required';
+      if (name === 'confirmPassword') return 'Please confirm your password';
+    }
+    if (name === 'confirmPassword' && value !== formData.password) {
+      return 'Passwords do not match';
+    }
+    return undefined;
+  };
+
+  const validateForm = (): boolean => {
+    const errors: ValidationErrors = {};
+    let isValid = true;
+
+    const emailError = validateField('email', formData.email);
+    if (emailError) {
+      errors.email = emailError;
+      isValid = false;
+    }
+
+    const passwordError = validateField('password', formData.password);
+    if (passwordError) {
+      errors.password = passwordError;
+      isValid = false;
+    }
+
+    const confirmPasswordError = validateField('confirmPassword', formData.confirmPassword);
+    if (confirmPasswordError) {
+      errors.confirmPassword = confirmPasswordError;
+      isValid = false;
+    }
+
+    setFieldErrors(errors);
+    return isValid;
+  };
+
+  const handleFieldBlur = (fieldName: string) => {
+    setTouched(prev => new Set(prev).add(fieldName));
+    const error = validateField(fieldName, formData[fieldName as keyof typeof formData]);
+    setFieldErrors(prev => ({ ...prev, [fieldName]: error }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors([]);
+
+    // Mark all fields as touched
+    setTouched(new Set(['email', 'password', 'confirmPassword']));
+
+    // Validate form
+    if (!validateForm()) {
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -109,12 +171,25 @@ export default function RegisterPage() {
               <input
                 id="email"
                 type="email"
-                required
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9]"
+                onChange={(e) => {
+                  setFormData({ ...formData, email: e.target.value });
+                  // Clear error when user starts typing
+                  if (fieldErrors.email) {
+                    setFieldErrors(prev => ({ ...prev, email: undefined }));
+                  }
+                }}
+                onBlur={() => handleFieldBlur('email')}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] ${
+                  touched.has('email') && fieldErrors.email
+                    ? 'border-red-500 focus:ring-red-500'
+                    : 'border-[#E2E8F0] dark:border-[#475569] focus:ring-[#3B82F6]'
+                }`}
                 placeholder="you@example.com"
               />
+              {touched.has('email') && fieldErrors.email && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.email}</p>
+              )}
             </div>
 
             <div>
@@ -124,11 +199,19 @@ export default function RegisterPage() {
               <input
                 id="password"
                 type="password"
-                required
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, password: e.target.value });
+                  // Clear error when user starts typing
+                  if (fieldErrors.password) {
+                    setFieldErrors(prev => ({ ...prev, password: undefined }));
+                  }
+                }}
+                onBlur={() => handleFieldBlur('password')}
                 className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] ${
-                  passwordStrength === 'valid'
+                  touched.has('password') && fieldErrors.password
+                    ? 'border-red-500 focus:ring-red-500'
+                    : passwordStrength === 'valid'
                     ? 'border-green-500 focus:ring-green-500'
                     : passwordStrength === 'invalid'
                     ? 'border-red-500 focus:ring-red-500'
@@ -136,6 +219,9 @@ export default function RegisterPage() {
                 }`}
                 placeholder="Min 8 chars, uppercase, lowercase, number, special"
               />
+              {touched.has('password') && fieldErrors.password && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.password}</p>
+              )}
               {formData.password && hasPasswordErrors && (
                 <ul className="mt-2 text-sm text-red-600 dark:text-red-400 list-disc list-inside">
                   {passwordErrors.map((error, index) => (
@@ -143,7 +229,7 @@ export default function RegisterPage() {
                   ))}
                 </ul>
               )}
-              {formData.password && !hasPasswordErrors && (
+              {formData.password && !hasPasswordErrors && !fieldErrors.password && (
                 <p className="mt-2 text-sm text-green-600 dark:text-green-400">
                   ✓ Password meets all requirements
                 </p>
@@ -157,11 +243,19 @@ export default function RegisterPage() {
               <input
                 id="confirmPassword"
                 type="password"
-                required
                 value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, confirmPassword: e.target.value });
+                  // Clear error when user starts typing
+                  if (fieldErrors.confirmPassword) {
+                    setFieldErrors(prev => ({ ...prev, confirmPassword: undefined }));
+                  }
+                }}
+                onBlur={() => handleFieldBlur('confirmPassword')}
                 className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] ${
-                  formData.confirmPassword && formData.password === formData.confirmPassword
+                  touched.has('confirmPassword') && fieldErrors.confirmPassword
+                    ? 'border-red-500 focus:ring-red-500'
+                    : formData.confirmPassword && formData.password === formData.confirmPassword
                     ? 'border-green-500 focus:ring-green-500'
                     : formData.confirmPassword && formData.password !== formData.confirmPassword
                     ? 'border-red-500 focus:ring-red-500'
@@ -169,12 +263,15 @@ export default function RegisterPage() {
                 }`}
                 placeholder="Repeat your password"
               />
-              {formData.confirmPassword && formData.password === formData.confirmPassword && (
+              {touched.has('confirmPassword') && fieldErrors.confirmPassword && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.confirmPassword}</p>
+              )}
+              {formData.confirmPassword && !fieldErrors.confirmPassword && formData.password === formData.confirmPassword && (
                 <p className="mt-1 text-sm text-green-600 dark:text-green-400">
                   ✓ Passwords match
                 </p>
               )}
-              {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+              {formData.confirmPassword && !fieldErrors.confirmPassword && formData.password !== formData.confirmPassword && (
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">
                   Passwords do not match
                 </p>
@@ -184,9 +281,14 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 bg-[#3B82F6] text-white rounded-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="w-full py-3 px-4 bg-[#3B82F6] text-white rounded-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
             >
-              {loading ? 'Creating account...' : 'Create Account'}
+              {loading ? (
+                <>
+                  <LoadingSpinner size="sm" />
+                  Creating account...
+                </>
+              ) : 'Create Account'}
             </button>
           </form>
 

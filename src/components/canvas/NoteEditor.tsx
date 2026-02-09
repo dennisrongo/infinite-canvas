@@ -10,6 +10,7 @@ import RichTextToolbar from './RichTextToolbar';
 import LinkAutocomplete from './LinkAutocomplete';
 import { sanitizeMarkdown } from '@/lib/sanitization';
 import { useToast } from '@/contexts/ToastContext';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 // Feature #139: Local storage key for draft backup
 const DRAFT_STORAGE_PREFIX = 'note_draft_';
@@ -727,9 +728,14 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
             <button
               onClick={handleSave}
               disabled={saving}
-              className="px-4 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] disabled:bg-[#94A3B8] disabled:cursor-not-allowed transition"
+              className="px-4 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] disabled:bg-[#94A3B8] disabled:cursor-not-allowed transition flex items-center gap-2"
             >
-              {saving ? 'Saving...' : 'Save Now'}
+              {saving ? (
+                <>
+                  <LoadingSpinner size="sm" />
+                  Saving...
+                </>
+              ) : 'Save Now'}
             </button>
             <button
               onClick={handleClose}

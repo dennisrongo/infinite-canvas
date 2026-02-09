@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 interface ValidationErrors {
   password?: string;
@@ -178,12 +179,25 @@ function ResetPasswordForm() {
                 <input
                   id="password"
                   type="password"
-                  required
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9]"
+                  onChange={(e) => {
+                    setFormData({ ...formData, password: e.target.value });
+                    // Clear error when user starts typing
+                    if (fieldErrors.password) {
+                      setFieldErrors(prev => ({ ...prev, password: undefined }));
+                    }
+                  }}
+                  onBlur={() => handleFieldBlur('password')}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] ${
+                    touched.has('password') && fieldErrors.password
+                      ? 'border-red-500 focus:ring-red-500'
+                      : 'border-[#E2E8F0] dark:border-[#475569] focus:ring-[#3B82F6]'
+                  }`}
                   placeholder="Enter new password"
                 />
+                {touched.has('password') && fieldErrors.password && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.password}</p>
+                )}
                 <p className="mt-1 text-xs text-[#1E293B] dark:text-[#F1F5F9]">
                   Must be at least 8 characters with uppercase, lowercase, number, and special character
                 </p>
@@ -196,20 +210,38 @@ function ResetPasswordForm() {
                 <input
                   id="confirmPassword"
                   type="password"
-                  required
                   value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9]"
+                  onChange={(e) => {
+                    setFormData({ ...formData, confirmPassword: e.target.value });
+                    // Clear error when user starts typing
+                    if (fieldErrors.confirmPassword) {
+                      setFieldErrors(prev => ({ ...prev, confirmPassword: undefined }));
+                    }
+                  }}
+                  onBlur={() => handleFieldBlur('confirmPassword')}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] ${
+                    touched.has('confirmPassword') && fieldErrors.confirmPassword
+                      ? 'border-red-500 focus:ring-red-500'
+                      : 'border-[#E2E8F0] dark:border-[#475569] focus:ring-[#3B82F6]'
+                  }`}
                   placeholder="Confirm new password"
                 />
+                {touched.has('confirmPassword') && fieldErrors.confirmPassword && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.confirmPassword}</p>
+                )}
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 px-4 bg-[#3B82F6] text-white rounded-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                className="w-full py-3 px-4 bg-[#3B82F6] text-white rounded-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
               >
-                {loading ? 'Resetting...' : 'Reset Password'}
+                {loading ? (
+                  <>
+                    <LoadingSpinner size="sm" />
+                    Resetting...
+                  </>
+                ) : 'Reset Password'}
               </button>
             </form>
           )}

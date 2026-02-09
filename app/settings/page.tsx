@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 // Client-side password validation matching the server-side validation
 function validatePasswordClient(password: string): string[] {
@@ -30,6 +31,12 @@ function validatePasswordClient(password: string): string[] {
   return errors;
 }
 
+interface PasswordValidationErrors {
+  currentPassword?: string;
+  newPassword?: string;
+  confirmNewPassword?: string;
+}
+
 export default function SettingsPage() {
   const router = useRouter();
   const [user, setUser] = useState<{ email: string; displayName?: string; createdAt?: string } | null>(null);
@@ -44,6 +51,9 @@ export default function SettingsPage() {
     newPassword: '',
     confirmNewPassword: '',
   });
+
+  const [passwordFieldErrors, setPasswordFieldErrors] = useState<PasswordValidationErrors>({});
+  const [passwordTouched, setPasswordTouched] = useState<Set<string>>(new Set());
 
   const [profileForm, setProfileForm] = useState({
     displayName: '',
@@ -79,6 +89,50 @@ export default function SettingsPage() {
       setError('Failed to load user data');
       setLoading(false);
     }
+  };
+
+  const validatePasswordField = (name: string, value: string): string | undefined => {
+    if (!value || value.trim() === '') {
+      if (name === 'currentPassword') return 'Current password is required';
+      if (name === 'newPassword') return 'New password is required';
+      if (name === 'confirmNewPassword') return 'Please confirm your new password';
+    }
+    if (name === 'confirmNewPassword' && value !== passwordForm.newPassword) {
+      return 'Passwords do not match';
+    }
+    return undefined;
+  };
+
+  const validatePasswordForm = (): boolean => {
+    const errors: PasswordValidationErrors = {};
+    let isValid = true;
+
+    const currentPasswordError = validatePasswordField('currentPassword', passwordForm.currentPassword);
+    if (currentPasswordError) {
+      errors.currentPassword = currentPasswordError;
+      isValid = false;
+    }
+
+    const newPasswordError = validatePasswordField('newPassword', passwordForm.newPassword);
+    if (newPasswordError) {
+      errors.newPassword = newPasswordError;
+      isValid = false;
+    }
+
+    const confirmNewPasswordError = validatePasswordField('confirmNewPassword', passwordForm.confirmNewPassword);
+    if (confirmNewPasswordError) {
+      errors.confirmNewPassword = confirmNewPasswordError;
+      isValid = false;
+    }
+
+    setPasswordFieldErrors(errors);
+    return isValid;
+  };
+
+  const handlePasswordFieldBlur = (fieldName: string) => {
+    setPasswordTouched(prev => new Set(prev).add(fieldName));
+    const error = validatePasswordField(fieldName, passwordForm[fieldName as keyof typeof passwordForm]);
+    setPasswordFieldErrors(prev => ({ ...prev, [fieldName]: error }));
   };
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
@@ -118,6 +172,15 @@ export default function SettingsPage() {
     e.preventDefault();
     setError('');
     setSuccess('');
+
+    // Mark all fields as touched
+    setPasswordTouched(new Set(['currentPassword', 'newPassword', 'confirmNewPassword']));
+
+    // Validate form
+    if (!validatePasswordForm()) {
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -142,6 +205,8 @@ export default function SettingsPage() {
         newPassword: '',
         confirmNewPassword: '',
       });
+      setPasswordFieldErrors({});
+      setPasswordTouched(new Set());
       setSaving(false);
 
       // Clear success message after 3 seconds
@@ -269,9 +334,14 @@ export default function SettingsPage() {
             <button
               type="submit"
               disabled={savingProfile}
-              className="w-full py-3 px-4 bg-[#3B82F6] text-white rounded-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="w-full py-3 px-4 bg-[#3B82F6] text-white rounded-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
             >
-              {savingProfile ? 'Saving...' : 'Save Profile'}
+              {savingProfile ? (
+                <>
+                  <LoadingSpinner size="sm" />
+                  Saving...
+                </>
+              ) : 'Save Profile'}
             </button>
           </form>
         </div>
@@ -289,14 +359,25 @@ export default function SettingsPage() {
               <input
                 id="currentPassword"
                 type="password"
-                required
                 value={passwordForm.currentPassword}
-                onChange={(e) =>
-                  setPasswordForm({ ...passwordForm, currentPassword: e.target.value })
-                }
-                className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9]"
+                onChange={(e) => {
+                  setPasswordForm({ ...passwordForm, currentPassword: e.target.value });
+                  // Clear error when user starts typing
+                  if (passwordFieldErrors.currentPassword) {
+                    setPasswordFieldErrors(prev => ({ ...prev, currentPassword: undefined }));
+                  }
+                }}
+                onBlur={() => handlePasswordFieldBlur('currentPassword')}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] ${
+                  passwordTouched.has('currentPassword') && passwordFieldErrors.currentPassword
+                    ? 'border-red-500 focus:ring-red-500'
+                    : 'border-[#E2E8F0] dark:border-[#475569] focus:ring-[#3B82F6]'
+                }`}
                 placeholder="Enter your current password"
               />
+              {passwordTouched.has('currentPassword') && passwordFieldErrors.currentPassword && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{passwordFieldErrors.currentPassword}</p>
+              )}
             </div>
 
             <div>
@@ -306,13 +387,19 @@ export default function SettingsPage() {
               <input
                 id="newPassword"
                 type="password"
-                required
                 value={passwordForm.newPassword}
-                onChange={(e) =>
-                  setPasswordForm({ ...passwordForm, newPassword: e.target.value })
-                }
+                onChange={(e) => {
+                  setPasswordForm({ ...passwordForm, newPassword: e.target.value });
+                  // Clear error when user starts typing
+                  if (passwordFieldErrors.newPassword) {
+                    setPasswordFieldErrors(prev => ({ ...prev, newPassword: undefined }));
+                  }
+                }}
+                onBlur={() => handlePasswordFieldBlur('newPassword')}
                 className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] ${
-                  passwordStrength === 'valid'
+                  passwordTouched.has('newPassword') && passwordFieldErrors.newPassword
+                    ? 'border-red-500 focus:ring-red-500'
+                    : passwordStrength === 'valid'
                     ? 'border-green-500 focus:ring-green-500'
                     : passwordStrength === 'invalid'
                     ? 'border-red-500 focus:ring-red-500'
@@ -320,14 +407,17 @@ export default function SettingsPage() {
                 }`}
                 placeholder="Enter new password"
               />
-              {passwordForm.newPassword && hasPasswordErrors && (
+              {passwordTouched.has('newPassword') && passwordFieldErrors.newPassword && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{passwordFieldErrors.newPassword}</p>
+              )}
+              {passwordForm.newPassword && hasPasswordErrors && !passwordFieldErrors.newPassword && (
                 <ul className="mt-2 text-sm text-red-600 dark:text-red-400 list-disc list-inside">
                   {newPasswordErrors.map((error, index) => (
                     <li key={index}>{error}</li>
                   ))}
                 </ul>
               )}
-              {passwordForm.newPassword && !hasPasswordErrors && (
+              {passwordForm.newPassword && !hasPasswordErrors && !passwordFieldErrors.newPassword && (
                 <p className="mt-2 text-sm text-green-600 dark:text-green-400">
                   ✓ Password meets all requirements
                 </p>
@@ -346,13 +436,19 @@ export default function SettingsPage() {
               <input
                 id="confirmNewPassword"
                 type="password"
-                required
                 value={passwordForm.confirmNewPassword}
-                onChange={(e) =>
-                  setPasswordForm({ ...passwordForm, confirmNewPassword: e.target.value })
-                }
+                onChange={(e) => {
+                  setPasswordForm({ ...passwordForm, confirmNewPassword: e.target.value });
+                  // Clear error when user starts typing
+                  if (passwordFieldErrors.confirmNewPassword) {
+                    setPasswordFieldErrors(prev => ({ ...prev, confirmNewPassword: undefined }));
+                  }
+                }}
+                onBlur={() => handlePasswordFieldBlur('confirmNewPassword')}
                 className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] ${
-                  passwordForm.confirmNewPassword && passwordForm.newPassword === passwordForm.confirmNewPassword
+                  passwordTouched.has('confirmNewPassword') && passwordFieldErrors.confirmNewPassword
+                    ? 'border-red-500 focus:ring-red-500'
+                    : passwordForm.confirmNewPassword && passwordForm.newPassword === passwordForm.confirmNewPassword
                     ? 'border-green-500 focus:ring-green-500'
                     : passwordForm.confirmNewPassword && passwordForm.newPassword !== passwordForm.confirmNewPassword
                     ? 'border-red-500 focus:ring-red-500'
@@ -360,12 +456,15 @@ export default function SettingsPage() {
                 }`}
                 placeholder="Confirm new password"
               />
-              {passwordForm.confirmNewPassword && passwordForm.newPassword === passwordForm.confirmNewPassword && (
+              {passwordTouched.has('confirmNewPassword') && passwordFieldErrors.confirmNewPassword && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{passwordFieldErrors.confirmNewPassword}</p>
+              )}
+              {passwordForm.confirmNewPassword && !passwordFieldErrors.confirmNewPassword && passwordForm.newPassword === passwordForm.confirmNewPassword && (
                 <p className="mt-1 text-sm text-green-600 dark:text-green-400">
                   ✓ Passwords match
                 </p>
               )}
-              {passwordForm.confirmNewPassword && passwordForm.newPassword !== passwordForm.confirmNewPassword && (
+              {passwordForm.confirmNewPassword && !passwordFieldErrors.confirmNewPassword && passwordForm.newPassword !== passwordForm.confirmNewPassword && (
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">
                   Passwords do not match
                 </p>
@@ -375,9 +474,14 @@ export default function SettingsPage() {
             <button
               type="submit"
               disabled={saving}
-              className="w-full py-3 px-4 bg-[#3B82F6] text-white rounded-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="w-full py-3 px-4 bg-[#3B82F6] text-white rounded-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
             >
-              {saving ? 'Changing Password...' : 'Change Password'}
+              {saving ? (
+                <>
+                  <LoadingSpinner size="sm" />
+                  Changing Password...
+                </>
+              ) : 'Change Password'}
             </button>
           </form>
         </div>
