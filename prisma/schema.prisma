@@ -99,6 +99,7 @@ model NoteConnection {
   sourceNote   Note     @relation("SourceNote", fields: [sourceNoteId], references: [id], onDelete: Cascade)
   canvas       Canvas   @relation(fields: [canvasId], references: [id], onDelete: Cascade)
 
+  @@unique([canvasId, sourceNoteId, targetNoteId])
   @@index([canvasId])
   @@index([sourceNoteId])
   @@index([targetNoteId])
