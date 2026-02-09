@@ -5,9 +5,17 @@ import { useParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Header from '@/components/layout/Header';
 
+// Dynamically import ReactFlowCanvas with SSR disabled
 const ReactFlowCanvas = dynamic(
-  () => import('@/components/canvas/ReactFlowCanvas').then(mod => mod.default),
-  { ssr: false }
+  () => import('@/components/canvas/ReactFlowCanvas'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-[#1E293B] dark:text-[#F1F5F9]">Loading canvas...</div>
+      </div>
+    )
+  }
 );
 
 interface Note {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface HeaderProps {
@@ -11,6 +11,25 @@ interface HeaderProps {
   showCollapseButton?: boolean;
   onCollapseClick?: () => void;
   isCollapsed?: boolean;
+}
+
+// Custom hook for debouncing values
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    // Set up timer to update debounced value after delay
+    const timer = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    // Cleanup timer if value changes before delay expires
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
 }
 
 export default function Header({
@@ -29,6 +48,33 @@ export default function Header({
   const [searchScope, setSearchScope] = useState<'all' | 'current'>('all');
   const [searching, setSearching] = useState(false);
 
+  // Debounce search query with 400ms delay
+  const debouncedSearchQuery = useDebounce(searchQuery, 400);
+
+  // Helper function to highlight search terms in text
+  const highlightTerms = (text: string, query: string) => {
+    if (!query.trim() || !text) return text;
+
+    const terms = query.trim().split(/\s+/).filter(term => term.length > 0);
+    let highlightedText = text;
+
+    terms.forEach(term => {
+      const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+      highlightedText = highlightedText.replace(regex, '<mark style="background-color: #FEF08A; color: #1E293B; padding: 1px 2px; border-radius: 2px;">$1</mark>');
+    });
+
+    return highlightedText;
+  };
+
+  // Memoize highlighted results to avoid recalculating on every render
+  const highlightedResults = useMemo(() => {
+    return searchResults.map(result => ({
+      ...result,
+      highlightedTitle: highlightTerms(result.title, searchQuery),
+      highlightedContent: highlightTerms(result.contentPreview || '', searchQuery)
+    }));
+  }, [searchResults, searchQuery]);
+
   // Close search results when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -42,39 +88,57 @@ export default function Header({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Handle search input
-  const handleSearch = async (query: string) => {
+  // Perform search when debounced query changes
+  useEffect(() => {
+    const performSearch = async () => {
+      if (!debouncedSearchQuery.trim()) {
+        setSearchResults([]);
+        setShowResults(false);
+        return;
+      }
+
+      setSearching(true);
+
+      try {
+        const scopeParam = searchScope === 'current' && currentCanvasId
+          ? `?canvasId=${currentCanvasId}`
+          : '';
+
+        const res = await fetch(`/api/search${scopeParam}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: debouncedSearchQuery.trim() }),
+        });
+
+        if (!res.ok) throw new Error('Search failed');
+
+        const data = await res.json();
+        setSearchResults(data.results || []);
+        setShowResults(true);
+      } catch (error) {
+        console.error('Search error:', error);
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
+    };
+
+    performSearch();
+  }, [debouncedSearchQuery, searchScope, currentCanvasId]);
+
+  // Handle search input change
+  const handleSearchChange = (query: string) => {
     setSearchQuery(query);
+  };
 
-    if (!query.trim()) {
-      setSearchResults([]);
-      setShowResults(false);
-      return;
-    }
-
-    setSearching(true);
-
-    try {
-      const scopeParam = searchScope === 'current' && currentCanvasId
-        ? `?canvasId=${currentCanvasId}`
-        : '';
-
-      const res = await fetch(`/api/search${scopeParam}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: query.trim() }),
-      });
-
-      if (!res.ok) throw new Error('Search failed');
-
-      const data = await res.json();
-      setSearchResults(data.results || []);
-      setShowResults(true);
-    } catch (error) {
-      console.error('Search error:', error);
-      setSearchResults([]);
-    } finally {
-      setSearching(false);
+  // Trigger immediate search when scope changes
+  const handleScopeChange = (newScope: 'all' | 'current') => {
+    setSearchScope(newScope);
+    if (searchQuery.trim()) {
+      // Trigger search immediately with new scope
+      setTimeout(() => {
+        // Debounced value will update and trigger search
+      }, 0);
     }
   };
 
@@ -165,7 +229,7 @@ export default function Header({
                 id="global-search-input"
                 type="text"
                 value={searchQuery}
-                onChange={(e) => handleSearch(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 placeholder="Search notes... (Ctrl+K)"
                 className="w-full pl-10 pr-24 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
               />
@@ -174,12 +238,7 @@ export default function Header({
               {currentCanvasId && (
                 <select
                   value={searchScope}
-                  onChange={(e) => {
-                    setSearchScope(e.target.value as 'all' | 'current');
-                    if (searchQuery.trim()) {
-                      handleSearch(searchQuery);
-                    }
-                  }}
+                  onChange={(e) => handleScopeChange(e.target.value as 'all' | 'current')}
                   className="absolute right-2 top-1/2 transform -translate-y-1/2 px-2 py-1 text-xs border border-[#E2E8F0] dark:border-[#475569] rounded bg-white dark:bg-[#0F172A] text-[#64748B] dark:text-[#94A3B8] focus:outline-none"
                 >
                   <option value="all">All Canvases</option>
@@ -201,7 +260,7 @@ export default function Header({
                   </div>
                 ) : (
                   <div className="divide-y divide-[#E2E8F0] dark:divide-[#475569]">
-                    {searchResults.map((result) => (
+                    {highlightedResults.map((result) => (
                       <button
                         key={result.id}
                         onClick={() => handleResultClick(result)}
@@ -209,12 +268,14 @@ export default function Header({
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
-                            <div className="font-medium text-[#1E293B] dark:text-[#F1F5F9] truncate">
-                              {result.title}
-                            </div>
-                            <div className="text-sm text-[#64748B] dark:text-[#94A3B8] mt-1 line-clamp-2">
-                              {result.contentPreview}
-                            </div>
+                            <div
+                              className="font-medium text-[#1E293B] dark:text-[#F1F5F9] truncate"
+                              dangerouslySetInnerHTML={{ __html: result.highlightedTitle }}
+                            />
+                            <div
+                              className="text-sm text-[#64748B] dark:text-[#94A3B8] mt-1 line-clamp-2"
+                              dangerouslySetInnerHTML={{ __html: result.highlightedContent }}
+                            />
                             <div className="text-xs text-[#94A3B8] dark:text-[#64748B] mt-1">
                               in {result.canvasName}
                             </div>

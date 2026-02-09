@@ -132,6 +132,8 @@ function ReactFlowCanvasInner({
     target: conn.targetNoteId,
     type: 'smoothstep',
     animated: false,
+    selectable: true, // Feature #49 - Allow edge selection
+    deletable: true, // Feature #49 - Allow edge deletion
   }));
 
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -358,6 +360,8 @@ function ReactFlowCanvasInner({
         ...connection,
         type: 'smoothstep',
         animated: false,
+        selectable: true, // Feature #49 - Allow edge selection
+        deletable: true, // Feature #49 - Allow edge deletion
       }, eds));
     },
     [setEdges, onConnectionCreate]
@@ -406,6 +410,8 @@ function ReactFlowCanvasInner({
       target: conn.targetNoteId,
       type: 'smoothstep',
       animated: false,
+      selectable: true, // Feature #49 - Allow edge selection
+      deletable: true, // Feature #49 - Allow edge deletion
     }));
 
     setEdges(newEdges);
@@ -496,7 +502,7 @@ function ReactFlowCanvasInner({
         }
       }
 
-      // Check for Delete or Backspace keys to delete selected nodes (Feature #71)
+      // Check for Delete or Backspace keys to delete selected nodes (Feature #71) and edges (Feature #49)
       if (event.key === 'Delete' || event.key === 'Backspace') {
         // Don't trigger if in an input field
         if (
@@ -504,6 +510,21 @@ function ReactFlowCanvasInner({
           (event.target as HTMLElement).tagName !== 'TEXTAREA' &&
           !(event.target as HTMLElement).isContentEditable
         ) {
+          // Feature #49: Check for selected edges first
+          const selectedEdges = edges.filter(e => e.selected);
+          if (selectedEdges.length > 0) {
+            event.preventDefault();
+            // Delete selected edges
+            selectedEdges.forEach(edge => {
+              if (onConnectionDelete) {
+                onConnectionDelete(edge.id);
+              }
+            });
+            // Remove from local state
+            setEdges(prev => prev.filter(e => !e.selected));
+            return;
+          }
+
           // Get selected nodes from React Flow
           const selectedNodes = nodes.filter(n => n.selected);
           if (selectedNodes.length > 0) {
@@ -588,6 +609,11 @@ function ReactFlowCanvasInner({
     }
   }, [setViewport, getViewport, onViewportChange]);
 
+  // Handler to zoom to fit all nodes (Feature #50)
+  const handleFitView = useCallback(() => {
+    fitView({ padding: 0.2, duration: 300 });
+  }, [fitView]);
+
   // Custom control button for reset zoom
   const ResetZoomControl = () => (
     <button
@@ -623,6 +649,41 @@ function ReactFlowCanvasInner({
     </button>
   );
 
+  // Custom control button for zoom to fit (Feature #50)
+  const FitViewControl = () => (
+    <button
+      onClick={handleFitView}
+      className="react-flow__controls-button"
+      title="Zoom to fit all notes"
+      aria-label="Zoom to fit all notes"
+      style={{
+        border: 'none',
+        background: 'inherit',
+        padding: '0',
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+      }}
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+      </svg>
+    </button>
+  );
+
   return (
     <>
       <ReactFlow
@@ -650,6 +711,7 @@ function ReactFlowCanvasInner({
           color="#CBD5E1"
         />
         <Controls>
+          <FitViewControl />
           <ResetZoomControl />
         </Controls>
       </ReactFlow>
