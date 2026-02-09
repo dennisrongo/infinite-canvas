@@ -23,9 +23,7 @@ export function sanitizeHtml(html: string): string {
       'href', 'src', 'alt', 'title', 'class',
       'target', 'rel', 'width', 'height'
     ],
-    // Force https on URLs
-    FORCE_HTTPS: true,
-    // Remove tags that aren't in the allowed list
+    // Keep content even if tags are removed
     KEEP_CONTENT: true,
   });
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import Header from '@/components/layout/Header';
 
 const ReactFlowCanvas = dynamic(
   () => import('@/components/canvas/ReactFlowCanvas').then(mod => mod.default),
@@ -484,37 +485,13 @@ export default function CanvasPage() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <header className="bg-white dark:bg-[#0F172A] border-b border-[#E2E8F0] dark:border-[#475569] px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="p-2 text-sm border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
-              >
-                {sidebarCollapsed ? '☰' : '«'}
-              </button>
-              <h1 className="text-2xl font-bold text-[#1E293B] dark:text-[#F1F5F9]">
-                {canvas.name}
-              </h1>
-            </div>
-            <div className="flex items-center gap-4">
-              <a
-                href="/settings"
-                className="px-4 py-2 text-sm border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
-              >
-                Settings
-              </a>
-              <form action="/api/auth/logout" method="POST">
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-sm border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
-                >
-                  Logout
-                </button>
-              </form>
-            </div>
-          </div>
-        </header>
+        <Header
+          currentCanvasId={canvasId}
+          title={canvas?.name || 'Canvas'}
+          showCollapseButton={true}
+          onCollapseClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          isCollapsed={sidebarCollapsed}
+        />
 
         {/* Canvas Area */}
         <main className="flex-1 relative overflow-hidden bg-[#F8FAFC] dark:bg-[#1E293B]">

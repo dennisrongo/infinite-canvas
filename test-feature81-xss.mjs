@@ -117,7 +117,7 @@ async function createNoteWithPayload(token, payload) {
   }
 
   // Create note with XSS payload
-  const createNoteResponse = await fetch(`http://localhost:3000/api/canvases/${canvasId}/notes`, {
+  const createNoteResponse = await fetch(`http://localhost:3010/api/canvases/${canvasId}/notes`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -195,7 +195,7 @@ async function testNoteContentSanitization() {
 
     // Clean up - delete the note
     try {
-      await fetch(`http://localhost:3000/api/notes/${note.id}`, {
+      await fetch(`http://localhost:3010/api/notes/${note.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

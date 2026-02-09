@@ -7,9 +7,21 @@ interface HeaderProps {
   currentCanvasId?: string;
   onMenuClick?: () => void;
   showMenuButton?: boolean;
+  title?: string;
+  showCollapseButton?: boolean;
+  onCollapseClick?: () => void;
+  isCollapsed?: boolean;
 }
 
-export default function Header({ currentCanvasId, onMenuClick, showMenuButton }: HeaderProps) {
+export default function Header({
+  currentCanvasId,
+  onMenuClick,
+  showMenuButton,
+  title,
+  showCollapseButton,
+  onCollapseClick,
+  isCollapsed
+}: HeaderProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -106,12 +118,29 @@ export default function Header({ currentCanvasId, onMenuClick, showMenuButton }:
             </button>
           )}
 
-          {/* Logo */}
-          <a href="/dashboard" className="flex items-center gap-2">
+          {/* Collapse sidebar button - for canvas page */}
+          {showCollapseButton && onCollapseClick && (
+            <button
+              onClick={onCollapseClick}
+              className="p-2 text-sm border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
+              aria-label="Toggle sidebar"
+            >
+              {isCollapsed ? '☰' : '«'}
+            </button>
+          )}
+
+          {/* Logo or Title */}
+          {title ? (
             <h1 className="text-2xl font-bold text-[#1E293B] dark:text-[#F1F5F9]">
-              Infinite Canvas
+              {title}
             </h1>
-          </a>
+          ) : (
+            <a href="/dashboard" className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-[#1E293B] dark:text-[#F1F5F9]">
+                Infinite Canvas
+              </h1>
+            </a>
+          )}
 
           {/* Search Container */}
           <div className="search-container relative flex-1 max-w-2xl ml-8">
