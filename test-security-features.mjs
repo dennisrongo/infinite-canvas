@@ -60,7 +60,9 @@ try {
 
   // Check sameSite flag
   if (authContent.includes('sameSite:')) {
-    log('116', 'PASS', `Cookie has sameSite flag (${authContent.match(/sameSite:\s*['"](.*?)['"]/)?.[1] || 'configured')`);
+    const sameSiteMatch = authContent.match(/sameSite:\s*['"](.*?)['"]/);
+    const sameSiteValue = sameSiteMatch ? sameSiteMatch[1] : 'configured';
+    log('116', 'PASS', `Cookie has sameSite flag (${sameSiteValue})`);
   } else {
     log('116', 'FAIL', 'Cookie missing sameSite flag');
   }

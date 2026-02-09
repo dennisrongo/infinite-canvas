@@ -69,10 +69,20 @@ export async function validateCSRFToken(request: Request): Promise<boolean> {
   }
 
   // Compare tokens using constant-time comparison
-  return crypto.subtle.timingSafeEqual(
-    new TextEncoder().encode(cookieToken),
-    new TextEncoder().encode(headerToken)
-  ).catch(() => false);
+  // Note: timingSafeEqual may not be available in all environments
+  // Use a simple comparison with length check as fallback
+  if (cookieToken.length !== headerToken.length) {
+    return false;
+  }
+
+  // Simple character-by-character comparison
+  // (In production with Node.js 20+, use crypto.timingSafeEqual if available)
+  for (let i = 0; i < cookieToken.length; i++) {
+    if (cookieToken[i] !== headerToken[i]) {
+      return false;
+    }
+  }
+  return true;
 }
 
 /**

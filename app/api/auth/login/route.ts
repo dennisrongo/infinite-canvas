@@ -2,14 +2,49 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyPassword, validateEmail, generateToken, setSessionCookie } from '@/lib/auth';
 import { validateCSRFToken } from '@/lib/csrf';
+import { checkRateLimit, getIdentifier, rateLimitConfigs } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
+    // Apply rate limiting
+    const identifier = getIdentifier(request);
+    const rateLimitResult = checkRateLimit(identifier, 'login', rateLimitConfigs.auth);
+
+    // Helper function to add rate limit headers
+    const addRateLimitHeaders = (response: NextResponse, result: typeof rateLimitResult) => {
+      response.headers.set('X-RateLimit-Limit', result.limit.toString());
+      response.headers.set('X-RateLimit-Remaining', result.remaining.toString());
+      response.headers.set('X-RateLimit-Reset', new Date(result.resetTime).toISOString());
+      return response;
+    };
+
+    // Check if rate limited
+    if (!rateLimitResult.success) {
+      const retryAfter = Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000);
+      const errorResponse = NextResponse.json(
+        {
+          error: 'Too many login attempts',
+          message: rateLimitResult.blocked
+            ? `Too many failed login attempts. Your account has been temporarily blocked. Please try again in ${retryAfter} seconds.`
+            : `Too many login attempts. Please try again in ${retryAfter} seconds.`,
+          retryAfter
+        },
+        { status: 429 }
+      );
+      errorResponse.headers.set('Retry-After', retryAfter.toString());
+      addRateLimitHeaders(errorResponse, rateLimitResult);
+      return errorResponse;
+    }
+
     const body = await request.json();
     const { email, password } = body;
 
     if (!email || !validateEmail(email)) {
-      return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
+      const response = NextResponse.json(
+        { error: 'Invalid email or password' },
+        { status: 401 }
+      );
+      return addRateLimitHeaders(response, rateLimitResult);
     }
 
     // Validate CSRF token (optional for login - we check if header is present)
@@ -29,13 +64,21 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
-      return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
+      const response = NextResponse.json(
+        { error: 'Invalid email or password' },
+        { status: 401 }
+      );
+      return addRateLimitHeaders(response, rateLimitResult);
     }
 
     const isValidPassword = await verifyPassword(password, user.passwordHash);
 
     if (!isValidPassword) {
-      return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
+      const response = NextResponse.json(
+        { error: 'Invalid email or password' },
+        { status: 401 }
+      );
+      return addRateLimitHeaders(response, rateLimitResult);
     }
 
     await prisma.user.update({
@@ -46,9 +89,10 @@ export async function POST(request: NextRequest) {
     const token = generateToken({ userId: user.id, email: user.email });
     await setSessionCookie(token);
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       user: { id: user.id, email: user.email, displayName: user.displayName },
     });
+    return addRateLimitHeaders(response, rateLimitResult);
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
