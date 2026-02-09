@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { query, canvasId } = body;
+    const { query, canvasId, sortBy = 'updatedAt', sortOrder = 'desc', dateFilter } = body;
 
     if (!query || typeof query !== 'string') {
       return NextResponse.json({ error: 'Query is required' }, { status: 400 });
@@ -34,6 +34,41 @@ export async function POST(request: NextRequest) {
       whereClause.canvasId = canvasId;
     }
 
+    // Add date filter if specified
+    if (dateFilter) {
+      const now = new Date();
+      switch (dateFilter) {
+        case 'today':
+          whereClause.updatedAt = {
+            gte: new Date(now.setHours(0, 0, 0, 0)),
+          };
+          break;
+        case 'week':
+          whereClause.updatedAt = {
+            gte: new Date(now.setDate(now.getDate() - 7)),
+          };
+          break;
+        case 'month':
+          whereClause.updatedAt = {
+            gte: new Date(now.setMonth(now.getMonth() - 1)),
+          };
+          break;
+        case 'year':
+          whereClause.updatedAt = {
+            gte: new Date(now.setFullYear(now.getFullYear() - 1)),
+          };
+          break;
+      }
+    }
+
+    // Validate sortBy field
+    const validSortFields = ['createdAt', 'updatedAt', 'title'];
+    const sortField = validSortFields.includes(sortBy) ? sortBy : 'updatedAt';
+
+    // Validate sortOrder
+    const validSortOrders = ['asc', 'desc'];
+    const sortDirection = validSortOrders.includes(sortOrder) ? sortOrder : 'desc';
+
     // Search notes by title OR content
     const notes = await prisma.note.findMany({
       where: {
@@ -52,7 +87,7 @@ export async function POST(request: NextRequest) {
         },
       },
       orderBy: {
-        updatedAt: 'desc',
+        [sortField]: sortDirection,
       },
       take: 50, // Limit results to prevent overwhelming responses
     });
@@ -69,6 +104,8 @@ export async function POST(request: NextRequest) {
       canvasName: note.canvas.name,
       positionX: note.positionX,
       positionY: note.positionY,
+      createdAt: note.createdAt,
+      updatedAt: note.updatedAt,
     }));
 
     return NextResponse.json({ results });

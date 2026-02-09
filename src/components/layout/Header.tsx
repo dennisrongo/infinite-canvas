@@ -47,6 +47,10 @@ export default function Header({
   const [showResults, setShowResults] = useState(false);
   const [searchScope, setSearchScope] = useState<'all' | 'current'>('all');
   const [searching, setSearching] = useState(false);
+  const [sortBy, setSortBy] = useState<'createdAt' | 'updatedAt' | 'title'>('updatedAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month' | 'year'>('all');
+  const [showFilters, setShowFilters] = useState(false);
 
   // Debounce search query with 400ms delay
   const debouncedSearchQuery = useDebounce(searchQuery, 400);
@@ -88,7 +92,7 @@ export default function Header({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Perform search when debounced query changes
+  // Perform search when debounced query changes or filters change
   useEffect(() => {
     const performSearch = async () => {
       if (!debouncedSearchQuery.trim()) {
@@ -107,7 +111,12 @@ export default function Header({
         const res = await fetch(`/api/search${scopeParam}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: debouncedSearchQuery.trim() }),
+          body: JSON.stringify({
+            query: debouncedSearchQuery.trim(),
+            sortBy,
+            sortOrder,
+            dateFilter: dateFilter === 'all' ? undefined : dateFilter,
+          }),
         });
 
         if (!res.ok) throw new Error('Search failed');
@@ -124,7 +133,7 @@ export default function Header({
     };
 
     performSearch();
-  }, [debouncedSearchQuery, searchScope, currentCanvasId]);
+  }, [debouncedSearchQuery, searchScope, currentCanvasId, sortBy, sortOrder, dateFilter]);
 
   // Handle search input change
   const handleSearchChange = (query: string) => {
@@ -234,18 +243,119 @@ export default function Header({
                 className="w-full pl-10 pr-24 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
               />
 
-              {/* Scope Selector */}
-              {currentCanvasId && (
-                <select
-                  value={searchScope}
-                  onChange={(e) => handleScopeChange(e.target.value as 'all' | 'current')}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 px-2 py-1 text-xs border border-[#E2E8F0] dark:border-[#475569] rounded bg-white dark:bg-[#0F172A] text-[#64748B] dark:text-[#94A3B8] focus:outline-none"
+              {/* Scope Selector and Filter Button */}
+              <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+                {currentCanvasId && (
+                  <select
+                    value={searchScope}
+                    onChange={(e) => handleScopeChange(e.target.value as 'all' | 'current')}
+                    className="px-2 py-1 text-xs border border-[#E2E8F0] dark:border-[#475569] rounded bg-white dark:bg-[#0F172A] text-[#64748B] dark:text-[#94A3B8] focus:outline-none"
+                  >
+                    <option value="all">All Canvases</option>
+                    <option value="current">This Canvas</option>
+                  </select>
+                )}
+
+                {/* Filter Toggle Button */}
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="px-2 py-1 text-xs border border-[#E2E8F0] dark:border-[#475569] rounded bg-white dark:bg-[#0F172A] text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition focus:outline-none"
+                  title="Filter and sort options"
                 >
-                  <option value="all">All Canvases</option>
-                  <option value="current">This Canvas</option>
-                </select>
-              )}
+                  ⚙️ Filters
+                </button>
+              </div>
             </div>
+
+            {/* Filter Panel */}
+            {showFilters && (
+              <div className="absolute mt-2 w-full bg-white dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-[#475569] rounded-lg shadow-lg p-4 z-50">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Sort By */}
+                  <div>
+                    <label className="block text-xs font-medium text-[#64748B] dark:text-[#94A3B8] mb-1">
+                      Sort By
+                    </label>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as 'createdAt' | 'updatedAt' | 'title')}
+                      className="w-full px-3 py-2 text-sm border border-[#E2E8F0] dark:border-[#475569] rounded bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                    >
+                      <option value="updatedAt">Last Modified</option>
+                      <option value="createdAt">Date Created</option>
+                      <option value="title">Title (A-Z)</option>
+                    </select>
+                  </div>
+
+                  {/* Sort Order */}
+                  <div>
+                    <label className="block text-xs font-medium text-[#64748B] dark:text-[#94A3B8] mb-1">
+                      Order
+                    </label>
+                    <select
+                      value={sortOrder}
+                      onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                      className="w-full px-3 py-2 text-sm border border-[#E2E8F0] dark:border-[#475569] rounded bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                    >
+                      <option value="desc">Newest First</option>
+                      <option value="asc">Oldest First</option>
+                    </select>
+                  </div>
+
+                  {/* Date Filter */}
+                  <div>
+                    <label className="block text-xs font-medium text-[#64748B] dark:text-[#94A3B8] mb-1">
+                      Date Range
+                    </label>
+                    <select
+                      value={dateFilter}
+                      onChange={(e) => setDateFilter(e.target.value as 'all' | 'today' | 'week' | 'month' | 'year')}
+                      className="w-full px-3 py-2 text-sm border border-[#E2E8F0] dark:border-[#475569] rounded bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                    >
+                      <option value="all">All Time</option>
+                      <option value="today">Today</option>
+                      <option value="week">Last 7 Days</option>
+                      <option value="month">Last 30 Days</option>
+                      <option value="year">Last 365 Days</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Active Filters Display */}
+                {(dateFilter !== 'all' || sortBy !== 'updatedAt' || sortOrder !== 'desc') && (
+                  <div className="mt-3 pt-3 border-t border-[#E2E8F0] dark:border-[#475569] flex items-center justify-between">
+                    <div className="text-xs text-[#64748B] dark:text-[#94A3B8]">
+                      Active filters:{' '}
+                      {dateFilter !== 'all' && (
+                        <span className="inline-flex items-center gap-1 ml-1 px-2 py-1 bg-[#DBEAFE] dark:bg-[#1E3A8A] text-[#1E40AF] dark:text-[#93C5FD] rounded">
+                          📅 {dateFilter === 'today' ? 'Today' : dateFilter === 'week' ? 'Last 7 days' : dateFilter === 'month' ? 'Last 30 days' : 'Last 365 days'}
+                        </span>
+                      )}
+                      {sortBy !== 'updatedAt' && (
+                        <span className="inline-flex items-center gap-1 ml-1 px-2 py-1 bg-[#DBEAFE] dark:bg-[#1E3A8A] text-[#1E40AF] dark:text-[#93C5FD] rounded">
+                          📊 {sortBy === 'createdAt' ? 'Created' : 'Title'}
+                        </span>
+                      )}
+                      {sortOrder !== 'desc' && (
+                        <span className="inline-flex items-center gap-1 ml-1 px-2 py-1 bg-[#DBEAFE] dark:bg-[#1E3A8A] text-[#1E40AF] dark:text-[#93C5FD] rounded">
+                          ⬆️ Ascending
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSortBy('updatedAt');
+                        setSortOrder('desc');
+                        setDateFilter('all');
+                      }}
+                      className="text-xs text-[#3B82F6] hover:text-[#2563EB] dark:text-[#60A5FA] dark:hover:text-[#3B82F6] transition"
+                    >
+                      Clear all filters
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Search Results Dropdown */}
             {showResults && searchQuery.trim() && (
@@ -276,8 +386,12 @@ export default function Header({
                               className="text-sm text-[#64748B] dark:text-[#94A3B8] mt-1 line-clamp-2"
                               dangerouslySetInnerHTML={{ __html: result.highlightedContent }}
                             />
-                            <div className="text-xs text-[#94A3B8] dark:text-[#64748B] mt-1">
-                              in {result.canvasName}
+                            <div className="flex items-center gap-2 mt-1 text-xs text-[#94A3B8] dark:text-[#64748B]">
+                              <span>in {result.canvasName}</span>
+                              <span>•</span>
+                              <span>
+                                {sortBy === 'createdAt' ? 'Created' : 'Updated'}: {new Date(result[sortBy === 'createdAt' ? 'createdAt' : 'updatedAt']).toLocaleDateString()}
+                              </span>
                             </div>
                           </div>
                         </div>
