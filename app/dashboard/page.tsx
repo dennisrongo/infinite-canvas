@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
+import { useToast } from '@/contexts/ToastContext';
 
 interface Canvas {
   id: string;
@@ -23,6 +24,7 @@ interface CanvasesResponse {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [folders, setFolders] = useState<Folder[]>([]);
   const [rootCanvases, setRootCanvases] = useState<Canvas[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,7 +36,6 @@ export default function DashboardPage() {
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [folderToRename, setFolderToRename] = useState<Folder | null>(null);
   const [renameName, setRenameName] = useState('');
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [canvasToMove, setCanvasToMove] = useState<Canvas & { currentFolderId?: string } | null>(null);
