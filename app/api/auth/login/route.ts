@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { email, password } = body;
+    const { email, password, rememberMe } = body;
 
     if (!email || !validateEmail(email)) {
       const response = NextResponse.json(
@@ -104,11 +104,14 @@ export async function POST(request: NextRequest) {
     });
 
     // Set the cookie explicitly on the response
+    // If rememberMe is true, use 7 days; otherwise use a session cookie (expires when browser closes)
+    const maxAge = rememberMe ? 60 * 60 * 24 * 7 : undefined; // 7 days if rememberMe, else session cookie
+
     response.cookies.set('auth_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge,
       path: '/',
     });
 

@@ -3,6 +3,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import ToastContainer from "@/components/ui/Toast";
+import NetworkStatusBanner from "@/components/ui/NetworkStatusBanner";
 
 export const metadata: Metadata = {
   title: "Infinite Canvas",
@@ -35,6 +36,7 @@ export default function RootLayout({
       <body>
         <ThemeProvider>
           <ToastProvider>
+            <NetworkStatusBanner />
             {children}
             <ToastContainer />
           </ToastProvider>

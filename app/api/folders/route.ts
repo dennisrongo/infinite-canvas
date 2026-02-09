@@ -57,12 +57,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Folder name is required' }, { status: 400 });
     }
 
-    if (name.trim().length === 0) {
+    const trimmedName = name.trim();
+
+    if (trimmedName.length === 0) {
       return NextResponse.json({ error: 'Folder name cannot be empty' }, { status: 400 });
     }
 
+    // Validate folder name length (max 255 characters for database, show friendlier error)
+    if (trimmedName.length > 255) {
+      return NextResponse.json(
+        { error: 'Folder name is too long. Maximum 255 characters allowed.' },
+        { status: 400 }
+      );
+    }
+
+    // Warn about very long names (but still allow them)
+    if (trimmedName.length > 100) {
+      console.warn(`Folder name is unusually long (${trimmedName.length} characters)`);
+    }
+
     const folder = await prisma.folder.create({
-      data: { userId: session.userId, name: name.trim() },
+      data: { userId: session.userId, name: trimmedName },
       include: { canvases: true },
     });
 

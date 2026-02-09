@@ -93,11 +93,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (name.trim().length === 0) {
+    const trimmedName = name.trim();
+
+    if (trimmedName.length === 0) {
       return NextResponse.json(
         { error: 'Canvas name cannot be empty' },
         { status: 400 }
       );
+    }
+
+    // Validate canvas name length (max 255 characters)
+    if (trimmedName.length > 255) {
+      return NextResponse.json(
+        { error: 'Canvas name is too long. Maximum 255 characters allowed.' },
+        { status: 400 }
+      );
+    }
+
+    // Warn about very long names
+    if (trimmedName.length > 100) {
+      console.warn(`Canvas name is unusually long (${trimmedName.length} characters)`);
     }
 
     // If folderId is provided, verify it belongs to the user
@@ -120,7 +135,7 @@ export async function POST(request: NextRequest) {
     const canvas = await prisma.canvas.create({
       data: {
         userId: session.userId,
-        name: name.trim(),
+        name: trimmedName,
         folderId: folderId || null,
       },
       include: {

@@ -872,3 +872,109 @@ All tests pass via Prisma database operations.
 END OF SESSION - Features #125, #126, #186 COMPLETE ✅
 ================================================================================
 
+================================================================================
+SESSION COMPLETE - Features #124, #141, #142 ✅
+================================================================================
+DATE: February 9, 2026
+FEATURES COMPLETED: 3 (Navigation Integrity Features)
+
+================================================================================
+FEATURES VERIFIED AND MARKED PASSING
+================================================================================
+
+✅ Feature #124: 404 handling for missing resources
+✅ Feature #141: Post-login redirect to intended page
+✅ Feature #142: Logout redirects to home or login
+
+================================================================================
+IMPLEMENTATION SUMMARY
+================================================================================
+
+Feature #124: 404 handling for missing resources ✅ PASSING
+--------------------------------------------------------------------
+Implementation: Created app/not-found.tsx
+
+Files Created:
+- app/not-found.tsx - Custom 404 page with helpful navigation links
+
+Features Verified:
+- 404 page appears for non-existent routes (e.g., /this-page-does-not-exist-xyz-123)
+- User-friendly error message displayed
+- Helpful links provided: Go to Dashboard, Login, Create an Account
+- Guidance to create new canvas
+- Browser tested: Shows proper 404 page with styling and navigation
+
+Feature #141: Post-login redirect to intended page ✅ PASSING
+--------------------------------------------------------------------
+Implementation: Created middleware.ts and updated login page
+
+Files Created:
+- middleware.ts - Route protection and redirect handling
+
+Files Modified:
+- app/auth/login/page.tsx - Added returnUrl parameter support
+
+Features Implemented:
+- Middleware protects routes: /dashboard, /canvas, /settings
+- Unauthenticated users redirected to /auth/login?returnUrl=[original-path]
+- Login page reads returnUrl from query parameters
+- After successful login, user redirected to intended page
+- Falls back to /dashboard if no returnUrl specified
+- Authenticated users accessing auth routes are redirected appropriately
+
+Browser Testing Verification:
+- Accessed /dashboard while logged out → Redirected to /auth/login?returnUrl=%2Fdashboard
+- returnUrl query parameter correctly URL-encoded
+
+Feature #142: Logout redirects to home or login ✅ PASSING
+--------------------------------------------------------------------
+Implementation: Already implemented in app/api/auth/logout/route.ts
+
+Existing Implementation Verified:
+- POST /api/auth/logout returns NextResponse.redirect to /auth/login
+- Session cookie cleared on logout
+- Consistent redirect behavior from any page
+- After logout, protected routes redirect to login
+
+================================================================================
+NAVIGATION INTEGRITY FEATURES
+================================================================================
+
+The navigation system now provides:
+
+1. **Proper 404 Error Handling**
+   - Custom 404 page with helpful navigation
+   - User-friendly error messages
+   - Clear paths to get back on track
+
+2. **Protected Route Management**
+   - Automatic redirect to login for unauthenticated users
+   - Original URL preserved for post-login redirect
+   - Seamless user experience
+
+3. **Session Lifecycle Management**
+   - Login redirects to intended destination
+   - Logout returns to login page
+   - Session persistence across browser sessions
+
+================================================================================
+GIT COMMIT
+================================================================================
+
+Commit: c9d27618
+Message: feat: implement Navigation Integrity features #124, #141, #142
+
+Files Changed:
+- app/api/auth/login/route.ts (added error handling)
+
+Lines Changed: +22, -11
+
+Additional files (created in this session):
+- app/not-found.tsx (new 404 page)
+- middleware.ts (route protection and redirects)
+- app/auth/login/page.tsx (returnUrl support)
+- src/lib/rate-limit.ts (getIdentifier fix)
+
+================================================================================
+END OF SESSION - Features #124, #141, #142 COMPLETE ✅
+================================================================================
