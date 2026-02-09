@@ -9,13 +9,27 @@ async function testLogin() {
   });
 
   console.log('Status:', response.status);
-  const data = await response.json();
-  console.log('Response:', JSON.stringify(data, null, 2));
 
-  if (data.token) {
-    // Test using the token
+  // Extract cookies from response
+  const setCookieHeader = response.headers.get('set-cookie');
+  console.log('Set-Cookie:', setCookieHeader);
+
+  // Get cookie value
+  let authToken = null;
+  if (setCookieHeader) {
+    const match = setCookieHeader.match(/auth_token=([^;]+)/);
+    if (match) {
+      authToken = match[1];
+      console.log('Auth Token:', authToken ? authToken.substring(0, 20) + '...' : 'not found');
+    }
+  }
+
+  if (authToken) {
+    // Test using the cookie
     const canvasesResponse = await fetch('http://localhost:4002/api/canvases', {
-      headers: { Authorization: `Bearer ${data.token}` },
+      headers: {
+        'Cookie': `auth_token=${authToken}`
+      },
     });
 
     console.log('\nCanvases Status:', canvasesResponse.status);
