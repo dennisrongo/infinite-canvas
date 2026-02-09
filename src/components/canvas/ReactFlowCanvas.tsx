@@ -40,6 +40,12 @@ interface UndoAction {
   timestamp: number;
 }
 
+interface RedoAction {
+  type: 'delete';
+  note: Note;
+  timestamp: number;
+}
+
 interface ReactFlowCanvasProps {
   canvasId: string;
   initialNotes: Note[];
@@ -71,10 +77,11 @@ function ReactFlowCanvasInner({
   onConnectionCreate,
   onConnectionDelete,
 }: ReactFlowCanvasProps) {
-  const { screenToFlowPosition, setViewport, getViewport } = useReactFlow();
+  const { screenToFlowPosition, setViewport, getViewport, fitView } = useReactFlow();
   const lastClickTime = useRef(0);
   const lastClickPosition = useRef({ x: 0, y: 0 });
   const [undoStack, setUndoStack] = React.useState<UndoAction[]>([]);
+  const [redoStack, setRedoStack] = React.useState<RedoAction[]>([]);
 
   // Convert notes from database to React Flow nodes
   const initialNodes: Node[] = initialNotes.map((note) => ({
@@ -129,6 +136,9 @@ function ReactFlowCanvasInner({
               note,
               timestamp: Date.now(),
             }]);
+
+            // Clear redo stack when new action is performed (Feature #56)
+            setRedoStack([]);
 
             // Call the delete API
             onNoteDelete(change.id);
@@ -249,12 +259,19 @@ function ReactFlowCanvasInner({
     setEdges(newEdges);
   }, [initialConnections, setEdges]);
 
-  // Restore viewport state when initialViewport changes
+  // Restore viewport state when initialViewport changes or center canvas on load (Feature #53)
   useEffect(() => {
     if (initialViewport) {
+      // Restore saved viewport state
       setViewport(initialViewport);
+    } else if (nodes.length > 0) {
+      // Auto-center on notes when loading a canvas with notes
+      // Small delay to ensure ReactFlow has initialized
+      setTimeout(() => {
+        fitView({ padding: 0.2, duration: 0 });
+      }, 100);
     }
-  }, [initialViewport, setViewport]);
+  }, [initialViewport, setViewport, fitView]);
 
   // Handle viewport changes (pan and zoom)
   const onMoveEnd = useCallback(
@@ -270,21 +287,22 @@ function ReactFlowCanvasInner({
     [onViewportChange]
   );
 
-  // Handle keyboard shortcuts for undo
+  // Handle keyboard shortcuts for undo, redo, and creating notes
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Check for Ctrl+Z or Cmd+Z
+      // Check for Ctrl+Z or Cmd+Z for undo (Feature #55)
       if ((event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey) {
         event.preventDefault();
         if (undoStack.length > 0) {
           const lastAction = undoStack[undoStack.length - 1];
 
-          if (lastAction.type === 'delete' && onNoteRestore) {
+          if (lastAction.type === 'delete' && onNoteDelete) {
             // Restore the deleted note
             onNoteRestore(lastAction.note);
 
-            // Remove from undo stack
+            // Move action from undo stack to redo stack (Feature #56)
             setUndoStack(prev => prev.slice(0, -1));
+            setRedoStack(prev => [...prev, lastAction]);
 
             // Add the note back to the nodes state
             const restoredNode: Node = {
@@ -305,11 +323,60 @@ function ReactFlowCanvasInner({
           }
         }
       }
+
+      // Check for Ctrl+Shift+Z or Cmd+Shift+Z for redo (Feature #56)
+      if ((event.ctrlKey || event.metaKey) && event.key === 'z' && event.shiftKey) {
+        event.preventDefault();
+        if (redoStack.length > 0) {
+          const lastRedoAction = redoStack[redoStack.length - 1];
+
+          if (lastRedoAction.type === 'delete' && onNoteDelete) {
+            // Re-apply the deleted note (delete it again)
+            onNoteDelete(lastRedoAction.note.id);
+
+            // Remove from nodes state
+            setNodes(prev => prev.filter(n => n.id !== lastRedoAction.note.id));
+
+            // Move action from redo stack back to undo stack
+            setRedoStack(prev => prev.slice(0, -1));
+            setUndoStack(prev => [...prev, lastRedoAction]);
+          }
+        }
+      }
+
+      // Check for 'N' key to create a new note (Feature #54)
+      // Only trigger if no modifier keys are pressed and not in an input field
+      if (event.key === 'n' || event.key === 'N') {
+        if (
+          !event.ctrlKey &&
+          !event.metaKey &&
+          !event.altKey &&
+          !event.shiftKey &&
+          (event.target as HTMLElement).tagName !== 'INPUT' &&
+          (event.target as HTMLElement).tagName !== 'TEXTAREA' &&
+          !(event.target as HTMLElement).isContentEditable
+        ) {
+          event.preventDefault();
+          if (onNoteCreate) {
+            try {
+              // Get current viewport to center the new note
+              const viewport = getViewport();
+              // Calculate center position in flow coordinates
+              const centerX = -viewport.x + (window.innerWidth / 2) / viewport.zoom;
+              const centerY = -viewport.y + (window.innerHeight / 2) / viewport.zoom;
+
+              onNoteCreate({ x: centerX, y: centerY });
+            } catch (error) {
+              console.error('Error creating note with N key:', error);
+            }
+          }
+        }
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undoStack, onNoteRestore, setNodes]);
+  }, [undoStack, redoStack, onNoteRestore, onNoteDelete, setNodes, onNoteCreate, getViewport]);
 
   // Handle node resize events from NoteNode
   useEffect(() => {
@@ -327,6 +394,60 @@ function ReactFlowCanvasInner({
     return () => window.removeEventListener('nodeResize', handleResize);
   }, [nodes, onNoteUpdate]);
 
+  // Handler to reset zoom to 100% (Feature #52)
+  const handleResetZoom = useCallback(() => {
+    const currentViewport = getViewport();
+    setViewport({
+      x: currentViewport.x,
+      y: currentViewport.y,
+      zoom: 1,
+    });
+
+    // Save the new viewport state
+    if (onViewportChange) {
+      onViewportChange({
+        x: currentViewport.x,
+        y: currentViewport.y,
+        zoom: 1,
+      });
+    }
+  }, [setViewport, getViewport, onViewportChange]);
+
+  // Custom control button for reset zoom
+  const ResetZoomControl = () => (
+    <button
+      onClick={handleResetZoom}
+      className="react-flow__controls-button"
+      title="Reset zoom to 100%"
+      aria-label="Reset zoom to 100%"
+      style={{
+        border: 'none',
+        background: 'inherit',
+        padding: '0',
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+      }}
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <text x="6" y="17" fontSize="12" fontWeight="bold" fill="currentColor">1:1</text>
+      </svg>
+    </button>
+  );
+
   return (
     <ReactFlow
       nodes={nodes}
@@ -338,7 +459,6 @@ function ReactFlowCanvasInner({
       onPaneClick={onPaneClick}
       onMoveEnd={onMoveEnd}
       nodeTypes={nodeTypes}
-      fitView={initialViewport ? undefined : true}
       deleteKeyCode="Delete"
       className="bg-[#F8FAFC] dark:bg-[#1E293B]"
     >
@@ -348,7 +468,9 @@ function ReactFlowCanvasInner({
         size={1}
         color="#CBD5E1"
       />
-      <Controls />
+      <Controls>
+        <ResetZoomControl />
+      </Controls>
     </ReactFlow>
   );
 }
