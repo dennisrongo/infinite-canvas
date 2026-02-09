@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { noteCreateSchema } from '@/lib/validation';
+import { ZodError } from 'zod';
 
 // POST /api/canvases/:id/notes - Create a new note
 export async function POST(
@@ -19,7 +21,7 @@ export async function POST(
 
     const { id: canvasId } = await params;
     const body = await request.json();
-    const { id, title, content, positionX, positionY, width, height } = body;
+    const { id } = body;
 
     // Verify the canvas belongs to the user
     const canvas = await prisma.canvas.findFirst({
@@ -36,23 +38,11 @@ export async function POST(
       );
     }
 
-    // Validate required fields
-    if (!title || typeof title !== 'string') {
-      return NextResponse.json(
-        { error: 'Title is required' },
-        { status: 400 }
-      );
-    }
-
-    if (positionX === undefined || positionY === undefined) {
-      return NextResponse.json(
-        { error: 'Position is required' },
-        { status: 400 }
-      );
-    }
+    // Validate and sanitize input using Zod schema
+    const validatedData = noteCreateSchema.parse(body);
 
     // Check for duplicate title within the same canvas
-    const trimmedTitle = title.trim() || 'Untitled Note';
+    const trimmedTitle = validatedData.title.trim() || 'Untitled Note';
     const existingNote = await prisma.note.findFirst({
       where: {
         canvasId,
@@ -70,22 +60,32 @@ export async function POST(
       );
     }
 
-    // Create note
+    // Create note with sanitized data
     const note = await prisma.note.create({
       data: {
         id: id || undefined, // Use provided ID for restore, otherwise generate new
         canvasId,
-        title: title.trim() || 'Untitled Note',
-        content: content || '',
-        positionX: Number(positionX),
-        positionY: Number(positionY),
-        width: Number(width || 300),
-        height: Number(height || 200),
+        title: trimmedTitle,
+        content: validatedData.content, // Already sanitized by Zod schema
+        positionX: validatedData.positionX,
+        positionY: validatedData.positionY,
+        width: validatedData.width,
+        height: validatedData.height,
       },
     });
 
     return NextResponse.json({ note }, { status: 201 });
   } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        {
+          error: 'Validation failed',
+          details: error.errors
+        },
+        { status: 400 }
+      );
+    }
+
     console.error('Error creating note:', error);
     return NextResponse.json(
       { error: 'Failed to create note' },

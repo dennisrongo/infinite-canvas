@@ -300,20 +300,22 @@ function ReactFlowCanvasInner({
   // Handle navigating to a linked note (Feature #74)
   const handleNavigateToNote = useCallback((noteTitle: string) => {
     // Find the note by title in the current nodes
-    const targetNote = nodes.find(node =>
-      node.data.title === noteTitle || node.data.title?.toLowerCase() === noteTitle.toLowerCase()
-    );
+    const targetNote = nodes.find(node => {
+      const title = node.data.title;
+      if (typeof title !== 'string') return false;
+      return title === noteTitle || title.toLowerCase() === noteTitle.toLowerCase();
+    });
 
     if (targetNote) {
       // Found the note - open it for editing
       const noteData = {
         id: targetNote.id,
-        title: targetNote.data.title,
-        content: targetNote.data.content,
+        title: String(targetNote.data.title || ''),
+        content: String(targetNote.data.content || ''),
         positionX: targetNote.position.x,
         positionY: targetNote.position.y,
-        width: targetNote.style?.width || 300,
-        height: targetNote.style?.height || 200,
+        width: Number(targetNote.style?.width || 300),
+        height: Number(targetNote.style?.height || 200),
       };
 
       setEditingNote(noteData);
@@ -321,17 +323,19 @@ function ReactFlowCanvasInner({
 
       // Optional: Center the view on the target note
       const viewport = getViewport();
+      const noteWidth = Number(targetNote.style?.width || 300);
+      const noteHeight = Number(targetNote.style?.height || 200);
       setViewport({
-        x: -targetNote.position.x + window.innerWidth / 2 / viewport.zoom - (targetNote.style?.width || 300) / 2,
-        y: -targetNote.position.y + window.innerHeight / 2 / viewport.zoom - (targetNote.style?.height || 200) / 2,
+        x: -targetNote.position.x + window.innerWidth / 2 / viewport.zoom - noteWidth / 2,
+        y: -targetNote.position.y + window.innerHeight / 2 / viewport.zoom - noteHeight / 2,
         zoom: viewport.zoom,
       });
 
       // Save viewport change
       if (onViewportChange) {
         onViewportChange({
-          x: -targetNote.position.x + window.innerWidth / 2 / viewport.zoom - (targetNote.style?.width || 300) / 2,
-          y: -targetNote.position.y + window.innerHeight / 2 / viewport.zoom - (targetNote.style?.height || 200) / 2,
+          x: -targetNote.position.x + window.innerWidth / 2 / viewport.zoom - noteWidth / 2,
+          y: -targetNote.position.y + window.innerHeight / 2 / viewport.zoom - noteHeight / 2,
           zoom: viewport.zoom,
         });
       }

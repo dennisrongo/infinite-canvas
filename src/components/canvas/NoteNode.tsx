@@ -19,12 +19,42 @@ export default function NoteNode({ data, selected, id }: NoteNodeProps) {
   const nodeRef = useRef<HTMLDivElement>(null);
   const resizeStartRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
 
-  // Get preview of content (first 100 chars)
-  const contentPreview = data.content
-    ? data.content.length > 100
-      ? data.content.substring(0, 100) + '...'
-      : data.content
-    : 'No content';
+  // Get preview of content (first 2-3 lines, strip markdown)
+  const contentPreview = (() => {
+    if (!data.content || data.content.trim() === '') {
+      return '';
+    }
+
+    // Remove markdown syntax for plain text preview
+    const plainText = data.content
+      // Remove headers
+      .replace(/^#{1,6}\s+/gm, '')
+      // Remove bold/italic
+      .replace(/\*\*\*/g, '').replace(/\*\*/g, '').replace(/\*/g, '')
+      .replace(/___/g, '').replace(/__/g, '').replace(/_/g, '')
+      // Remove links
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      // Remove code blocks
+      .replace(/```[\s\S]*?```/g, '[Code]')
+      .replace(/`([^`]+)`/g, '$1')
+      // Remove images
+      .replace(/!\[([^\]]*)\]\([^)]+\)/g, '[Image]')
+      // Remove wiki links
+      .replace(/\[\[([^\]]+)\]\]/g, '$1')
+      // Clean up extra whitespace
+      .replace(/\n\s*\n/g, '\n')
+      .trim();
+
+    // Split into lines and take first 3
+    const lines = plainText.split('\n').filter(line => line.trim() !== '');
+    const previewLines = lines.slice(0, 3);
+
+    // Join with ellipsis if there's more content
+    const preview = previewLines.join(' ');
+    const hasMore = lines.length > 3 || preview.length < plainText.length;
+
+    return hasMore ? preview + '...' : preview;
+  })();
 
   // Handle resize start
   const handleResizeStart = (e: React.MouseEvent, corner: string) => {
@@ -95,9 +125,15 @@ export default function NoteNode({ data, selected, id }: NoteNodeProps) {
       </div>
 
       {/* Content preview */}
-      <div className="text-sm text-[#64748B] dark:text-[#94A3B8] line-clamp-3">
-        {contentPreview}
-      </div>
+      {contentPreview ? (
+        <div className="text-sm text-[#64748B] dark:text-[#94A3B8] leading-relaxed">
+          {contentPreview}
+        </div>
+      ) : (
+        <div className="text-sm text-[#94A3B8] dark:text-[#64748B] italic">
+          No content yet
+        </div>
+      )}
 
       {/* Edit hint */}
       <div className="mt-2 text-xs text-[#94A3B8] dark:text-[#64748B] italic">

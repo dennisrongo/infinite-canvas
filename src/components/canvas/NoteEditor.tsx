@@ -4,9 +4,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
+import rehypeSanitize from 'rehype-sanitize';
 import 'highlight.js/styles/github-dark.css';
 import RichTextToolbar from './RichTextToolbar';
 import LinkAutocomplete from './LinkAutocomplete';
+import { sanitizeMarkdown } from '@/lib/sanitization';
 
 interface Note {
   id: string;
@@ -195,13 +197,16 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
   // Handle content change and detect [[ for link autocomplete
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
-    setContent(newValue);
+
+    // Client-side sanitization for immediate protection
+    const sanitizedValue = sanitizeMarkdown(newValue);
+    setContent(sanitizedValue);
 
     const textarea = textareaRef.current;
     if (!textarea) return;
 
     const cursorPosition = textarea.selectionStart;
-    const textBeforeCursor = newValue.substring(0, cursorPosition);
+    const textBeforeCursor = sanitizedValue.substring(0, cursorPosition);
 
     // Check if user just typed [[
     const doubleBracketMatch = textBeforeCursor.match(/\[\[([^\[]*)$/);
@@ -470,7 +475,7 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
               >
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeHighlight]}
+                  rehypePlugins={[rehypeHighlight, rehypeSanitize]}
                   components={{
                     // Custom renderer for wiki-style [[links]]
                     p: ({ children }) => {
