@@ -39,7 +39,7 @@ interface ReactFlowCanvasProps {
   initialNotes: Note[];
   initialViewport?: { x: number; y: number; zoom: number };
   onNoteCreate?: (position: { x: number; y: number }) => void;
-  onNoteUpdate?: (noteId: string, position: { x: number; y: number }) => void;
+  onNoteUpdate?: (noteId: string, position: { x: number; y: number }, size?: { width: number; height: number }) => void;
   onNoteDelete?: (noteId: string) => void;
   onViewportChange?: (viewport: { x: number; y: number; zoom: number }) => void;
   onNoteRestore?: (note: Note) => void;
@@ -249,6 +249,22 @@ function ReactFlowCanvasInner({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undoStack, onNoteRestore, setNodes]);
+
+  // Handle node resize events from NoteNode
+  useEffect(() => {
+    const handleResize = (event: any) => {
+      if (event.detail && onNoteUpdate) {
+        const { id, width, height } = event.detail;
+        const node = nodes.find(n => n.id === id);
+        if (node) {
+          onNoteUpdate(id, node.position, { width, height });
+        }
+      }
+    };
+
+    window.addEventListener('nodeResize', handleResize);
+    return () => window.removeEventListener('nodeResize', handleResize);
+  }, [nodes, onNoteUpdate]);
 
   return (
     <ReactFlow

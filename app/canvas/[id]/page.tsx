@@ -19,6 +19,12 @@ interface Note {
   height: number;
 }
 
+interface Connection {
+  id: string;
+  sourceNoteId: string;
+  targetNoteId: string;
+}
+
 interface Canvas {
   id: string;
   name: string;
@@ -48,6 +54,7 @@ export default function CanvasPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [notes, setNotes] = useState<Note[]>([]);
+  const [connections, setConnections] = useState<Connection[]>([]);
   const [viewport, setViewport] = useState<{ x: number; y: number; zoom: number } | null>(null);
 
   useEffect(() => {
@@ -88,6 +95,9 @@ export default function CanvasPage() {
       setCanvas(data.canvas);
       setNotes(data.canvas.notes || []);
 
+      // Fetch connections for this canvas
+      fetchConnections(canvasId);
+
       // Load viewport state
       if (data.canvas.viewportX !== null && data.canvas.viewportY !== null && data.canvas.zoom !== null) {
         setViewport({
@@ -121,6 +131,18 @@ export default function CanvasPage() {
       console.error('Error fetching folders and canvases:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchConnections = async (id: string) => {
+    try {
+      const res = await fetch(`/api/canvases/${id}/connections`);
+      if (res.ok) {
+        const data = await res.json();
+        setConnections(data.connections || []);
+      }
+    } catch (err) {
+      console.error('Error fetching connections:', err);
     }
   };
 
@@ -159,25 +181,37 @@ export default function CanvasPage() {
     }
   }, [canvasId]);
 
-  const handleNoteUpdate = useCallback(async (noteId: string, newPosition: { x: number; y: number }) => {
+  const handleNoteUpdate = useCallback(async (noteId: string, newPosition: { x: number; y: number }, newSize?: { width: number; height: number }) => {
     try {
+      const body: any = {
+        positionX: Math.round(newPosition.x),
+        positionY: Math.round(newPosition.y),
+      };
+
+      if (newSize) {
+        body.width = Math.round(newSize.width);
+        body.height = Math.round(newSize.height);
+      }
+
       await fetch(`/api/notes/${noteId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          positionX: Math.round(newPosition.x),
-          positionY: Math.round(newPosition.y),
-        }),
+        body: JSON.stringify(body),
       });
 
       // Update note in state
       setNotes(prev => prev.map(note =>
         note.id === noteId
-          ? { ...note, positionX: Math.round(newPosition.x), positionY: Math.round(newPosition.y) }
+          ? {
+              ...note,
+              positionX: Math.round(newPosition.x),
+              positionY: Math.round(newPosition.y),
+              ...(newSize && { width: Math.round(newSize.width), height: Math.round(newSize.height) })
+            }
           : note
       ));
     } catch (error) {
-      console.error('Error updating note position:', error);
+      console.error('Error updating note:', error);
     }
   }, []);
 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-// POST /api/canvases/:id/notes - Create a new note
+// POST /api/canvases/:id/connections - Create a new connection between notes
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -19,7 +19,7 @@ export async function POST(
 
     const { id: canvasId } = await params;
     const body = await request.json();
-    const { id, title, content, positionX, positionY, width, height } = body;
+    const { sourceNoteId, targetNoteId } = body;
 
     // Verify the canvas belongs to the user
     const canvas = await prisma.canvas.findFirst({
@@ -37,45 +37,86 @@ export async function POST(
     }
 
     // Validate required fields
-    if (!title || typeof title !== 'string') {
+    if (!sourceNoteId || !targetNoteId) {
       return NextResponse.json(
-        { error: 'Title is required' },
+        { error: 'Source and target note IDs are required' },
         { status: 400 }
       );
     }
 
-    if (positionX === undefined || positionY === undefined) {
+    if (sourceNoteId === targetNoteId) {
       return NextResponse.json(
-        { error: 'Position is required' },
+        { error: 'Cannot connect a note to itself' },
         { status: 400 }
       );
     }
 
-    // Create note
-    const note = await prisma.note.create({
-      data: {
-        id: id || undefined, // Use provided ID for restore, otherwise generate new
+    // Verify both notes exist and belong to the canvas
+    const [sourceNote, targetNote] = await Promise.all([
+      prisma.note.findFirst({
+        where: {
+          id: sourceNoteId,
+          canvasId,
+        },
+      }),
+      prisma.note.findFirst({
+        where: {
+          id: targetNoteId,
+          canvasId,
+        },
+      }),
+    ]);
+
+    if (!sourceNote) {
+      return NextResponse.json(
+        { error: 'Source note not found' },
+        { status: 404 }
+      );
+    }
+
+    if (!targetNote) {
+      return NextResponse.json(
+        { error: 'Target note not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check if connection already exists
+    const existingConnection = await prisma.noteConnection.findFirst({
+      where: {
         canvasId,
-        title: title.trim() || 'Untitled Note',
-        content: content || '',
-        positionX: Number(positionX),
-        positionY: Number(positionY),
-        width: Number(width || 300),
-        height: Number(height || 200),
+        sourceNoteId,
+        targetNoteId,
       },
     });
 
-    return NextResponse.json({ note }, { status: 201 });
+    if (existingConnection) {
+      return NextResponse.json(
+        { error: 'Connection already exists' },
+        { status: 409 }
+      );
+    }
+
+    // Create connection
+    const connection = await prisma.noteConnection.create({
+      data: {
+        canvasId,
+        sourceNoteId,
+        targetNoteId,
+      },
+    });
+
+    return NextResponse.json({ connection }, { status: 201 });
   } catch (error) {
-    console.error('Error creating note:', error);
+    console.error('Error creating connection:', error);
     return NextResponse.json(
-      { error: 'Failed to create note' },
+      { error: 'Failed to create connection' },
       { status: 500 }
     );
   }
 }
 
-// GET /api/canvases/:id/notes - Get all notes in a canvas
+// GET /api/canvases/:id/connections - Get all connections in a canvas
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -107,8 +148,8 @@ export async function GET(
       );
     }
 
-    // Get notes
-    const notes = await prisma.note.findMany({
+    // Get connections
+    const connections = await prisma.noteConnection.findMany({
       where: {
         canvasId,
       },
@@ -117,11 +158,11 @@ export async function GET(
       },
     });
 
-    return NextResponse.json({ notes });
+    return NextResponse.json({ connections });
   } catch (error) {
-    console.error('Error fetching notes:', error);
+    console.error('Error fetching connections:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch notes' },
+      { error: 'Failed to fetch connections' },
       { status: 500 }
     );
   }
