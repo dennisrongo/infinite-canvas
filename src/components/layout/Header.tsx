@@ -177,7 +177,7 @@ export default function Header({
   }, []);
 
   return (
-    <header className="bg-white dark:bg-[#0F172A] border-b border-[#E2E8F0] dark:border-[#475569] px-6 py-4 sticky top-0 z-40">
+    <header className="bg-white dark:bg-[#0F172A] border-b border-[#E2E8F0] dark:border-[#475569] px-6 py-4 sticky top-0 z-40 transition-colors duration-300">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4 flex-1">
           {/* Hamburger menu button - visible on mobile */}

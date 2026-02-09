@@ -36,7 +36,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | string[]>('');
   const [success, setSuccess] = useState('');
 
   const [passwordForm, setPasswordForm] = useState({
@@ -131,8 +131,7 @@ export default function SettingsPage() {
 
       if (!response.ok) {
         // Handle both single error string and array of errors
-        const errorMessage = Array.isArray(data.error) ? data.error.join('. ') : data.error || 'Failed to change password';
-        setError(errorMessage);
+        setError(data.error || 'Failed to change password');
         setSaving(false);
         return;
       }

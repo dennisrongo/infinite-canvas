@@ -30,6 +30,9 @@ const config: Config = {
           noteBorder: "#475569",
         },
       },
+      transitionProperty: {
+        'colors': 'background-color, border-color, color, fill, stroke',
+      },
     },
   },
   plugins: [

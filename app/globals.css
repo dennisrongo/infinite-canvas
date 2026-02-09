@@ -37,10 +37,3 @@ body {
 * {
   box-sizing: border-box;
 }
-
-/* Smooth theme transitions - applied via Tailwind transition utilities */
-.theme-transition {
-  transition-property: background-color, border-color, color, fill, stroke;
-  transition-timing-function: ease-in-out;
-  transition-duration: 300ms;
-}
