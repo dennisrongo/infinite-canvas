@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyPassword, validateEmail, generateToken, setSessionCookie } from '@/lib/auth';
+import { validateCSRFToken } from '@/lib/csrf';
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,6 +10,18 @@ export async function POST(request: NextRequest) {
 
     if (!email || !validateEmail(email)) {
       return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
+    }
+
+    // Validate CSRF token (optional for login - we check if header is present)
+    const csrfToken = request.headers.get('x-csrf-token');
+    if (csrfToken) {
+      const isValidCSRF = await validateCSRFToken(request);
+      if (!isValidCSRF) {
+        return NextResponse.json(
+          { error: 'CSRF validation failed' },
+          { status: 403 }
+        );
+      }
     }
 
     const user = await prisma.user.findUnique({

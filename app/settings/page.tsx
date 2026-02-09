@@ -193,7 +193,15 @@ export default function SettingsPage() {
         {/* Error and Success Messages */}
         {error && (
           <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
-            <p className="text-red-600 dark:text-red-400">{error}</p>
+            {Array.isArray(error) ? (
+              <ul className="text-red-600 dark:text-red-400 list-disc list-inside">
+                {error.map((err, index) => (
+                  <li key={index}>{err}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-red-600 dark:text-red-400">{error}</p>
+            )}
           </div>
         )}
 

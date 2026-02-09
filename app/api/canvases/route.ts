@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { validateCSRFToken } from '@/lib/csrf';
 
 // GET /api/canvases - Get all canvases for the current user
 export async function GET() {
@@ -69,6 +70,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
+      );
+    }
+
+    // Validate CSRF token for state-changing operation
+    const isValidCSRF = await validateCSRFToken(request);
+    if (!isValidCSRF) {
+      return NextResponse.json(
+        { error: 'CSRF validation failed', message: 'Invalid or missing CSRF token' },
+        { status: 403 }
       );
     }
 

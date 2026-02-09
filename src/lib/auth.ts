@@ -2,7 +2,12 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+// JWT_SECRET must be set in environment variables - no fallback for security
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is not set. Please set it in your .env file.');
+}
 
 export interface TokenPayload {
   userId: string;
@@ -49,9 +54,10 @@ export async function setSessionCookie(token: string) {
   cookieStore.set('auth_token', token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: 'strict', // Use 'strict' for better CSRF protection
     maxAge: 60 * 60 * 24 * 7, // 7 days
     path: '/',
+    // priority: 'high', // Ensures cookie is sent with high priority
   });
 }
 
