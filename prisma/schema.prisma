@@ -77,6 +77,8 @@ model Note {
   positionY         Float            @map("position_y")
   width             Float            @default(300)
   height            Float            @default(200)
+  fontFamily        String?          @default("Inter") @map("font_family")
+  fontSize          Int?             @default(14) @map("font_size")
   createdAt         DateTime         @default(now()) @map("created_at")
   updatedAt         DateTime         @updatedAt @map("updated_at")
   images            Image[]

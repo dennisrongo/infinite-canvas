@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ReactFlow,
   Background,
@@ -17,6 +17,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import NoteNode from './NoteNode';
+import NoteEditor from './NoteEditor';
 
 interface Note {
   id: string;
@@ -52,7 +53,7 @@ interface ReactFlowCanvasProps {
   initialConnections?: Connection[];
   initialViewport?: { x: number; y: number; zoom: number };
   onNoteCreate?: (position: { x: number; y: number }) => void;
-  onNoteUpdate?: (noteId: string, position: { x: number; y: number }, size?: { width: number; height: number }) => void;
+  onNoteUpdate?: (noteId: string, position: { x: number; y: number }, size?: { width: number; height: number }, title?: string, content?: string) => void;
   onNoteDelete?: (noteId: string) => void;
   onViewportChange?: (viewport: { x: number; y: number; zoom: number }) => void;
   onNoteRestore?: (note: Note) => void;
@@ -82,6 +83,8 @@ function ReactFlowCanvasInner({
   const lastClickPosition = useRef({ x: 0, y: 0 });
   const [undoStack, setUndoStack] = React.useState<UndoAction[]>([]);
   const [redoStack, setRedoStack] = React.useState<RedoAction[]>([]);
+  const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
 
   // Convert notes from database to React Flow nodes
   const initialNodes: Node[] = initialNotes.map((note) => ({
@@ -192,6 +195,52 @@ function ReactFlowCanvasInner({
     },
     [onNoteUpdate]
   );
+
+  // Handle node double-click to open editor
+  const onNodeDoubleClick = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      event.stopPropagation();
+      // Find the note in initialNotes
+      const note = initialNotes.find(n => n.id === node.id);
+      if (note) {
+        setEditingNote(note);
+        setIsEditorOpen(true);
+      }
+    },
+    [initialNotes]
+  );
+
+  // Handle saving note content from editor
+  const handleNoteContentSave = useCallback(
+    async (noteId: string, title: string, content: string, fontFamily?: string, fontSize?: number) => {
+      if (onNoteUpdate) {
+        // Find the node to get its position
+        const node = nodes.find(n => n.id === noteId);
+        if (node) {
+          await onNoteUpdate(noteId, node.position, undefined, title, content, fontFamily, fontSize);
+
+          // Update local state
+          setNodes(prev => prev.map(n =>
+            n.id === noteId
+              ? { ...n, data: { ...n.data, title, content, fontFamily, fontSize } }
+              : n
+          ));
+
+          // Update the editingNote reference
+          if (editingNote && editingNote.id === noteId) {
+            setEditingNote(prev => prev ? { ...prev, title, content, fontFamily, fontSize } : null);
+          }
+        }
+      }
+    },
+    [onNoteUpdate, nodes, editingNote, setNodes]
+  );
+
+  // Handle closing the editor
+  const handleEditorClose = useCallback(() => {
+    setIsEditorOpen(false);
+    setEditingNote(null);
+  }, []);
 
   // Handle connections - create new connection
   const onConnect = useCallback(
@@ -449,29 +498,40 @@ function ReactFlowCanvasInner({
   );
 
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      onNodesChange={handleNodesChange}
-      onEdgesChange={handleEdgesChange}
-      onConnect={onConnect}
-      onNodeDragStop={onNodeDragStop}
-      onPaneClick={onPaneClick}
-      onMoveEnd={onMoveEnd}
-      nodeTypes={nodeTypes}
-      deleteKeyCode="Delete"
-      className="bg-[#F8FAFC] dark:bg-[#1E293B]"
-    >
-      <Background
-        variant={BackgroundVariant.Dots}
-        gap={16}
-        size={1}
-        color="#CBD5E1"
+    <>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={handleNodesChange}
+        onEdgesChange={handleEdgesChange}
+        onConnect={onConnect}
+        onNodeDragStop={onNodeDragStop}
+        onNodeDoubleClick={onNodeDoubleClick}
+        onPaneClick={onPaneClick}
+        onMoveEnd={onMoveEnd}
+        nodeTypes={nodeTypes}
+        deleteKeyCode="Delete"
+        className="bg-[#F8FAFC] dark:bg-[#1E293B]"
+      >
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={16}
+          size={1}
+          color="#CBD5E1"
+        />
+        <Controls>
+          <ResetZoomControl />
+        </Controls>
+      </ReactFlow>
+
+      {/* Note Editor Modal */}
+      <NoteEditor
+        note={editingNote}
+        isOpen={isEditorOpen}
+        onClose={handleEditorClose}
+        onSave={handleNoteContentSave}
       />
-      <Controls>
-        <ResetZoomControl />
-      </Controls>
-    </ReactFlow>
+    </>
   );
 }
 

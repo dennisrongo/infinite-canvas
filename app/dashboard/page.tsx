@@ -466,9 +466,9 @@ export default function DashboardPage() {
         <div className="flex">
           {/* Sidebar - responsive */}
           <aside
-            className={`fixed lg:static inset-y-0 left-0 z-50 w-80 bg-white dark:bg-[#0F172A] border-r border-[#E2E8F0] dark:border-[#475569] transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
-              sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-            } overflow-y-auto`}
+            className={`fixed lg:static inset-y-0 left-0 z-50 w-80 bg-white dark:bg-[#0F172A] border-r border-[#E2E8F0] dark:border-[#475569] transform transition-transform duration-300 ease-in-out overflow-y-auto ${
+              sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+            }`}
           >
             <div className="p-6 border-b border-[#E2E8F0] dark:border-[#475569]">
               <div className="flex items-center justify-between mb-4">

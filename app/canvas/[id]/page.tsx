@@ -17,6 +17,8 @@ interface Note {
   positionY: number;
   width: number;
   height: number;
+  fontFamily?: string | null;
+  fontSize?: number | null;
 }
 
 interface Connection {
@@ -181,7 +183,7 @@ export default function CanvasPage() {
     }
   }, [canvasId]);
 
-  const handleNoteUpdate = useCallback(async (noteId: string, newPosition: { x: number; y: number }, newSize?: { width: number; height: number }) => {
+  const handleNoteUpdate = useCallback(async (noteId: string, newPosition: { x: number; y: number }, newSize?: { width: number; height: number }, newTitle?: string, newContent?: string, newFontFamily?: string, newFontSize?: number) => {
     try {
       const body: any = {
         positionX: Math.round(newPosition.x),
@@ -191,6 +193,22 @@ export default function CanvasPage() {
       if (newSize) {
         body.width = Math.round(newSize.width);
         body.height = Math.round(newSize.height);
+      }
+
+      if (newTitle !== undefined) {
+        body.title = newTitle;
+      }
+
+      if (newContent !== undefined) {
+        body.content = newContent;
+      }
+
+      if (newFontFamily !== undefined) {
+        body.fontFamily = newFontFamily;
+      }
+
+      if (newFontSize !== undefined) {
+        body.fontSize = newFontSize;
       }
 
       await fetch(`/api/notes/${noteId}`, {
@@ -206,7 +224,11 @@ export default function CanvasPage() {
               ...note,
               positionX: Math.round(newPosition.x),
               positionY: Math.round(newPosition.y),
-              ...(newSize && { width: Math.round(newSize.width), height: Math.round(newSize.height) })
+              ...(newSize && { width: Math.round(newSize.width), height: Math.round(newSize.height) }),
+              ...(newTitle !== undefined && { title: newTitle }),
+              ...(newContent !== undefined && { content: newContent }),
+              ...(newFontFamily !== undefined && { fontFamily: newFontFamily }),
+              ...(newFontSize !== undefined && { fontSize: newFontSize })
             }
           : note
       ));

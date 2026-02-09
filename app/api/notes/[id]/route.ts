@@ -19,7 +19,7 @@ export async function PUT(
 
     const { id: noteId } = await params;
     const body = await request.json();
-    const { title, content, positionX, positionY, width, height } = body;
+    const { title, content, positionX, positionY, width, height, fontFamily, fontSize } = body;
 
     // Verify the note exists and belongs to the user's canvas
     const note = await prisma.note.findFirst({
@@ -66,6 +66,14 @@ export async function PUT(
 
     if (height !== undefined) {
       updateData.height = Number(height);
+    }
+
+    if (fontFamily !== undefined) {
+      updateData.fontFamily = String(fontFamily);
+    }
+
+    if (fontSize !== undefined) {
+      updateData.fontSize = Number(fontSize);
     }
 
     // Update note
