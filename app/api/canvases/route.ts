@@ -14,6 +14,22 @@ export async function GET() {
       );
     }
 
+    // Get user's canvas sort order preference
+    const userSettings = await prisma.userSettings.findUnique({
+      where: { userId: session.userId },
+      select: { canvasSortOrder: true },
+    });
+
+    const sortOrder = userSettings?.canvasSortOrder || 'updated';
+
+    // Determine sort order for canvases
+    let orderBy: { [key: string]: 'asc' | 'desc' } = { updatedAt: 'desc' };
+    if (sortOrder === 'alphabetical') {
+      orderBy = { name: 'asc' };
+    } else if (sortOrder === 'created') {
+      orderBy = { createdAt: 'desc' };
+    }
+
     const canvases = await prisma.canvas.findMany({
       where: {
         userId: session.userId,
@@ -31,12 +47,10 @@ export async function GET() {
           },
         },
       },
-      orderBy: {
-        updatedAt: 'desc',
-      },
+      orderBy,
     });
 
-    return NextResponse.json({ canvases });
+    return NextResponse.json({ canvases, sortOrder });
   } catch (error) {
     console.error('Error fetching canvases:', error);
     return NextResponse.json(

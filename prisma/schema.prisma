@@ -24,12 +24,13 @@ model User {
 }
 
 model UserSettings {
-  id        String   @id @default(uuid())
-  userId    String   @unique @map("user_id")
-  theme     String   @default("light")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String   @id @default(uuid())
+  userId          String   @unique @map("user_id")
+  theme           String   @default("light")
+  canvasSortOrder String   @default("updated") @map("canvas_sort_order") // 'updated' | 'alphabetical' | 'created'
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_settings")
 }

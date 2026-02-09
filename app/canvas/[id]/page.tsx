@@ -1,7 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
+
+const ReactFlowCanvas = dynamic(
+  () => import('../../src/components/canvas/ReactFlowCanvas').then(mod => mod.default),
+  { ssr: false }
+);
 
 interface Note {
   id: string;
@@ -41,6 +47,7 @@ export default function CanvasPage() {
   const [error, setError] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [notes, setNotes] = useState<Note[]>([]);
 
   useEffect(() => {
     // Load expanded folders from localStorage
@@ -78,6 +85,7 @@ export default function CanvasPage() {
       }
       const data = await res.json();
       setCanvas(data.canvas);
+      setNotes(data.canvas.notes || []);
     } catch (err) {
       console.error('Error fetching canvas:', err);
       setError('Failed to load canvas');
@@ -115,6 +123,53 @@ export default function CanvasPage() {
     }
     setExpandedFolders(newExpanded);
   };
+
+  const handleNoteCreate = useCallback(async (position: { x: number; y: number }) => {
+    try {
+      const res = await fetch(`/api/canvases/${canvasId}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Untitled Note',
+          content: '',
+          positionX: Math.round(position.x),
+          positionY: Math.round(position.y),
+          width: 300,
+          height: 200,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        // Add new note to state
+        setNotes(prev => [...prev, data.note]);
+      }
+    } catch (error) {
+      console.error('Error creating note:', error);
+    }
+  }, [canvasId]);
+
+  const handleNoteUpdate = useCallback(async (noteId: string, newPosition: { x: number; y: number }) => {
+    try {
+      await fetch(`/api/notes/${noteId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          positionX: Math.round(newPosition.x),
+          positionY: Math.round(newPosition.y),
+        }),
+      });
+
+      // Update note in state
+      setNotes(prev => prev.map(note =>
+        note.id === noteId
+          ? { ...note, positionX: Math.round(newPosition.x), positionY: Math.round(newPosition.y) }
+          : note
+      ));
+    } catch (error) {
+      console.error('Error updating note position:', error);
+    }
+  }, []);
 
   if (loading) {
     return (
@@ -265,7 +320,7 @@ export default function CanvasPage() {
 
         {/* Canvas Area */}
         <main className="flex-1 relative overflow-hidden bg-[#F8FAFC] dark:bg-[#1E293B]">
-          {canvas.notes.length === 0 ? (
+          {canvas.notes.length === 0 && notes.length === 0 ? (
             <div className="h-full flex items-center justify-center">
               <div className="text-center">
                 <p className="text-[#1E293B] dark:text-[#F1F5F9] text-lg mb-2">
@@ -274,25 +329,15 @@ export default function CanvasPage() {
                 <p className="text-[#64748B] mb-4">
                   Double-click anywhere to create your first note
                 </p>
-                <p className="text-sm text-[#64748B]">
-                  (Canvas functionality coming soon)
-                </p>
               </div>
             </div>
           ) : (
-            <div className="h-full flex items-center justify-center">
-              <div className="text-center">
-                <p className="text-[#1E293B] dark:text-[#F1F5F9] text-lg mb-2">
-                  Canvas: {canvas.name}
-                </p>
-                <p className="text-[#64748B] mb-4">
-                  {canvas.notes.length} note(s)
-                </p>
-                <p className="text-sm text-[#64748B]">
-                  (Full canvas functionality coming soon)
-                </p>
-              </div>
-            </div>
+            <ReactFlowCanvas
+              canvasId={canvasId}
+              initialNotes={notes}
+              onNoteCreate={handleNoteCreate}
+              onNoteUpdate={handleNoteUpdate}
+            />
           )}
         </main>
       </div>

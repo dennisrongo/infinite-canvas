@@ -1,7 +1,7 @@
 // Test script for Features #19, #20, #21 - Folder Management
 // This script tests the folder management API endpoints
 
-const API_BASE = 'http://localhost:3010';
+const API_BASE = 'http://localhost:3000';
 
 // Test credentials
 const TEST_USER = {
