@@ -28,6 +28,12 @@ interface Note {
   height: number;
 }
 
+interface UndoAction {
+  type: 'delete';
+  note: Note;
+  timestamp: number;
+}
+
 interface ReactFlowCanvasProps {
   canvasId: string;
   initialNotes: Note[];
@@ -36,6 +42,7 @@ interface ReactFlowCanvasProps {
   onNoteUpdate?: (noteId: string, position: { x: number; y: number }) => void;
   onNoteDelete?: (noteId: string) => void;
   onViewportChange?: (viewport: { x: number; y: number; zoom: number }) => void;
+  onNoteRestore?: (note: Note) => void;
 }
 
 const nodeTypes = {
@@ -50,10 +57,12 @@ function ReactFlowCanvasInner({
   onNoteUpdate,
   onNoteDelete,
   onViewportChange,
+  onNoteRestore,
 }: ReactFlowCanvasProps) {
   const { screenToFlowPosition, setViewport, getViewport } = useReactFlow();
   const lastClickTime = useRef(0);
   const lastClickPosition = useRef({ x: 0, y: 0 });
+  const [undoStack, setUndoStack] = React.useState<UndoAction[]>([]);
 
   // Convert notes from database to React Flow nodes
   const initialNodes: Node[] = initialNotes.map((note) => ({
@@ -76,16 +85,38 @@ function ReactFlowCanvasInner({
   // Custom onNodesChange handler to detect deletions
   const handleNodesChange = useCallback(
     (changes: any[]) => {
-      onNodesChange(changes);
-
-      // Detect node deletions and call API
+      // Before applying changes, check if any nodes are being deleted and save them to undo stack
       changes.forEach((change) => {
-        if (change.type === 'remove' && change.id && onNoteDelete) {
-          onNoteDelete(change.id);
+        if (change.type === 'remove' && change.id) {
+          // Find the node being deleted
+          const nodeToDelete = nodes.find(n => n.id === change.id);
+          if (nodeToDelete && onNoteDelete) {
+            // Save to undo stack before deleting
+            const note: Note = {
+              id: nodeToDelete.id,
+              title: nodeToDelete.data.title || 'Untitled Note',
+              content: nodeToDelete.data.content || '',
+              positionX: nodeToDelete.position.x,
+              positionY: nodeToDelete.position.y,
+              width: typeof nodeToDelete.style?.width === 'number' ? nodeToDelete.style.width : 300,
+              height: typeof nodeToDelete.style?.height === 'number' ? nodeToDelete.style.height : 200,
+            };
+
+            setUndoStack(prev => [...prev, {
+              type: 'delete',
+              note,
+              timestamp: Date.now(),
+            }]);
+
+            // Call the delete API
+            onNoteDelete(change.id);
+          }
         }
       });
+
+      onNodesChange(changes);
     },
-    [onNodesChange, onNoteDelete]
+    [onNodesChange, onNoteDelete, nodes]
   );
 
   // Handle click on canvas to detect double-click
@@ -166,7 +197,7 @@ function ReactFlowCanvasInner({
 
   // Handle viewport changes (pan and zoom)
   const onMoveEnd = useCallback(
-    (event: React.MouseEvent, viewport: { x: number; y: number; zoom: number }) => {
+    (event: React.MouseEvent | MouseEvent | TouchEvent | null, viewport: { x: number; y: number; zoom: number }) => {
       if (onViewportChange) {
         onViewportChange({
           x: viewport.x,
@@ -177,6 +208,47 @@ function ReactFlowCanvasInner({
     },
     [onViewportChange]
   );
+
+  // Handle keyboard shortcuts for undo
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Check for Ctrl+Z or Cmd+Z
+      if ((event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey) {
+        event.preventDefault();
+        if (undoStack.length > 0) {
+          const lastAction = undoStack[undoStack.length - 1];
+
+          if (lastAction.type === 'delete' && onNoteRestore) {
+            // Restore the deleted note
+            onNoteRestore(lastAction.note);
+
+            // Remove from undo stack
+            setUndoStack(prev => prev.slice(0, -1));
+
+            // Add the note back to the nodes state
+            const restoredNode: Node = {
+              id: lastAction.note.id,
+              type: 'noteNode',
+              position: { x: lastAction.note.positionX, y: lastAction.note.positionY },
+              data: {
+                title: lastAction.note.title,
+                content: lastAction.note.content,
+              },
+              style: {
+                width: lastAction.note.width,
+                height: lastAction.note.height,
+              },
+            };
+
+            setNodes(prev => [...prev, restoredNode]);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undoStack, onNoteRestore, setNodes]);
 
   return (
     <ReactFlow

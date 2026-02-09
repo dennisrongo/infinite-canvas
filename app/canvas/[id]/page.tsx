@@ -212,6 +212,31 @@ export default function CanvasPage() {
     }
   }, []);
 
+  const handleNoteRestore = useCallback(async (note: Note) => {
+    try {
+      const res = await fetch(`/api/canvases/${canvasId}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: note.id, // Use the original ID
+          title: note.title,
+          content: note.content,
+          positionX: note.positionX,
+          positionY: note.positionY,
+          width: note.width,
+          height: note.height,
+        }),
+      });
+
+      if (res.ok) {
+        // Add restored note to state
+        setNotes(prev => [...prev, note]);
+      }
+    } catch (error) {
+      console.error('Error restoring note:', error);
+    }
+  }, [canvasId]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#1E293B] flex items-center justify-center">
@@ -381,6 +406,7 @@ export default function CanvasPage() {
               onNoteUpdate={handleNoteUpdate}
               onNoteDelete={handleNoteDelete}
               onViewportChange={handleViewportChange}
+              onNoteRestore={handleNoteRestore}
             />
           )}
         </main>

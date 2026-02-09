@@ -19,7 +19,7 @@ export async function POST(
 
     const { id: canvasId } = await params;
     const body = await request.json();
-    const { title, content, positionX, positionY, width, height } = body;
+    const { id, title, content, positionX, positionY, width, height } = body;
 
     // Verify the canvas belongs to the user
     const canvas = await prisma.canvas.findFirst({
