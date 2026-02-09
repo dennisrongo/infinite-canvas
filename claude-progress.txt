@@ -276,3 +276,146 @@ Other recommended categories:
 ================================================================================
 END OF SESSION - Feature #149 COMPLETE ✅
 ================================================================================
+
+================================================================================
+SESSION COMPLETE - Features #155, #156, #157 ✅
+================================================================================
+DATE: February 9, 2026
+FEATURES COMPLETED: 3 (Data_Cleanup_and_Cascade)
+
+================================================================================
+FEATURES VERIFIED AND MARKED PASSING
+================================================================================
+
+✅ Feature #155: Canvas deletion cascades to notes
+✅ Feature #156: Folder deletion moves or deletes canvases  
+✅ Feature #157: Note deletion removes connections
+
+================================================================================
+IMPLEMENTATION SUMMARY
+================================================================================
+
+All three features were already implemented via the Prisma schema's 
+onDelete: Cascade configuration. No code changes were required.
+
+Feature #155: Canvas deletion cascades to notes ✅ PASSING
+--------------------------------------------------------
+Test Steps Verified:
+1. Created a canvas with multiple notes ✓
+2. Added connections between notes ✓
+3. Deleted the canvas (with confirmation) ✓
+4. Verified canvas disappears from sidebar ✓
+5. Checked database - Canvas record is deleted ✓
+6. Checked database - all Note records for this canvas are deleted ✓
+7. Verified all NoteConnection records are deleted ✓
+8. Verified no orphaned notes remain ✓
+
+Schema Configuration (prisma/schema.prisma):
+- Note model has `onDelete: Cascade` for canvas relation
+- NoteConnection model has `onDelete: Cascade` for canvas relation
+- Image model has `onDelete: Cascade` for note relation
+
+When a canvas is deleted, all related records cascade:
+1. All notes in the canvas are deleted
+2. All connections in the canvas are deleted  
+3. All images attached to notes are deleted (via Note cascade)
+
+Feature #156: Folder deletion moves or deletes canvases ✅ PASSING
+--------------------------------------------------------
+Test Steps Verified:
+1. Created a folder with canvases inside ✓
+2. Deleted the folder with moveCanvasesToRoot=true ✓
+3. Verified canvases are moved (not deleted) ✓
+4. Verified canvases now appear at root level ✓
+5. Alternatively tested deleting folder and canvases ✓
+6. Verified both folder and canvases are deleted ✓
+
+API Implementation (app/api/folders/[id]/route.ts):
+- DELETE endpoint accepts moveCanvasesToRoot query parameter
+- If folder has canvases and moveCanvasesToRoot=false, returns 409
+- If folder has canvases and moveCanvasesToRoot=true, moves to root
+- Canvases moved to root by setting folderId to null
+
+Frontend Implementation (app/dashboard/page.tsx):
+- Delete confirmation modal shows options
+- "Move canvases to root (recommended)" option
+- "Delete folder and all canvases inside" option
+- Radio buttons for user selection
+
+Feature #157: Note deletion removes connections ✅ PASSING
+--------------------------------------------------------
+Test Steps Verified:
+1. Created three notes: A, B, and C ✓
+2. Created connections: A->B, A->C, B->C ✓
+3. Deleted note B ✓
+4. Verified note B disappears ✓
+5. Verified connections A->B and B->C are removed ✓
+6. Verified connection A->C still exists ✓
+7. Checked database - only Note B and its connections deleted ✓
+
+Schema Configuration (prisma/schema.prisma):
+- NoteConnection model has `onDelete: Cascade` for sourceNote
+- NoteConnection model has `onDelete: Cascade` for targetNote
+
+When a note is deleted:
+1. All connections where it is the source are deleted
+2. All connections where it is the target are deleted
+3. Connections between other notes remain intact
+
+================================================================================
+PROGRESS UPDATE
+================================================================================
+
+Before: 159/188 passing (84.6%)
+After:  162/188 passing (86.2%)
+Change: +3 features (+1.6%)
+
+Data_Cleanup_and_Cascade Category:
+Before: 0/3 passing (0%)
+After:  3/3 passing (100%)
+Change: COMPLETE ✅
+
+Completed Features:
+- #155: Canvas deletion cascades to notes ⭐ NEW
+- #156: Folder deletion moves or deletes canvases ⭐ NEW
+- #157: Note deletion removes connections ⭐ NEW
+
+================================================================================
+SUMMARY
+================================================================================
+
+Session successfully verified all Data_Cleanup_and_Cascade features.
+
+All three features rely on Prisma's cascade delete configuration:
+1. Canvas deletion cascades to notes, connections, and images
+2. Folder deletion can either move canvases to root or delete them
+3. Note deletion cascades to all related connections
+
+The cascade deletes work at the database level via onDelete: Cascade
+in the Prisma schema, ensuring referential integrity even if the
+application code bypasses ORM operations.
+
+Key files:
+- prisma/schema.prisma: Cascade configuration
+- app/api/canvases/[id]/route.ts: Canvas DELETE endpoint
+- app/api/folders/[id]/route.ts: Folder DELETE with moveCanvasesToRoot option
+- app/dashboard/page.tsx: Folder deletion confirmation modal
+
+Progress: 162/188 features passing (86.2%)
+
+================================================================================
+NEXT RECOMMENDED FEATURES
+================================================================================
+
+Remaining Data_Cleanup_and_Cascade features: NONE - CATEGORY COMPLETE ✅
+
+Other recommended categories:
+- Error_Handling (2 features remaining)
+- Note_Content_and_Editing (markdown preview, code blocks, image paste, etc.)
+- Infinite_Canvas_Experience (zoom controls, keyboard shortcuts, etc.)
+- Canvas_and_Project_Management (folder management, canvas organization)
+- Search_and_Discovery (search highlighting, keyboard shortcut, etc.)
+
+================================================================================
+END OF SESSION - Features #155, #156, #157 COMPLETE ✅
+================================================================================
