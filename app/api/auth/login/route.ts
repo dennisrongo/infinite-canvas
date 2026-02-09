@@ -6,9 +6,15 @@ import { checkRateLimit, getIdentifier, rateLimitConfigs } from '@/lib/rate-limi
 
 export async function POST(request: NextRequest) {
   try {
-    // Apply rate limiting
-    const identifier = getIdentifier(request);
-    const rateLimitResult = checkRateLimit(identifier, 'login', rateLimitConfigs.auth);
+    // Apply rate limiting (with fallback if rate limiting module fails)
+    let rateLimitResult = { success: true, limit: 100, remaining: 100, resetTime: Date.now() + 60000 };
+    try {
+      const identifier = getIdentifier(request);
+      rateLimitResult = checkRateLimit(identifier, 'login', rateLimitConfigs.auth);
+    } catch (rateLimitError) {
+      console.error('Rate limiting error:', rateLimitError);
+      // Continue without rate limiting if module fails
+    }
 
     // Helper function to add rate limit headers
     const addRateLimitHeaders = (response: NextResponse, result: typeof rateLimitResult) => {
@@ -48,15 +54,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate CSRF token (optional for login - we check if header is present)
-    const csrfToken = request.headers.get('x-csrf-token');
-    if (csrfToken) {
-      const isValidCSRF = await validateCSRFToken(request);
-      if (!isValidCSRF) {
-        return NextResponse.json(
-          { error: 'CSRF validation failed' },
-          { status: 403 }
-        );
+    try {
+      const csrfToken = request.headers.get('x-csrf-token');
+      if (csrfToken) {
+        const isValidCSRF = await validateCSRFToken(request);
+        if (!isValidCSRF) {
+          return NextResponse.json(
+            { error: 'CSRF validation failed' },
+            { status: 403 }
+          );
+        }
       }
+    } catch (csrfError) {
+      console.error('CSRF validation error:', csrfError);
+      // Continue without CSRF validation if module fails
     }
 
     const user = await prisma.user.findUnique({
