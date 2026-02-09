@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 
 const ReactFlowCanvas = dynamic(
-  () => import('../../src/components/canvas/ReactFlowCanvas').then(mod => mod.default),
+  () => import('@/components/canvas/ReactFlowCanvas').then(mod => mod.default),
   { ssr: false }
 );
 
@@ -48,6 +48,7 @@ export default function CanvasPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [notes, setNotes] = useState<Note[]>([]);
+  const [viewport, setViewport] = useState<{ x: number; y: number; zoom: number } | null>(null);
 
   useEffect(() => {
     // Load expanded folders from localStorage
@@ -86,6 +87,15 @@ export default function CanvasPage() {
       const data = await res.json();
       setCanvas(data.canvas);
       setNotes(data.canvas.notes || []);
+
+      // Load viewport state
+      if (data.canvas.viewportX !== null && data.canvas.viewportY !== null && data.canvas.zoom !== null) {
+        setViewport({
+          x: data.canvas.viewportX,
+          y: data.canvas.viewportY,
+          zoom: data.canvas.zoom,
+        });
+      }
     } catch (err) {
       console.error('Error fetching canvas:', err);
       setError('Failed to load canvas');
@@ -168,6 +178,37 @@ export default function CanvasPage() {
       ));
     } catch (error) {
       console.error('Error updating note position:', error);
+    }
+  }, []);
+
+  const handleViewportChange = useCallback(async (newViewport: { x: number; y: number; zoom: number }) => {
+    try {
+      await fetch(`/api/canvases/${canvasId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          viewportX: newViewport.x,
+          viewportY: newViewport.y,
+          zoom: newViewport.zoom,
+        }),
+      });
+    } catch (error) {
+      console.error('Error saving viewport state:', error);
+    }
+  }, [canvasId]);
+
+  const handleNoteDelete = useCallback(async (noteId: string) => {
+    try {
+      const res = await fetch(`/api/notes/${noteId}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        // Remove note from state
+        setNotes(prev => prev.filter(note => note.id !== noteId));
+      }
+    } catch (error) {
+      console.error('Error deleting note:', error);
     }
   }, []);
 
@@ -335,8 +376,11 @@ export default function CanvasPage() {
             <ReactFlowCanvas
               canvasId={canvasId}
               initialNotes={notes}
+              initialViewport={viewport || undefined}
               onNoteCreate={handleNoteCreate}
               onNoteUpdate={handleNoteUpdate}
+              onNoteDelete={handleNoteDelete}
+              onViewportChange={handleViewportChange}
             />
           )}
         </main>

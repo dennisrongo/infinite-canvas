@@ -31,8 +31,11 @@ interface Note {
 interface ReactFlowCanvasProps {
   canvasId: string;
   initialNotes: Note[];
+  initialViewport?: { x: number; y: number; zoom: number };
   onNoteCreate?: (position: { x: number; y: number }) => void;
   onNoteUpdate?: (noteId: string, position: { x: number; y: number }) => void;
+  onNoteDelete?: (noteId: string) => void;
+  onViewportChange?: (viewport: { x: number; y: number; zoom: number }) => void;
 }
 
 const nodeTypes = {
@@ -42,10 +45,13 @@ const nodeTypes = {
 function ReactFlowCanvasInner({
   canvasId,
   initialNotes,
+  initialViewport,
   onNoteCreate,
   onNoteUpdate,
+  onNoteDelete,
+  onViewportChange,
 }: ReactFlowCanvasProps) {
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, setViewport, getViewport } = useReactFlow();
   const lastClickTime = useRef(0);
   const lastClickPosition = useRef({ x: 0, y: 0 });
 
@@ -66,6 +72,21 @@ function ReactFlowCanvasInner({
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+  // Custom onNodesChange handler to detect deletions
+  const handleNodesChange = useCallback(
+    (changes: any[]) => {
+      onNodesChange(changes);
+
+      // Detect node deletions and call API
+      changes.forEach((change) => {
+        if (change.type === 'remove' && change.id && onNoteDelete) {
+          onNoteDelete(change.id);
+        }
+      });
+    },
+    [onNodesChange, onNoteDelete]
+  );
 
   // Handle click on canvas to detect double-click
   const onPaneClick = useCallback(
@@ -136,17 +157,40 @@ function ReactFlowCanvasInner({
     setNodes(newNodes);
   }, [initialNotes, setNodes]);
 
+  // Restore viewport state when initialViewport changes
+  useEffect(() => {
+    if (initialViewport) {
+      setViewport(initialViewport);
+    }
+  }, [initialViewport, setViewport]);
+
+  // Handle viewport changes (pan and zoom)
+  const onMoveEnd = useCallback(
+    (event: React.MouseEvent, viewport: { x: number; y: number; zoom: number }) => {
+      if (onViewportChange) {
+        onViewportChange({
+          x: viewport.x,
+          y: viewport.y,
+          zoom: viewport.zoom,
+        });
+      }
+    },
+    [onViewportChange]
+  );
+
   return (
     <ReactFlow
       nodes={nodes}
       edges={edges}
-      onNodesChange={onNodesChange}
+      onNodesChange={handleNodesChange}
       onEdgesChange={onEdgesChange}
       onConnect={onConnect}
       onNodeDragStop={onNodeDragStop}
       onPaneClick={onPaneClick}
+      onMoveEnd={onMoveEnd}
       nodeTypes={nodeTypes}
-      fitView
+      fitView={initialViewport ? undefined : true}
+      deleteKeyCode="Delete"
       className="bg-[#F8FAFC] dark:bg-[#1E293B]"
     >
       <Background

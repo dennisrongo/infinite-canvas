@@ -74,7 +74,7 @@ export async function PUT(
 
     const { id: canvasId } = await params;
     const body = await request.json();
-    const { name, folderId } = body;
+    const { name, folderId, viewportX, viewportY, zoom } = body;
 
     // Verify the canvas belongs to the user
     const existingCanvas = await prisma.canvas.findFirst({
@@ -132,6 +132,15 @@ export async function PUT(
     }
     if (folderId !== undefined) {
       updateData.folderId = folderId;
+    }
+    if (viewportX !== undefined) {
+      updateData.viewportX = viewportX;
+    }
+    if (viewportY !== undefined) {
+      updateData.viewportY = viewportY;
+    }
+    if (zoom !== undefined) {
+      updateData.zoom = zoom;
     }
 
     const canvas = await prisma.canvas.update({
