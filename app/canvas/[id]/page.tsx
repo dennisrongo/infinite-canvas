@@ -160,11 +160,18 @@ export default function CanvasPage() {
 
   const handleNoteCreate = useCallback(async (position: { x: number; y: number }) => {
     try {
+      // Generate a unique title for "Untitled Note"
+      const existingUntitledNotes = notes.filter(n => n.title.startsWith('Untitled Note'));
+      let newTitle = 'Untitled Note';
+      if (existingUntitledNotes.length > 0) {
+        newTitle = `Untitled Note ${existingUntitledNotes.length + 1}`;
+      }
+
       const res = await fetch(`/api/canvases/${canvasId}/notes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: 'Untitled Note',
+          title: newTitle,
           content: '',
           positionX: Math.round(position.x),
           positionY: Math.round(position.y),
@@ -177,11 +184,21 @@ export default function CanvasPage() {
         const data = await res.json();
         // Add new note to state
         setNotes(prev => [...prev, data.note]);
+      } else {
+        const errorData = await res.json();
+        if (res.status === 409 && errorData.field === 'title') {
+          // Duplicate title - this shouldn't happen with our unique naming, but handle it
+          console.error('Duplicate title error:', errorData.error);
+          alert(errorData.error || 'Failed to create note: duplicate title');
+        } else {
+          throw new Error(errorData.error || 'Failed to create note');
+        }
       }
     } catch (error) {
       console.error('Error creating note:', error);
+      alert('Failed to create note. Please try again.');
     }
-  }, [canvasId]);
+  }, [canvasId, notes]);
 
   const handleNoteUpdate = useCallback(async (noteId: string, newPosition: { x: number; y: number }, newSize?: { width: number; height: number }, newTitle?: string, newContent?: string, newFontFamily?: string, newFontSize?: number) => {
     try {
@@ -211,11 +228,21 @@ export default function CanvasPage() {
         body.fontSize = newFontSize;
       }
 
-      await fetch(`/api/notes/${noteId}`, {
+      const response = await fetch(`/api/notes/${noteId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (response.status === 409 && errorData.field === 'title') {
+          // Duplicate title error
+          alert(errorData.error || 'A note with this title already exists in this canvas.');
+          return; // Don't update state
+        }
+        throw new Error(errorData.error || 'Failed to update note');
+      }
 
       // Update note in state
       setNotes(prev => prev.map(note =>

@@ -51,6 +51,25 @@ export async function POST(
       );
     }
 
+    // Check for duplicate title within the same canvas
+    const trimmedTitle = title.trim() || 'Untitled Note';
+    const existingNote = await prisma.note.findFirst({
+      where: {
+        canvasId,
+        title: trimmedTitle,
+      },
+    });
+
+    if (existingNote) {
+      return NextResponse.json(
+        {
+          error: 'A note with this title already exists in this canvas. Please use a unique title.',
+          field: 'title'
+        },
+        { status: 409 }
+      );
+    }
+
     // Create note
     const note = await prisma.note.create({
       data: {

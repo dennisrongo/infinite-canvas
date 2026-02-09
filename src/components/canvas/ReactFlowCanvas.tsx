@@ -61,6 +61,7 @@ interface ReactFlowCanvasProps {
   onConnectionCreate?: (sourceNoteId: string, targetNoteId: string) => void;
   onConnectionDelete?: (connectionId: string) => void;
   onNoteDuplicate?: (noteId: string) => void;
+  onNavigateToNote?: (noteTitle: string) => void;
 }
 
 const nodeTypes = {

@@ -26,9 +26,10 @@ interface NoteEditorProps {
   onClose: () => void;
   onSave: (noteId: string, title: string, content: string, fontFamily?: string, fontSize?: number) => void;
   canvasId: string;
+  onNavigateToNote?: (noteTitle: string) => void;
 }
 
-export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId }: NoteEditorProps) {
+export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, onNavigateToNote }: NoteEditorProps) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [fontFamily, setFontFamily] = useState('Inter');
@@ -245,14 +246,18 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId }: 
 
   const handleNoteLinkClick = (noteTitle: string) => {
     // Feature #74: Navigate to the linked note
-    // This will be implemented by opening the linked note in the editor
-    // For now, log the click and show a message
     console.log('Clicked link to note:', noteTitle);
 
-    // Check if we can find the note in the current canvas
-    // If found, open it for editing
-    // If not found, show a message or offer to create it
-    alert(`Link to note: "${noteTitle}"\n\nNavigation will be implemented in Feature #74.`);
+    // Check if the note exists in the current canvas
+    if (linkedNoteTitles.has(noteTitle)) {
+      // Note exists, trigger navigation
+      if (onNavigateToNote) {
+        onNavigateToNote(noteTitle);
+      }
+    } else {
+      // Note doesn't exist, show a message
+      alert(`Note "${noteTitle}" not found in this canvas.\n\nCreate it first, then the link will work.`);
+    }
   };
 
   const handlePaste = async (e: React.ClipboardEvent) => {

@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-// PUT /api/notes/:id - Update note content or position
+// PUT /api/notes/:noteId - Update note content or position
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ noteId: string }> }
 ) {
   try {
     const session = await getSession();
@@ -17,7 +17,7 @@ export async function PUT(
       );
     }
 
-    const { id: noteId } = await params;
+    const { noteId } = await params;
     const body = await request.json();
     const { title, content, positionX, positionY, width, height, fontFamily, fontSize } = body;
 
@@ -45,7 +45,28 @@ export async function PUT(
     const updateData: any = {};
 
     if (title !== undefined) {
-      updateData.title = title.trim() || 'Untitled Note';
+      const trimmedTitle = title.trim() || 'Untitled Note';
+
+      // Check for duplicate title within the same canvas (excluding current note)
+      const existingNote = await prisma.note.findFirst({
+        where: {
+          canvasId: note.canvasId,
+          title: trimmedTitle,
+          id: { not: noteId }, // Exclude current note
+        },
+      });
+
+      if (existingNote) {
+        return NextResponse.json(
+          {
+            error: 'A note with this title already exists in this canvas. Please use a unique title.',
+            field: 'title'
+          },
+          { status: 409 }
+        );
+      }
+
+      updateData.title = trimmedTitle;
     }
 
     if (content !== undefined) {
@@ -92,10 +113,10 @@ export async function PUT(
   }
 }
 
-// DELETE /api/notes/:id - Delete note
+// DELETE /api/notes/:noteId - Delete note
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ noteId: string }> }
 ) {
   try {
     const session = await getSession();
@@ -107,7 +128,7 @@ export async function DELETE(
       );
     }
 
-    const { id: noteId } = await params;
+    const { noteId } = await params;
 
     // Verify the note exists and belongs to the user's canvas
     const note = await prisma.note.findFirst({
