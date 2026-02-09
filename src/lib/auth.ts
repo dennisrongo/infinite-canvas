@@ -55,6 +55,18 @@ export async function setSessionCookie(token: string) {
   });
 }
 
+export function generateResetToken(): string {
+  // Generate a random 32-byte token and convert to hex
+  return Array.from(crypto.getRandomValues(new Uint8Array(32)))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+export function getTokenExpiration(): Date {
+  // Token expires in 1 hour
+  return new Date(Date.now() + 60 * 60 * 1000);
+}
+
 export async function clearSessionCookie() {
   const cookieStore = await cookies();
   cookieStore.delete('auth_token');
