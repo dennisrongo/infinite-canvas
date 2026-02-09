@@ -1,14 +1,17 @@
 'use client';
 
 import React from 'react';
-import { Handle, Position, NodeProps } from '@xyflow/react';
+import { Handle, Position } from '@xyflow/react';
 
-interface NoteNodeData {
-  title: string;
-  content: string;
+interface NoteNodeProps {
+  data: {
+    title: string;
+    content: string;
+  };
+  selected?: boolean;
 }
 
-export default function NoteNode({ data, selected }: NodeProps<NoteNodeData>) {
+export default function NoteNode({ data, selected }: NoteNodeProps) {
   // Get preview of content (first 100 chars)
   const contentPreview = data.content
     ? data.content.length > 100
