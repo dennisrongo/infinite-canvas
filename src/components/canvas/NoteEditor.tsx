@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import RichTextToolbar from './RichTextToolbar';
 
 interface Note {
   id: string;
@@ -10,18 +11,22 @@ interface Note {
   positionY: number;
   width: number;
   height: number;
+  fontFamily?: string | null;
+  fontSize?: number | null;
 }
 
 interface NoteEditorProps {
   note: Note | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (noteId: string, title: string, content: string) => void;
+  onSave: (noteId: string, title: string, content: string, fontFamily?: string, fontSize?: number) => void;
 }
 
 export default function NoteEditor({ note, isOpen, onClose, onSave }: NoteEditorProps) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [fontFamily, setFontFamily] = useState('Inter');
+  const [fontSize, setFontSize] = useState(14);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -30,9 +35,13 @@ export default function NoteEditor({ note, isOpen, onClose, onSave }: NoteEditor
     if (note) {
       setTitle(note.title || '');
       setContent(note.content || '');
+      setFontFamily(note.fontFamily || 'Inter');
+      setFontSize(note.fontSize || 14);
     } else {
       setTitle('');
       setContent('');
+      setFontFamily('Inter');
+      setFontSize(14);
     }
   }, [note]);
 
@@ -40,14 +49,19 @@ export default function NoteEditor({ note, isOpen, onClose, onSave }: NoteEditor
     // Auto-save with debouncing
     if (isOpen && note) {
       const timer = setTimeout(() => {
-        if (title !== note.title || content !== note.content) {
+        if (
+          title !== note.title ||
+          content !== note.content ||
+          fontFamily !== (note.fontFamily || 'Inter') ||
+          fontSize !== (note.fontSize || 14)
+        ) {
           handleSave();
         }
       }, 2000); // 2 second debounce
 
       return () => clearTimeout(timer);
     }
-  }, [title, content, isOpen, note]);
+  }, [title, content, fontFamily, fontSize, isOpen, note]);
 
   const handleSave = async () => {
     if (!note) return;
@@ -56,7 +70,7 @@ export default function NoteEditor({ note, isOpen, onClose, onSave }: NoteEditor
     setSaveStatus('saving');
 
     try {
-      await onSave(note.id, title, content);
+      await onSave(note.id, title, content, fontFamily, fontSize);
       setSaveStatus('saved');
 
       // Reset saved status after 2 seconds
@@ -73,12 +87,85 @@ export default function NoteEditor({ note, isOpen, onClose, onSave }: NoteEditor
 
   const handleClose = () => {
     // Save before closing if there are changes
-    if (note && (title !== note.title || content !== note.content)) {
+    if (
+      note &&
+      (title !== note.title ||
+        content !== note.content ||
+        fontFamily !== (note.fontFamily || 'Inter') ||
+        fontSize !== (note.fontSize || 14))
+    ) {
       handleSave().then(() => {
         setTimeout(() => onClose(), 500);
       });
     } else {
       onClose();
+    }
+  };
+
+  // Text formatting handlers
+  const handleBold = () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = content.substring(start, end);
+
+    if (selectedText) {
+      // Check if already wrapped in **
+      if (selectedText.startsWith('**') && selectedText.endsWith('**')) {
+        // Remove bold
+        const newText = selectedText.slice(2, -2);
+        setContent(content.substring(0, start) + newText + content.substring(end));
+      } else {
+        // Add bold
+        const newText = `**${selectedText}**`;
+        setContent(content.substring(0, start) + newText + content.substring(end));
+      }
+    }
+  };
+
+  const handleItalic = () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = content.substring(start, end);
+
+    if (selectedText) {
+      // Check if already wrapped in *
+      if (selectedText.startsWith('*') && selectedText.endsWith('*')) {
+        // Remove italic
+        const newText = selectedText.slice(1, -1);
+        setContent(content.substring(0, start) + newText + content.substring(end));
+      } else {
+        // Add italic
+        const newText = `*${selectedText}*`;
+        setContent(content.substring(0, start) + newText + content.substring(end));
+      }
+    }
+  };
+
+  const handleUnderline = () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = content.substring(start, end);
+
+    if (selectedText) {
+      // Check if already wrapped in <u>
+      if (selectedText.startsWith('<u>') && selectedText.endsWith('</u>')) {
+        // Remove underline
+        const newText = selectedText.slice(3, -4);
+        setContent(content.substring(0, start) + newText + content.substring(end));
+      } else {
+        // Add underline (HTML tag since markdown doesn't support underline)
+        const newText = `<u>${selectedText}</u>`;
+        setContent(content.substring(0, start) + newText + content.substring(end));
+      }
     }
   };
 
@@ -122,6 +209,17 @@ export default function NoteEditor({ note, isOpen, onClose, onSave }: NoteEditor
           </div>
         </div>
 
+        {/* Rich Text Toolbar */}
+        <RichTextToolbar
+          onBold={handleBold}
+          onItalic={handleItalic}
+          onUnderline={handleUnderline}
+          fontFamily={fontFamily}
+          onFontFamilyChange={setFontFamily}
+          fontSize={fontSize}
+          onFontSizeChange={setFontSize}
+        />
+
         {/* Editor Content */}
         <div className="flex-1 overflow-y-auto p-4">
           {/* Title Field */}
@@ -155,7 +253,11 @@ export default function NoteEditor({ note, isOpen, onClose, onSave }: NoteEditor
               id="note-content"
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              className="w-full px-3 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3B82F6] bg-white dark:bg-[#0F172A] text-[#1E293B] dark:text-[#F1F5F9] min-h-[400px] font-mono text-sm"
+              style={{
+                fontFamily: fontFamily.includes(',') ? fontFamily : `"${fontFamily}", sans-serif`,
+                fontSize: `${fontSize}px`,
+              }}
+              className="w-full px-3 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3B82F6] bg-white dark:bg-[#0F172A] text-[#1E293B] dark:text-[#F1F5F9] min-h-[400px]"
               placeholder="Enter note content... (Markdown supported)"
             />
           </div>
