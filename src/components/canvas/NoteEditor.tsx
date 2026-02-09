@@ -43,6 +43,15 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId }: 
   // Link autocomplete state
   const [showLinkAutocomplete, setShowLinkAutocomplete] = useState(false);
   const [linkSearchQuery, setLinkSearchQuery] = useState('');
+  const [linkedNoteTitles, setLinkedNoteTitles] = useState<Set<string>>(new Set());
+
+  // Extract linked note titles from content
+  useEffect(() => {
+    const linkRegex = /\[\[([^\]]+)\]\]/g;
+    const matches = content.match(linkRegex) || [];
+    const titles = matches.map(match => match.replace(/\[\[|\]\]/g, ''));
+    setLinkedNoteTitles(new Set(titles));
+  }, [content]);
 
   useEffect(() => {
     if (note) {
@@ -232,6 +241,18 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId }: 
 
     setShowLinkAutocomplete(false);
     setLinkSearchQuery('');
+  };
+
+  const handleNoteLinkClick = (noteTitle: string) => {
+    // Feature #74: Navigate to the linked note
+    // This will be implemented by opening the linked note in the editor
+    // For now, log the click and show a message
+    console.log('Clicked link to note:', noteTitle);
+
+    // Check if we can find the note in the current canvas
+    // If found, open it for editing
+    // If not found, show a message or offer to create it
+    alert(`Link to note: "${noteTitle}"\n\nNavigation will be implemented in Feature #74.`);
   };
 
   const handlePaste = async (e: React.ClipboardEvent) => {
@@ -425,6 +446,7 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId }: 
                       setShowLinkAutocomplete(false);
                       setLinkSearchQuery('');
                     }}
+                    searchQuery={linkSearchQuery}
                   />
                 )}
               </div>
@@ -444,6 +466,49 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId }: 
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypeHighlight]}
+                  components={{
+                    // Custom renderer for wiki-style [[links]]
+                    p: ({ children }) => {
+                      // Check if children contain [[link]] syntax
+                      const childStr = String(children);
+                      if (childStr.includes('[[')) {
+                        // Replace [[Note Title]] with a clickable link
+                        const parts = childStr.split(/(\[\[[^\]]+\]\])/g);
+                        return (
+                          <>
+                            {parts.map((part, i) => {
+                              const linkMatch = part.match(/\[\[([^\]]+)\]\]/);
+                              if (linkMatch) {
+                                const noteTitle = linkMatch[1];
+                                const isLinkedNote = linkedNoteTitles.has(noteTitle);
+                                return (
+                                  <a
+                                    key={i}
+                                    href="#"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      // Feature #74: Navigate to linked note
+                                      handleNoteLinkClick(noteTitle);
+                                    }}
+                                    className={`font-medium ${
+                                      isLinkedNote
+                                        ? 'text-[#3B82F6] hover:text-[#2563EB] underline'
+                                        : 'text-[#64748B] dark:text-[#94A3B8] hover:text-[#3B82F6] underline decoration-dashed'
+                                    }`}
+                                    title={isLinkedNote ? `Jump to "${noteTitle}"` : `Note "${noteTitle}" not found in this canvas`}
+                                  >
+                                    {noteTitle}
+                                  </a>
+                                );
+                              }
+                              return part;
+                            })}
+                          </>
+                        );
+                      }
+                      return <>{children}</>;
+                    },
+                  }}
                 >
                   {content || '*Empty note - start typing to add content*'}
                 </ReactMarkdown>

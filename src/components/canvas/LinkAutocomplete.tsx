@@ -12,6 +12,7 @@ interface LinkAutocompleteProps {
   canvasId: string;
   onSelect: (noteTitle: string) => void;
   onClose: () => void;
+  searchQuery: string;
 }
 
 export default function LinkAutocomplete({
@@ -19,11 +20,11 @@ export default function LinkAutocomplete({
   canvasId,
   onSelect,
   onClose,
+  searchQuery: externalSearchQuery,
 }: LinkAutocompleteProps) {
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const [notes, setNotes] = useState<Note[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [searchQuery, setSearchQuery] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -98,12 +99,12 @@ export default function LinkAutocomplete({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [notes, selectedIndex, searchQuery, onSelect, onClose]);
+  }, [notes, selectedIndex, externalSearchQuery, onSelect, onClose]);
 
   const getFilteredNotes = () => {
-    if (!searchQuery) return notes;
+    if (!externalSearchQuery) return notes;
     return notes.filter((note) =>
-      note.title.toLowerCase().includes(searchQuery.toLowerCase())
+      note.title.toLowerCase().includes(externalSearchQuery.toLowerCase())
     );
   };
 
