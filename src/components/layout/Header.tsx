@@ -177,14 +177,14 @@ export default function Header({
   }, []);
 
   return (
-    <header className="bg-white dark:bg-[#0F172A] border-b border-[#E2E8F0] dark:border-[#475569] px-6 py-4 sticky top-0 z-40 transition-colors duration-300">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4 flex-1">
+    <header className="bg-white dark:bg-[#0F172A] border-b border-[#E2E8F0] dark:border-[#475569] px-4 md:px-6 py-4 sticky top-0 z-40 transition-colors duration-300">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0">
           {/* Hamburger menu button - visible on mobile */}
           {showMenuButton && onMenuClick && (
             <button
               onClick={onMenuClick}
-              className="lg:hidden p-2 rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
+              className="lg:hidden p-2 rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition flex-shrink-0"
               aria-label="Toggle menu"
             >
               <svg className="w-6 h-6 text-[#1E293B] dark:text-[#F1F5F9]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -197,28 +197,28 @@ export default function Header({
           {showCollapseButton && onCollapseClick && (
             <button
               onClick={onCollapseClick}
-              className="p-2 text-sm border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
+              className="hidden md:block p-2 text-sm border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition flex-shrink-0"
               aria-label="Toggle sidebar"
             >
               {isCollapsed ? '☰' : '«'}
             </button>
           )}
 
-          {/* Logo or Title */}
+          {/* Logo or Title - truncate on small screens */}
           {title ? (
-            <h1 className="text-2xl font-bold text-[#1E293B] dark:text-[#F1F5F9]">
+            <h1 className="text-lg md:text-2xl font-bold text-[#1E293B] dark:text-[#F1F5F9] truncate">
               {title}
             </h1>
           ) : (
-            <a href="/dashboard" className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-[#1E293B] dark:text-[#F1F5F9]">
+            <a href="/dashboard" className="flex items-center gap-1 md:gap-2 flex-shrink-0">
+              <h1 className="text-lg md:text-2xl font-bold text-[#1E293B] dark:text-[#F1F5F9]">
                 Infinite Canvas
               </h1>
             </a>
           )}
 
           {/* Search Container */}
-          <div className="search-container relative flex-1 max-w-2xl ml-8">
+          <div className="search-container relative flex-1 max-w-2xl ml-2 md:ml-8 min-w-0">
             <div className="relative">
               {/* Search Icon */}
               <svg
@@ -407,35 +407,35 @@ export default function Header({
         </div>
 
         {/* Right Side Actions */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-1 md:gap-4 flex-shrink-0">
           <a
             href="/settings"
-            className="px-4 py-2 text-sm border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition text-[#1E293B] dark:text-[#F1F5F9]"
+            className="hidden md:inline-block px-4 py-2 text-sm border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition text-[#1E293B] dark:text-[#F1F5F9]"
           >
             Settings
           </a>
 
-          {/* Theme Toggle Button */}
+          {/* Theme Toggle Button - icon only on mobile */}
           <button
             onClick={toggleTheme}
-            className="px-4 py-2 text-sm border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition text-[#1E293B] dark:text-[#F1F5F9] flex items-center gap-2"
+            className="px-2 md:px-4 py-2 text-sm border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition text-[#1E293B] dark:text-[#F1F5F9] flex items-center gap-1 md:gap-2"
             aria-label="Toggle theme"
           >
             {theme === 'light' ? (
               <>
                 {/* Moon icon for dark mode */}
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                 </svg>
-                <span>Dark</span>
+                <span className="hidden md:inline">Dark</span>
               </>
             ) : (
               <>
                 {/* Sun icon for light mode */}
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
-                <span>Light</span>
+                <span className="hidden md:inline">Light</span>
               </>
             )}
           </button>
@@ -443,7 +443,7 @@ export default function Header({
           <form action="/api/auth/logout" method="POST">
             <button
               type="submit"
-              className="px-4 py-2 text-sm border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition text-[#1E293B] dark:text-[#F1F5F9]"
+              className="px-2 md:px-4 py-2 text-sm border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition text-[#1E293B] dark:text-[#F1F5F9]"
             >
               Logout
             </button>

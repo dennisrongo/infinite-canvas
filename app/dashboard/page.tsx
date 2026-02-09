@@ -47,6 +47,7 @@ export default function DashboardPage() {
   const [canvasRenameName, setCanvasRenameName] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sortOrder, setSortOrder] = useState<'updated' | 'alphabetical' | 'created'>('updated');
+  const [csrfToken, setCsrfToken] = useState<string | null>(null);
 
   useEffect(() => {
     // Load expanded folders from localStorage
@@ -58,6 +59,11 @@ export default function DashboardPage() {
         console.error('Error loading expanded folders:', e);
       }
     }
+    // Fetch CSRF token for state-changing operations
+    fetch('/api/auth/csrf')
+      .then(res => res.json())
+      .then(data => setCsrfToken(data.csrfToken))
+      .catch(e => console.error('Failed to fetch CSRF token:', e));
     fetchFolders();
   }, []);
 
@@ -227,9 +233,14 @@ export default function DashboardPage() {
       const body: any = { name: canvasName.trim() };
       if (folderId) body.folderId = folderId;
 
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (csrfToken) {
+        headers['x-csrf-token'] = csrfToken;
+      }
+
       const res = await fetch('/api/canvases', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(body),
       });
 

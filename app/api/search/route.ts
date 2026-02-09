@@ -92,19 +92,6 @@ export async function POST(request: NextRequest) {
       note.title.toLowerCase().includes(searchTerms) ||
       note.content.toLowerCase().includes(searchTerms)
     ).slice(0, 50); // Limit to 50 results
-      include: {
-        canvas: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-      orderBy: {
-        [sortField]: sortDirection,
-      },
-      take: 50, // Limit results to prevent overwhelming responses
-    });
 
     // Format results
     const results = notes.map((note) => ({
