@@ -7,6 +7,7 @@ interface NoteNodeProps {
   data: {
     title: string;
     content: string;
+    onDuplicate?: (noteId: string) => void;
   };
   selected?: boolean;
   id: string;
@@ -77,7 +78,7 @@ export default function NoteNode({ data, selected, id }: NoteNodeProps) {
   return (
     <div
       ref={nodeRef}
-      className={`px-4 py-3 bg-white dark:bg-[#1E293B] border-2 rounded-lg shadow-md transition-all relative ${
+      className={`group px-4 py-3 bg-white dark:bg-[#1E293B] border-2 rounded-lg shadow-md transition-all relative ${
         selected
           ? 'border-[#3B82F6] ring-2 ring-[#3B82F6] ring-opacity-50'
           : 'border-[#E2E8F0] dark:border-[#475569] hover:border-[#3B82F6]'
@@ -102,6 +103,42 @@ export default function NoteNode({ data, selected, id }: NoteNodeProps) {
       <div className="mt-2 text-xs text-[#94A3B8] dark:text-[#64748B] italic">
         Double-click to edit
       </div>
+
+      {/* Duplicate button - visible on hover */}
+      {data.onDuplicate && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            data.onDuplicate?.(id);
+          }}
+          className="absolute top-2 right-2 p-1.5 bg-[#3B82F6] hover:bg-[#2563EB] text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+          title="Duplicate note"
+          style={{ opacity: selected ? 1 : 0 }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.opacity = '1';
+          }}
+          onMouseLeave={(e) => {
+            if (!selected) {
+              e.currentTarget.style.opacity = '0';
+            }
+          }}
+        >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-4 w-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+          />
+        </svg>
+        </button>
+      )}
 
       {/* Resize handles - only show when selected */}
       {selected && (

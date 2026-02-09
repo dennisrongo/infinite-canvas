@@ -268,6 +268,22 @@ export default function CanvasPage() {
     }
   }, []);
 
+  const handleNoteDuplicate = useCallback(async (noteId: string) => {
+    try {
+      const res = await fetch(`/api/notes/${noteId}/duplicate`, {
+        method: 'POST',
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        // Add duplicated note to state
+        setNotes(prev => [...prev, data.note]);
+      }
+    } catch (error) {
+      console.error('Error duplicating note:', error);
+    }
+  }, []);
+
   const handleNoteRestore = useCallback(async (note: Note) => {
     try {
       const res = await fetch(`/api/canvases/${canvasId}/notes`, {
@@ -495,6 +511,7 @@ export default function CanvasPage() {
               onNoteCreate={handleNoteCreate}
               onNoteUpdate={handleNoteUpdate}
               onNoteDelete={handleNoteDelete}
+              onNoteDuplicate={handleNoteDuplicate}
               onViewportChange={handleViewportChange}
               onNoteRestore={handleNoteRestore}
               onConnectionCreate={handleConnectionCreate}
