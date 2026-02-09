@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
+// Maximum search query length to prevent performance issues
+const MAX_SEARCH_QUERY_LENGTH = 1000;
+
 export async function POST(request: NextRequest) {
   try {
     // Verify user is authenticated
@@ -17,7 +20,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Query is required' }, { status: 400 });
     }
 
-    const searchTerms = query.trim().toLowerCase();
+    // Handle very long search queries - truncate to max length
+    let searchTerms = query.trim().toLowerCase();
+    let wasTruncated = false;
+
+    if (searchTerms.length > MAX_SEARCH_QUERY_LENGTH) {
+      searchTerms = searchTerms.substring(0, MAX_SEARCH_QUERY_LENGTH);
+      wasTruncated = true;
+    }
+
     if (!searchTerms) {
       return NextResponse.json({ results: [] });
     }
@@ -109,7 +120,12 @@ export async function POST(request: NextRequest) {
       updatedAt: note.updatedAt,
     }));
 
-    return NextResponse.json({ results });
+    return NextResponse.json({
+      results,
+      ...(wasTruncated && {
+        warning: `Search query was truncated to ${MAX_SEARCH_QUERY_LENGTH} characters for performance.`
+      })
+    });
   } catch (error) {
     console.error('Search error:', error);
     return NextResponse.json({ error: 'Search failed' }, { status: 500 });

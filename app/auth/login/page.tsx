@@ -3,6 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+interface ValidationErrors {
+  email?: string;
+  password?: string;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -14,6 +19,8 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [returnUrl, setReturnUrl] = useState('/dashboard');
+  const [fieldErrors, setFieldErrors] = useState<ValidationErrors>({});
+  const [touched, setTouched] = useState<Set<string>>(new Set());
 
   // Get return URL from query params on mount
   useEffect(() => {
@@ -23,9 +30,53 @@ export default function LoginPage() {
     }
   }, [searchParams]);
 
+  const validateField = (name: string, value: string): string | undefined => {
+    if (!value || value.trim() === '') {
+      return `${name.charAt(0).toUpperCase() + name.slice(1)} is required`;
+    }
+    return undefined;
+  };
+
+  const validateForm = (): boolean => {
+    const errors: ValidationErrors = {};
+    let isValid = true;
+
+    // Validate email
+    const emailError = validateField('email', formData.email);
+    if (emailError) {
+      errors.email = emailError;
+      isValid = false;
+    }
+
+    // Validate password
+    const passwordError = validateField('password', formData.password);
+    if (passwordError) {
+      errors.password = passwordError;
+      isValid = false;
+    }
+
+    setFieldErrors(errors);
+    return isValid;
+  };
+
+  const handleFieldBlur = (fieldName: string) => {
+    setTouched(prev => new Set(prev).add(fieldName));
+    const error = validateField(fieldName, formData[fieldName as keyof typeof formData]);
+    setFieldErrors(prev => ({ ...prev, [fieldName]: error }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Mark all fields as touched
+    setTouched(new Set(['email', 'password']));
+
+    // Validate form
+    if (!validateForm()) {
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -76,12 +127,25 @@ export default function LoginPage() {
               <input
                 id="email"
                 type="email"
-                required
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9]"
+                onChange={(e) => {
+                  setFormData({ ...formData, email: e.target.value });
+                  // Clear error when user starts typing
+                  if (fieldErrors.email) {
+                    setFieldErrors(prev => ({ ...prev, email: undefined }));
+                  }
+                }}
+                onBlur={() => handleFieldBlur('email')}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] ${
+                  touched.has('email') && fieldErrors.email
+                    ? 'border-red-500 focus:ring-red-500'
+                    : 'border-[#E2E8F0] dark:border-[#475569] focus:ring-[#3B82F6]'
+                }`}
                 placeholder="you@example.com"
               />
+              {touched.has('email') && fieldErrors.email && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.email}</p>
+              )}
             </div>
 
             <div>
@@ -91,12 +155,25 @@ export default function LoginPage() {
               <input
                 id="password"
                 type="password"
-                required
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9]"
+                onChange={(e) => {
+                  setFormData({ ...formData, password: e.target.value });
+                  // Clear error when user starts typing
+                  if (fieldErrors.password) {
+                    setFieldErrors(prev => ({ ...prev, password: undefined }));
+                  }
+                }}
+                onBlur={() => handleFieldBlur('password')}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] ${
+                  touched.has('password') && fieldErrors.password
+                    ? 'border-red-500 focus:ring-red-500'
+                    : 'border-[#E2E8F0] dark:border-[#475569] focus:ring-[#3B82F6]'
+                }`}
                 placeholder="Enter your password"
               />
+              {touched.has('password') && fieldErrors.password && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.password}</p>
+              )}
               <div className="mt-1 text-right">
                 <a href="/auth/forgot-password" className="text-sm text-[#3B82F6] hover:underline">
                   Forgot password?

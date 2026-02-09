@@ -3,6 +3,11 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+interface ValidationErrors {
+  password?: string;
+  confirmPassword?: string;
+}
+
 function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -14,6 +19,8 @@ function ResetPasswordForm() {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [tokenValid, setTokenValid] = useState(true);
+  const [fieldErrors, setFieldErrors] = useState<ValidationErrors>({});
+  const [touched, setTouched] = useState<Set<string>>(new Set());
 
   const token = searchParams.get('token');
 
@@ -24,12 +31,57 @@ function ResetPasswordForm() {
     }
   }, [token]);
 
+  const validateField = (name: string, value: string): string | undefined => {
+    if (!value || value.trim() === '') {
+      if (name === 'password') return 'Password is required';
+      if (name === 'confirmPassword') return 'Please confirm your password';
+    }
+    if (name === 'confirmPassword' && value !== formData.password) {
+      return 'Passwords do not match';
+    }
+    return undefined;
+  };
+
+  const validateForm = (): boolean => {
+    const errors: ValidationErrors = {};
+    let isValid = true;
+
+    const passwordError = validateField('password', formData.password);
+    if (passwordError) {
+      errors.password = passwordError;
+      isValid = false;
+    }
+
+    const confirmPasswordError = validateField('confirmPassword', formData.confirmPassword);
+    if (confirmPasswordError) {
+      errors.confirmPassword = confirmPasswordError;
+      isValid = false;
+    }
+
+    setFieldErrors(errors);
+    return isValid;
+  };
+
+  const handleFieldBlur = (fieldName: string) => {
+    setTouched(prev => new Set(prev).add(fieldName));
+    const error = validateField(fieldName, formData[fieldName as keyof typeof formData]);
+    setFieldErrors(prev => ({ ...prev, [fieldName]: error }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     if (!token) {
       setError('Invalid reset link. Please request a new password reset.');
+      return;
+    }
+
+    // Mark all fields as touched
+    setTouched(new Set(['password', 'confirmPassword']));
+
+    // Validate form
+    if (!validateForm()) {
       return;
     }
 

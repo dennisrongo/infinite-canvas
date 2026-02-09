@@ -7,12 +7,37 @@ export default function ForgotPasswordPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
+  const [fieldError, setFieldError] = useState('');
+  const [touched, setTouched] = useState(false);
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const validateEmail = (value: string): string | undefined => {
+    if (!value || value.trim() === '') {
+      return 'Email is required';
+    }
+    return undefined;
+  };
+
+  const handleFieldBlur = () => {
+    setTouched(true);
+    const error = validateEmail(email);
+    setFieldError(error || '');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setTouched(true);
+
+    // Validate email
+    const emailValidation = validateEmail(email);
+    if (emailValidation) {
+      setFieldError(emailValidation);
+      return;
+    }
+
+    setFieldError('');
     setLoading(true);
 
     try {
@@ -81,12 +106,25 @@ export default function ForgotPasswordPage() {
                 <input
                   id="email"
                   type="email"
-                  required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9]"
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    // Clear error when user starts typing
+                    if (fieldError) {
+                      setFieldError('');
+                    }
+                  }}
+                  onBlur={handleFieldBlur}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] ${
+                    touched && fieldError
+                      ? 'border-red-500 focus:ring-red-500'
+                      : 'border-[#E2E8F0] dark:border-[#475569] focus:ring-[#3B82F6]'
+                  }`}
                   placeholder="you@example.com"
                 />
+                {touched && fieldError && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldError}</p>
+                )}
               </div>
 
               <button

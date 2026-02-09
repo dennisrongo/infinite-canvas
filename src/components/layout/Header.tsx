@@ -53,6 +53,7 @@ export default function Header({
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month' | 'year'>('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [searchWarning, setSearchWarning] = useState<string | null>(null);
 
   // Debounce search query with 400ms delay
   const debouncedSearchQuery = useDebounce(searchQuery, 400);
@@ -100,6 +101,7 @@ export default function Header({
       if (!debouncedSearchQuery.trim()) {
         setSearchResults([]);
         setShowResults(false);
+        setSearchWarning(null);
         return;
       }
 
@@ -125,10 +127,12 @@ export default function Header({
 
         const data = await res.json();
         setSearchResults(data.results || []);
+        setSearchWarning(data.warning || null);
         setShowResults(true);
       } catch (error) {
         console.error('Search error:', error);
         setSearchResults([]);
+        setSearchWarning(null);
       } finally {
         setSearching(false);
       }
@@ -158,6 +162,7 @@ export default function Header({
     setShowResults(false);
     setSearchQuery('');
     setSearchResults([]);
+    setSearchWarning(null);
 
     // Navigate to the canvas
     router.push(`/canvas/${result.canvasId}`);
@@ -362,6 +367,11 @@ export default function Header({
             {/* Search Results Dropdown */}
             {showResults && searchQuery.trim() && (
               <div className="absolute mt-2 w-full bg-white dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-[#475569] rounded-lg shadow-lg max-h-96 overflow-y-auto z-50">
+                {searchWarning && (
+                  <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-sm">
+                    ⚠️ {searchWarning}
+                  </div>
+                )}
                 {searching ? (
                   <div className="p-4 text-center text-[#64748B] dark:text-[#94A3B8]">
                     Searching...

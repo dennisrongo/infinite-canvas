@@ -7,7 +7,7 @@ import { checkRateLimit, getIdentifier, rateLimitConfigs } from '@/lib/rate-limi
 export async function POST(request: NextRequest) {
   try {
     // Apply rate limiting (with fallback if rate limiting module fails)
-    let rateLimitResult = { success: true, limit: 100, remaining: 100, resetTime: Date.now() + 60000 };
+    let rateLimitResult: { success: boolean; limit: number; remaining: number; resetTime: number; blocked?: boolean } = { success: true, limit: 100, remaining: 100, resetTime: Date.now() + 60000, blocked: false };
     try {
       const identifier = getIdentifier(request);
       rateLimitResult = checkRateLimit(identifier, 'login', rateLimitConfigs.auth);
