@@ -271,6 +271,29 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
     }
   };
 
+  // Handle Tab key for indentation in textarea (accessibility)
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+
+      // Insert 2 spaces for indentation
+      const newText = content.substring(0, start) + '  ' + content.substring(end);
+      setContent(newText);
+
+      // Move cursor after the inserted spaces
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + 2, start + 2);
+      }, 0);
+    }
+  };
+
   const handlePaste = async (e: React.ClipboardEvent) => {
     const items = e.clipboardData?.items;
     if (!items) return;
@@ -441,6 +464,7 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
                   id="note-content"
                   value={content}
                   onChange={handleContentChange}
+                  onKeyDown={handleKeyDown}
                   onPaste={handlePaste}
                   style={{
                     fontFamily: fontFamily.includes(',') ? fontFamily : `"${fontFamily}", sans-serif`,
@@ -448,7 +472,7 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
                     height: viewMode === 'split' ? '400px' : '500px',
                   }}
                   className="w-full px-3 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3B82F6] bg-white dark:bg-[#0F172A] text-[#1E293B] dark:text-[#F1F5F9] min-h-[400px]"
-                  placeholder="Enter note content... (Markdown supported, Ctrl+V to paste images, type [[ for note links)"
+                  placeholder="Enter note content... (Markdown supported, Tab for indent, Ctrl+V to paste images, type [[ for note links)"
                   disabled={pastingImage}
                 />
 

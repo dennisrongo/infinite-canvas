@@ -36,8 +36,13 @@ export default function RootLayout({
       <body>
         <ThemeProvider>
           <ToastProvider>
+            <a href="#main-content" className="skip-link">
+              Skip to main content
+            </a>
             <NetworkStatusBanner />
-            {children}
+            <div id="main-content">
+              {children}
+            </div>
             <ToastContainer />
           </ToastProvider>
         </ThemeProvider>
