@@ -18,6 +18,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import NoteNode from './NoteNode';
 import NoteEditor from './NoteEditor';
+import { useTheme } from '@/contexts/ThemeContext';
 import DeleteConfirmationModal from './DeleteConfirmationModal';
 
 interface Note {
@@ -83,6 +84,7 @@ function ReactFlowCanvasInner({
   onNoteDuplicate,
   onNavigateToNote,
 }: ReactFlowCanvasProps) {
+  const { theme } = useTheme();
   const { screenToFlowPosition, setViewport, getViewport, fitView } = useReactFlow();
   const lastClickTime = useRef(0);
   const lastClickPosition = useRef({ x: 0, y: 0 });
@@ -708,7 +710,7 @@ function ReactFlowCanvasInner({
           variant={BackgroundVariant.Dots}
           gap={16}
           size={1}
-          color="#CBD5E1"
+          color={theme === 'dark' ? '#475569' : '#CBD5E1'}
         />
         <Controls>
           <FitViewControl />
