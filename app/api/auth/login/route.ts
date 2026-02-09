@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyPassword, validateEmail, generateToken, setSessionCookie } from '@/lib/auth';
+import { verifyPassword, validateEmail, generateToken } from '@/lib/auth';
 import { validateCSRFToken } from '@/lib/csrf';
 import { checkRateLimit, getIdentifier, rateLimitConfigs } from '@/lib/rate-limit';
 
@@ -87,11 +87,20 @@ export async function POST(request: NextRequest) {
     });
 
     const token = generateToken({ userId: user.id, email: user.email });
-    await setSessionCookie(token);
 
     const response = NextResponse.json({
       user: { id: user.id, email: user.email, displayName: user.displayName },
     });
+
+    // Set the cookie explicitly on the response
+    response.cookies.set('auth_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/',
+    });
+
     return addRateLimitHeaders(response, rateLimitResult);
   } catch (error) {
     console.error('Login error:', error);

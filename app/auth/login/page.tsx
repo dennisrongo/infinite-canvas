@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -12,6 +13,15 @@ export default function LoginPage() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [returnUrl, setReturnUrl] = useState('/dashboard');
+
+  // Get return URL from query params on mount
+  useEffect(() => {
+    const returnParam = searchParams.get('returnUrl');
+    if (returnParam && returnParam.startsWith('/')) {
+      setReturnUrl(returnParam);
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +43,8 @@ export default function LoginPage() {
         return;
       }
 
-      router.push('/dashboard');
+      // Redirect to the return URL or dashboard
+      router.push(returnUrl);
     } catch (error) {
       setError('Network error. Please try again.');
       setLoading(false);
@@ -109,7 +120,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 bg-[#3B82F6] text-white rounded-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="w-full py-3 px-4 bg-[#3B82F6] text-white rounded-lg hover:bg-opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               {loading ? 'Logging in...' : 'Login'}
             </button>

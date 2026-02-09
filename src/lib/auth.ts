@@ -56,10 +56,10 @@ export async function setSessionCookie(token: string) {
   cookieStore.set('auth_token', token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict', // Use 'strict' for better CSRF protection
+    sameSite: 'lax', // Changed from 'strict' to 'lax' to allow redirects to work
     maxAge: 60 * 60 * 24 * 7, // 7 days
     path: '/',
-    // priority: 'high', // Ensures cookie is sent with high priority
+    priority: 'high', // Ensures cookie is sent with high priority
   });
 }
 
