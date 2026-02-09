@@ -81,6 +81,7 @@ function ReactFlowCanvasInner({
   onConnectionCreate,
   onConnectionDelete,
   onNoteDuplicate,
+  onNavigateToNote,
 }: ReactFlowCanvasProps) {
   const { screenToFlowPosition, setViewport, getViewport, fitView } = useReactFlow();
   const lastClickTime = useRef(0);
@@ -295,6 +296,50 @@ function ReactFlowCanvasInner({
     setIsEditorOpen(false);
     setEditingNote(null);
   }, []);
+
+  // Handle navigating to a linked note (Feature #74)
+  const handleNavigateToNote = useCallback((noteTitle: string) => {
+    // Find the note by title in the current nodes
+    const targetNote = nodes.find(node =>
+      node.data.title === noteTitle || node.data.title?.toLowerCase() === noteTitle.toLowerCase()
+    );
+
+    if (targetNote) {
+      // Found the note - open it for editing
+      const noteData = {
+        id: targetNote.id,
+        title: targetNote.data.title,
+        content: targetNote.data.content,
+        positionX: targetNote.position.x,
+        positionY: targetNote.position.y,
+        width: targetNote.style?.width || 300,
+        height: targetNote.style?.height || 200,
+      };
+
+      setEditingNote(noteData);
+      setIsEditorOpen(true);
+
+      // Optional: Center the view on the target note
+      const viewport = getViewport();
+      setViewport({
+        x: -targetNote.position.x + window.innerWidth / 2 / viewport.zoom - (targetNote.style?.width || 300) / 2,
+        y: -targetNote.position.y + window.innerHeight / 2 / viewport.zoom - (targetNote.style?.height || 200) / 2,
+        zoom: viewport.zoom,
+      });
+
+      // Save viewport change
+      if (onViewportChange) {
+        onViewportChange({
+          x: -targetNote.position.x + window.innerWidth / 2 / viewport.zoom - (targetNote.style?.width || 300) / 2,
+          y: -targetNote.position.y + window.innerHeight / 2 / viewport.zoom - (targetNote.style?.height || 200) / 2,
+          zoom: viewport.zoom,
+        });
+      }
+    } else {
+      // Note not found - could offer to create it
+      console.warn(`Note "${noteTitle}" not found in current canvas`);
+    }
+  }, [nodes, getViewport, setViewport, onViewportChange]);
 
   // Handle connections - create new connection
   const onConnect = useCallback(
@@ -612,6 +657,7 @@ function ReactFlowCanvasInner({
         onClose={handleEditorClose}
         onSave={handleNoteContentSave}
         canvasId={canvasId}
+        onNavigateToNote={handleNavigateToNote}
       />
 
       {/* Delete Confirmation Modal */}
