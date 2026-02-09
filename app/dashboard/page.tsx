@@ -88,15 +88,10 @@ export default function DashboardPage() {
       }));
     } catch (error) {
       console.error('Error fetching data:', error);
-      showMessage('error', 'Failed to load folders and canvases');
+      showToast('Failed to load folders and canvases', 'error');
     } finally {
       setLoading(false);
     }
-  };
-
-  const showMessage = (type: 'success' | 'error', text: string) => {
-    setMessage({ type, text });
-    setTimeout(() => setMessage(null), 3000);
   };
 
   const updateSortOrder = async (newSortOrder: 'updated' | 'alphabetical' | 'created') => {
@@ -116,7 +111,7 @@ export default function DashboardPage() {
       showToast(`Sort order changed to ${newSortOrder}`, 'success');
     } catch (error) {
       console.error('Error updating sort order:', error);
-      showMessage('error', 'Failed to update sort order');
+      showToast('Failed to update sort order', 'error');
     }
   };
 
@@ -140,10 +135,10 @@ export default function DashboardPage() {
       setFolders([...folders, data.folder]);
       setNewFolderName('');
       setShowNewFolderModal(false);
-      showMessage('success', `Folder "${data.folder.name}" created successfully`);
+      showToast(`Folder "${data.folder.name}" created successfully`, 'success');
     } catch (error: any) {
       console.error('Error creating folder:', error);
-      showMessage('error', error.message || 'Failed to create folder');
+      showToast(error.message || 'Failed to create folder', 'error');
     }
   };
 
@@ -173,10 +168,10 @@ export default function DashboardPage() {
 
       setShowDeleteModal(false);
       setFolderToDelete(null);
-      showMessage('success', 'Folder deleted successfully');
+      showToast('Folder deleted successfully', 'success');
     } catch (error: any) {
       console.error('Error deleting folder:', error);
-      showMessage('error', error.message || 'Failed to delete folder');
+      showToast(error.message || 'Failed to delete folder', 'error');
     }
   };
 
@@ -207,10 +202,10 @@ export default function DashboardPage() {
       setShowRenameModal(false);
       setFolderToRename(null);
       setRenameName('');
-      showMessage('success', 'Folder renamed successfully');
+      showToast('Folder renamed successfully', 'success');
     } catch (error: any) {
       console.error('Error renaming folder:', error);
-      showMessage('error', error.message || 'Failed to rename folder');
+      showToast(error.message || 'Failed to rename folder', 'error');
     }
   };
 
@@ -252,10 +247,10 @@ export default function DashboardPage() {
         setRootCanvases([...rootCanvases, data.canvas]);
       }
 
-      showMessage('success', `Canvas "${data.canvas.name}" created successfully`);
+      showToast(`Canvas "${data.canvas.name}" created successfully`, 'success');
     } catch (error) {
       console.error('Error creating canvas:', error);
-      showMessage('error', 'Failed to create canvas');
+      showToast('Failed to create canvas', 'error');
     }
   };
 
@@ -284,10 +279,10 @@ export default function DashboardPage() {
 
       setShowCanvasDeleteModal(false);
       setCanvasToDelete(null);
-      showMessage('success', 'Canvas deleted successfully');
+      showToast('Canvas deleted successfully', 'success');
     } catch (error) {
       console.error('Error deleting canvas:', error);
-      showMessage('error', 'Failed to delete canvas');
+      showToast('Failed to delete canvas', 'error');
     }
   };
 
@@ -334,10 +329,10 @@ export default function DashboardPage() {
       setShowCanvasRenameModal(false);
       setCanvasToRename(null);
       setCanvasRenameName('');
-      showMessage('success', 'Canvas renamed successfully');
+      showToast('Canvas renamed successfully', 'success');
     } catch (error: any) {
       console.error('Error renaming canvas:', error);
-      showMessage('error', error.message || 'Failed to rename canvas');
+      showToast(error.message || 'Failed to rename canvas', 'error');
     }
   };
 
@@ -398,10 +393,10 @@ export default function DashboardPage() {
       const targetName = moveTargetFolderId
         ? folders.find(f => f.id === moveTargetFolderId)?.name || 'folder'
         : 'root';
-      showMessage('success', `Canvas moved to ${targetName}`);
+      showToast(`Canvas moved to ${targetName}`, 'success');
     } catch (error: any) {
       console.error('Error moving canvas:', error);
-      showMessage('error', error.message || 'Failed to move canvas');
+      showToast(error.message || 'Failed to move canvas', 'error');
     }
   };
 
