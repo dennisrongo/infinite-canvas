@@ -624,18 +624,6 @@ export default function DashboardPage() {
 
             {/* Main content area */}
             <div className="flex-1 p-6">
-              {message && (
-                <div
-                  className={`mb-4 p-4 rounded-lg ${
-                    message.type === 'success'
-                      ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-                      : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
-                  }`}
-                >
-                  {message.text}
-                </div>
-              )}
-
               <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow p-6">
                 <h2 className="text-xl font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-4">
                   Welcome to Infinite Canvas

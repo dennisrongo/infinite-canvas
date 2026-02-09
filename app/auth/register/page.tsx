@@ -1,7 +1,34 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+
+// Client-side password validation matching the server-side validation
+function validatePasswordClient(password: string): string[] {
+  const errors: string[] = [];
+
+  if (password.length < 8) {
+    errors.push('Password must be at least 8 characters long');
+  }
+
+  if (!/[A-Z]/.test(password)) {
+    errors.push('Password must contain at least one uppercase letter');
+  }
+
+  if (!/[a-z]/.test(password)) {
+    errors.push('Password must contain at least one lowercase letter');
+  }
+
+  if (!/[0-9]/.test(password)) {
+    errors.push('Password must contain at least one number');
+  }
+
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+    errors.push('Password must contain at least one special character');
+  }
+
+  return errors;
+}
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -12,6 +39,17 @@ export default function RegisterPage() {
   });
   const [errors, setErrors] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Client-side password validation for real-time feedback
+  const passwordErrors = useMemo(() => {
+    if (!formData.password) return [];
+    return validatePasswordClient(formData.password);
+  }, [formData.password]);
+
+  const hasPasswordErrors = passwordErrors.length > 0;
+  const passwordStrength = formData.password ? (
+    passwordErrors.length === 0 ? 'valid' : 'invalid'
+  ) : '';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +66,9 @@ export default function RegisterPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setErrors([data.error || 'Registration failed']);
+        // Handle both single error string and array of errors
+        const errorList = Array.isArray(data.error) ? data.error : [data.error || 'Registration failed'];
+        setErrors(errorList);
         setLoading(false);
         return;
       }
@@ -87,9 +127,27 @@ export default function RegisterPage() {
                 required
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9]"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] ${
+                  passwordStrength === 'valid'
+                    ? 'border-green-500 focus:ring-green-500'
+                    : passwordStrength === 'invalid'
+                    ? 'border-red-500 focus:ring-red-500'
+                    : 'border-[#E2E8F0] dark:border-[#475569] focus:ring-[#3B82F6]'
+                }`}
                 placeholder="Min 8 chars, uppercase, lowercase, number, special"
               />
+              {formData.password && hasPasswordErrors && (
+                <ul className="mt-2 text-sm text-red-600 dark:text-red-400 list-disc list-inside">
+                  {passwordErrors.map((error, index) => (
+                    <li key={index}>{error}</li>
+                  ))}
+                </ul>
+              )}
+              {formData.password && !hasPasswordErrors && (
+                <p className="mt-2 text-sm text-green-600 dark:text-green-400">
+                  ✓ Password meets all requirements
+                </p>
+              )}
             </div>
 
             <div>
@@ -102,9 +160,25 @@ export default function RegisterPage() {
                 required
                 value={formData.confirmPassword}
                 onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9]"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] ${
+                  formData.confirmPassword && formData.password === formData.confirmPassword
+                    ? 'border-green-500 focus:ring-green-500'
+                    : formData.confirmPassword && formData.password !== formData.confirmPassword
+                    ? 'border-red-500 focus:ring-red-500'
+                    : 'border-[#E2E8F0] dark:border-[#475569] focus:ring-[#3B82F6]'
+                }`}
                 placeholder="Repeat your password"
               />
+              {formData.confirmPassword && formData.password === formData.confirmPassword && (
+                <p className="mt-1 text-sm text-green-600 dark:text-green-400">
+                  ✓ Passwords match
+                </p>
+              )}
+              {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                  Passwords do not match
+                </p>
+              )}
             </div>
 
             <button

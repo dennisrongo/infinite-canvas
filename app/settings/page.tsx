@@ -1,7 +1,34 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+
+// Client-side password validation matching the server-side validation
+function validatePasswordClient(password: string): string[] {
+  const errors: string[] = [];
+
+  if (password.length < 8) {
+    errors.push('Password must be at least 8 characters long');
+  }
+
+  if (!/[A-Z]/.test(password)) {
+    errors.push('Password must contain at least one uppercase letter');
+  }
+
+  if (!/[a-z]/.test(password)) {
+    errors.push('Password must contain at least one lowercase letter');
+  }
+
+  if (!/[0-9]/.test(password)) {
+    errors.push('Password must contain at least one number');
+  }
+
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+    errors.push('Password must contain at least one special character');
+  }
+
+  return errors;
+}
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -21,6 +48,17 @@ export default function SettingsPage() {
   const [profileForm, setProfileForm] = useState({
     displayName: '',
   });
+
+  // Client-side password validation for real-time feedback
+  const newPasswordErrors = useMemo(() => {
+    if (!passwordForm.newPassword) return [];
+    return validatePasswordClient(passwordForm.newPassword);
+  }, [passwordForm.newPassword]);
+
+  const hasPasswordErrors = newPasswordErrors.length > 0;
+  const passwordStrength = passwordForm.newPassword ? (
+    newPasswordErrors.length === 0 ? 'valid' : 'invalid'
+  ) : '';
 
   useEffect(() => {
     fetchUser();
@@ -92,7 +130,9 @@ export default function SettingsPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'Failed to change password');
+        // Handle both single error string and array of errors
+        const errorMessage = Array.isArray(data.error) ? data.error.join('. ') : data.error || 'Failed to change password';
+        setError(errorMessage);
         setSaving(false);
         return;
       }
@@ -264,12 +304,32 @@ export default function SettingsPage() {
                 onChange={(e) =>
                   setPasswordForm({ ...passwordForm, newPassword: e.target.value })
                 }
-                className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9]"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] ${
+                  passwordStrength === 'valid'
+                    ? 'border-green-500 focus:ring-green-500'
+                    : passwordStrength === 'invalid'
+                    ? 'border-red-500 focus:ring-red-500'
+                    : 'border-[#E2E8F0] dark:border-[#475569] focus:ring-[#3B82F6]'
+                }`}
                 placeholder="Enter new password"
               />
-              <p className="mt-1 text-xs text-[#1E293B] dark:text-[#F1F5F9]">
-                Must be at least 8 characters with uppercase, lowercase, number, and special character
-              </p>
+              {passwordForm.newPassword && hasPasswordErrors && (
+                <ul className="mt-2 text-sm text-red-600 dark:text-red-400 list-disc list-inside">
+                  {newPasswordErrors.map((error, index) => (
+                    <li key={index}>{error}</li>
+                  ))}
+                </ul>
+              )}
+              {passwordForm.newPassword && !hasPasswordErrors && (
+                <p className="mt-2 text-sm text-green-600 dark:text-green-400">
+                  ✓ Password meets all requirements
+                </p>
+              )}
+              {!passwordForm.newPassword && (
+                <p className="mt-1 text-xs text-[#1E293B] dark:text-[#F1F5F9]">
+                  Must be at least 8 characters with uppercase, lowercase, number, and special character
+                </p>
+              )}
             </div>
 
             <div>
@@ -284,9 +344,25 @@ export default function SettingsPage() {
                 onChange={(e) =>
                   setPasswordForm({ ...passwordForm, confirmNewPassword: e.target.value })
                 }
-                className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9]"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] ${
+                  passwordForm.confirmNewPassword && passwordForm.newPassword === passwordForm.confirmNewPassword
+                    ? 'border-green-500 focus:ring-green-500'
+                    : passwordForm.confirmNewPassword && passwordForm.newPassword !== passwordForm.confirmNewPassword
+                    ? 'border-red-500 focus:ring-red-500'
+                    : 'border-[#E2E8F0] dark:border-[#475569] focus:ring-[#3B82F6]'
+                }`}
                 placeholder="Confirm new password"
               />
+              {passwordForm.confirmNewPassword && passwordForm.newPassword === passwordForm.confirmNewPassword && (
+                <p className="mt-1 text-sm text-green-600 dark:text-green-400">
+                  ✓ Passwords match
+                </p>
+              )}
+              {passwordForm.confirmNewPassword && passwordForm.newPassword !== passwordForm.confirmNewPassword && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                  Passwords do not match
+                </p>
+              )}
             </div>
 
             <button

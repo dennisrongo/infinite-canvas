@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
 
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.valid) {
-      return NextResponse.json({ error: passwordValidation.errors.join('. ') }, { status: 400 });
+      return NextResponse.json({ error: passwordValidation.errors }, { status: 400 });
     }
 
     if (password !== confirmPassword) {

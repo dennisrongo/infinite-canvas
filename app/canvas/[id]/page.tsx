@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Header from '@/components/layout/Header';
+import { useToast } from '@/contexts/ToastContext';
 
 // Dynamically import ReactFlowCanvas with SSR disabled
 const ReactFlowCanvas = dynamic(
@@ -56,6 +57,7 @@ interface CanvasesResponse {
 export default function CanvasPage() {
   const params = useParams();
   const router = useRouter();
+  const { showToast } = useToast();
   const canvasId = params.id as string;
   const [canvas, setCanvas] = useState<Canvas | null>(null);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -193,21 +195,22 @@ export default function CanvasPage() {
         const data = await res.json();
         // Add new note to state
         setNotes(prev => [...prev, data.note]);
+        showToast('Note created successfully', 'success');
       } else {
         const errorData = await res.json();
         if (res.status === 409 && errorData.field === 'title') {
           // Duplicate title - this shouldn't happen with our unique naming, but handle it
           console.error('Duplicate title error:', errorData.error);
-          alert(errorData.error || 'Failed to create note: duplicate title');
+          showToast(errorData.error || 'Failed to create note: duplicate title', 'error');
         } else {
           throw new Error(errorData.error || 'Failed to create note');
         }
       }
     } catch (error) {
       console.error('Error creating note:', error);
-      alert('Failed to create note. Please try again.');
+      showToast('Failed to create note. Please try again.', 'error');
     }
-  }, [canvasId, notes]);
+  }, [canvasId, notes, showToast]);
 
   const handleNoteUpdate = useCallback(async (noteId: string, newPosition: { x: number; y: number }, newSize?: { width: number; height: number }, newTitle?: string, newContent?: string, newFontFamily?: string, newFontSize?: number) => {
     try {

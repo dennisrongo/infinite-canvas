@@ -9,6 +9,7 @@ import 'highlight.js/styles/github-dark.css';
 import RichTextToolbar from './RichTextToolbar';
 import LinkAutocomplete from './LinkAutocomplete';
 import { sanitizeMarkdown } from '@/lib/sanitization';
+import { useToast } from '@/contexts/ToastContext';
 
 interface Note {
   id: string;
@@ -32,6 +33,7 @@ interface NoteEditorProps {
 }
 
 export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, onNavigateToNote }: NoteEditorProps) {
+  const { showToast } = useToast();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [fontFamily, setFontFamily] = useState('Inter');
@@ -98,12 +100,16 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
       await onSave(note.id, title, content, fontFamily, fontSize);
       setSaveStatus('saved');
 
+      // Show toast notification on successful save
+      showToast('Note saved successfully', 'success');
+
       // Reset saved status after 2 seconds
       setTimeout(() => {
         setSaveStatus('idle');
       }, 2000);
     } catch (error) {
       console.error('Error saving note:', error);
+      showToast('Failed to save note', 'error');
       setSaveStatus('idle');
     } finally {
       setSaving(false);
