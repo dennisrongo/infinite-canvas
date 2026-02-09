@@ -15,12 +15,12 @@ async function main() {
   });
 
   // Create new user
-  const hashedPassword = await bcrypt.hash(password, 10);
+  const passwordHash = await bcrypt.hash(password, 10);
   const user = await prisma.user.create({
     data: {
       email,
-      password: hashedPassword,
-      name: 'Test User Features 55-56-57'
+      passwordHash,
+      displayName: 'Test User Features 55-56-57'
     }
   });
 

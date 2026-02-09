@@ -113,7 +113,7 @@ export default function DashboardPage() {
 
       setSortOrder(newSortOrder);
       await fetchFolders(); // Refresh the canvas list with new sort order
-      showMessage('success', `Sort order changed to ${newSortOrder}`);
+      showToast(`Sort order changed to ${newSortOrder}`, 'success');
     } catch (error) {
       console.error('Error updating sort order:', error);
       showMessage('error', 'Failed to update sort order');
