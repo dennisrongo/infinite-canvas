@@ -48,6 +48,14 @@ export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sortOrder, setSortOrder] = useState<'updated' | 'alphabetical' | 'created'>('updated');
   const [csrfToken, setCsrfToken] = useState<string | null>(null);
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const [isDeletingFolder, setIsDeletingFolder] = useState(false);
+  const [isRenamingFolder, setIsRenamingFolder] = useState(false);
+  const [isCreatingCanvas, setIsCreatingCanvas] = useState(false);
+  const [isDeletingCanvas, setIsDeletingCanvas] = useState(false);
+  const [isRenamingCanvas, setIsRenamingCanvas] = useState(false);
+  const [isMovingCanvas, setIsMovingCanvas] = useState(false);
+  const [isUpdatingSortOrder, setIsUpdatingSortOrder] = useState(false);
 
   useEffect(() => {
     // Load expanded folders from localStorage
@@ -101,6 +109,9 @@ export default function DashboardPage() {
   };
 
   const updateSortOrder = async (newSortOrder: 'updated' | 'alphabetical' | 'created') => {
+    if (isUpdatingSortOrder) return; // Prevent double-click
+    setIsUpdatingSortOrder(true);
+
     try {
       const res = await fetch('/api/user/settings', {
         method: 'PUT',
@@ -118,13 +129,16 @@ export default function DashboardPage() {
     } catch (error) {
       console.error('Error updating sort order:', error);
       showToast('Failed to update sort order', 'error');
+    } finally {
+      setIsUpdatingSortOrder(false);
     }
   };
 
   const createFolder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newFolderName.trim()) return;
+    if (!newFolderName.trim() || isCreatingFolder) return; // Prevent double-click
 
+    setIsCreatingFolder(true);
     try {
       const res = await fetch('/api/folders', {
         method: 'POST',
@@ -145,6 +159,8 @@ export default function DashboardPage() {
     } catch (error: any) {
       console.error('Error creating folder:', error);
       showToast(error.message || 'Failed to create folder', 'error');
+    } finally {
+      setIsCreatingFolder(false);
     }
   };
 
@@ -155,8 +171,9 @@ export default function DashboardPage() {
   };
 
   const deleteFolder = async () => {
-    if (!folderToDelete) return;
+    if (!folderToDelete || isDeletingFolder) return; // Prevent double-click
 
+    setIsDeletingFolder(true);
     try {
       const url = `/api/folders/${folderToDelete.id}?moveCanvasesToRoot=${deleteMoveToRoot}`;
       const res = await fetch(url, { method: 'DELETE' });
@@ -178,6 +195,8 @@ export default function DashboardPage() {
     } catch (error: any) {
       console.error('Error deleting folder:', error);
       showToast(error.message || 'Failed to delete folder', 'error');
+    } finally {
+      setIsDeletingFolder(false);
     }
   };
 
@@ -189,8 +208,9 @@ export default function DashboardPage() {
 
   const renameFolder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!folderToRename || !renameName.trim()) return;
+    if (!folderToRename || !renameName.trim() || isRenamingFolder) return; // Prevent double-click
 
+    setIsRenamingFolder(true);
     try {
       const res = await fetch(`/api/folders/${folderToRename.id}`, {
         method: 'PUT',
@@ -212,6 +232,8 @@ export default function DashboardPage() {
     } catch (error: any) {
       console.error('Error renaming folder:', error);
       showToast(error.message || 'Failed to rename folder', 'error');
+    } finally {
+      setIsRenamingFolder(false);
     }
   };
 
@@ -226,9 +248,12 @@ export default function DashboardPage() {
   };
 
   const createCanvas = async (folderId?: string) => {
+    if (isCreatingCanvas) return; // Prevent double-click
+
     const canvasName = prompt(folderId ? 'Enter canvas name:' : 'Enter canvas name for root:');
     if (!canvasName || !canvasName.trim()) return;
 
+    setIsCreatingCanvas(true);
     try {
       const body: any = { name: canvasName.trim() };
       if (folderId) body.folderId = folderId;
@@ -262,6 +287,8 @@ export default function DashboardPage() {
     } catch (error) {
       console.error('Error creating canvas:', error);
       showToast('Failed to create canvas', 'error');
+    } finally {
+      setIsCreatingCanvas(false);
     }
   };
 
@@ -271,8 +298,9 @@ export default function DashboardPage() {
   };
 
   const deleteCanvasConfirmed = async () => {
-    if (!canvasToDelete) return;
+    if (!canvasToDelete || isDeletingCanvas) return; // Prevent double-click
 
+    setIsDeletingCanvas(true);
     try {
       const res = await fetch(`/api/canvases/${canvasToDelete.canvas.id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete canvas');
@@ -294,6 +322,8 @@ export default function DashboardPage() {
     } catch (error) {
       console.error('Error deleting canvas:', error);
       showToast('Failed to delete canvas', 'error');
+    } finally {
+      setIsDeletingCanvas(false);
     }
   };
 
@@ -305,8 +335,9 @@ export default function DashboardPage() {
 
   const renameCanvas = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canvasToRename || !canvasRenameName.trim()) return;
+    if (!canvasToRename || !canvasRenameName.trim() || isRenamingCanvas) return; // Prevent double-click
 
+    setIsRenamingCanvas(true);
     try {
       const res = await fetch(`/api/canvases/${canvasToRename.canvas.id}`, {
         method: 'PUT',
@@ -344,6 +375,8 @@ export default function DashboardPage() {
     } catch (error: any) {
       console.error('Error renaming canvas:', error);
       showToast(error.message || 'Failed to rename canvas', 'error');
+    } finally {
+      setIsRenamingCanvas(false);
     }
   };
 
@@ -355,8 +388,9 @@ export default function DashboardPage() {
 
   const moveCanvas = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canvasToMove) return;
+    if (!canvasToMove || isMovingCanvas) return; // Prevent double-click
 
+    setIsMovingCanvas(true);
     try {
       const body: any = { folderId: moveTargetFolderId };
       const res = await fetch(`/api/canvases/${canvasToMove.id}`, {
@@ -408,6 +442,8 @@ export default function DashboardPage() {
     } catch (error: any) {
       console.error('Error moving canvas:', error);
       showToast(error.message || 'Failed to move canvas', 'error');
+    } finally {
+      setIsMovingCanvas(false);
     }
   };
 
@@ -454,18 +490,36 @@ export default function DashboardPage() {
                       setShowNewFolderModal(true);
                       setSidebarOpen(false);
                     }}
-                    className="px-4 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] transition text-sm"
+                    disabled={isCreatingFolder}
+                    className="px-4 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] transition text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
                   >
-                    + New Folder
+                    {isCreatingFolder ? (
+                      <>
+                        <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        New Folder
+                      </>
+                    ) : '+ New Folder'}
                   </button>
                   <button
                     onClick={() => {
                       createCanvas();
                       setSidebarOpen(false);
                     }}
-                    className="px-4 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] transition text-sm"
+                    disabled={isCreatingCanvas}
+                    className="px-4 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] transition text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
                   >
-                    + New Canvas
+                    {isCreatingCanvas ? (
+                      <>
+                        <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        New Canvas
+                      </>
+                    ) : '+ New Canvas'}
                   </button>
                 </div>
               </div>
@@ -478,7 +532,8 @@ export default function DashboardPage() {
                 <select
                   value={sortOrder}
                   onChange={(e) => updateSortOrder(e.target.value as 'updated' | 'alphabetical' | 'created')}
-                  className="flex-1 px-3 py-2 text-sm border border-[#E2E8F0] dark:border-[#475569] rounded-lg bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                  disabled={isUpdatingSortOrder}
+                  className="flex-1 px-3 py-2 text-sm border border-[#E2E8F0] dark:border-[#475569] rounded-lg bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] focus:outline-none focus:ring-2 focus:ring-[#3B82F6] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <option value="updated">Recently Updated</option>
                   <option value="created">Recently Created</option>
@@ -516,9 +571,10 @@ export default function DashboardPage() {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={(e) => { e.stopPropagation(); createCanvas(folder.id); }}
-                            className="px-3 py-1 text-xs bg-[#3B82F6] text-white rounded hover:bg-[#2563EB] transition"
+                            disabled={isCreatingCanvas}
+                            className="px-3 py-1 text-xs bg-[#3B82F6] text-white rounded hover:bg-[#2563EB] transition disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            + Canvas
+                            {isCreatingCanvas ? '...' : '+ Canvas'}
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); openRenameModal(folder); }}
@@ -673,15 +729,25 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={() => { setShowNewFolderModal(false); setNewFolderName(''); }}
-                  className="px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
+                  disabled={isCreatingFolder}
+                  className="px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] transition"
+                  disabled={isCreatingFolder}
+                  className="px-4 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  Create
+                  {isCreatingFolder ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Creating...
+                    </>
+                  ) : 'Create'}
                 </button>
               </div>
             </form>
@@ -733,15 +799,25 @@ export default function DashboardPage() {
             <div className="flex gap-2 justify-end">
               <button
                 onClick={() => { setShowDeleteModal(false); setFolderToDelete(null); }}
-                className="px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
+                disabled={isDeletingFolder}
+                className="px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 onClick={deleteFolder}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                disabled={isDeletingFolder}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Delete
+                {isDeletingFolder ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Deleting...
+                  </>
+                ) : 'Delete'}
               </button>
             </div>
           </div>
@@ -767,15 +843,25 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={() => { setShowRenameModal(false); setFolderToRename(null); setRenameName(''); }}
-                  className="px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
+                  disabled={isRenamingFolder}
+                  className="px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] transition"
+                  disabled={isRenamingFolder}
+                  className="px-4 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  Save
+                  {isRenamingFolder ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Saving...
+                    </>
+                  ) : 'Save'}
                 </button>
               </div>
             </form>
@@ -823,15 +909,25 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={() => { setShowMoveModal(false); setCanvasToMove(null); setMoveTargetFolderId(null); }}
-                  className="px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
+                  disabled={isMovingCanvas}
+                  className="px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] transition"
+                  disabled={isMovingCanvas}
+                  className="px-4 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  Move
+                  {isMovingCanvas ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Moving...
+                    </>
+                  ) : 'Move'}
                 </button>
               </div>
             </form>
@@ -858,15 +954,25 @@ export default function DashboardPage() {
             <div className="flex gap-2 justify-end">
               <button
                 onClick={() => { setShowCanvasDeleteModal(false); setCanvasToDelete(null); }}
-                className="px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
+                disabled={isDeletingCanvas}
+                className="px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 onClick={deleteCanvasConfirmed}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                disabled={isDeletingCanvas}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Delete Canvas
+                {isDeletingCanvas ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Deleting...
+                  </>
+                ) : 'Delete Canvas'}
               </button>
             </div>
           </div>
@@ -892,15 +998,25 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={() => { setShowCanvasRenameModal(false); setCanvasToRename(null); setCanvasRenameName(''); }}
-                  className="px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
+                  disabled={isRenamingCanvas}
+                  className="px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] transition"
+                  disabled={isRenamingCanvas}
+                  className="px-4 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  Save
+                  {isRenamingCanvas ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Saving...
+                    </>
+                  ) : 'Save'}
                 </button>
               </div>
             </form>
