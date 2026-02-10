@@ -526,10 +526,12 @@ export default function DashboardPage() {
 
               {/* Sort Order Selector */}
               <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-[#64748B] dark:text-[#94A3B8]">
+                <label htmlFor="sortOrder" className="text-sm font-medium text-[#64748B] dark:text-[#94A3B8]">
                   Sort by:
                 </label>
                 <select
+                  id="sortOrder"
+                  name="sortOrder"
                   value={sortOrder}
                   onChange={(e) => updateSortOrder(e.target.value as 'updated' | 'alphabetical' | 'created')}
                   disabled={isUpdatingSortOrder}
@@ -717,14 +719,20 @@ export default function DashboardPage() {
               Create New Folder
             </h3>
             <form onSubmit={createFolder}>
-              <input
-                type="text"
-                value={newFolderName}
-                onChange={(e) => setNewFolderName(e.target.value)}
-                placeholder="Folder name"
-                className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] mb-4 overflow-x-hidden"
-                autoFocus
-              />
+              <div>
+                <label htmlFor="newFolderName" className="block text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9] mb-1">
+                  Folder Name
+                </label>
+                <input
+                  id="newFolderName"
+                  type="text"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  placeholder="Folder name"
+                  className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] mb-4 overflow-x-hidden focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none"
+                  autoFocus
+                />
+              </div>
               <div className="flex gap-2 justify-end">
                 <button
                   type="button"
@@ -839,14 +847,20 @@ export default function DashboardPage() {
               Rename Folder
             </h3>
             <form onSubmit={renameFolder}>
-              <input
-                type="text"
-                value={renameName}
-                onChange={(e) => setRenameName(e.target.value)}
-                placeholder="Folder name"
-                className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] mb-4"
-                autoFocus
-              />
+              <div>
+                <label htmlFor="renameFolderName" className="block text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9] mb-1">
+                  Folder Name
+                </label>
+                <input
+                  id="renameFolderName"
+                  type="text"
+                  value={renameName}
+                  onChange={(e) => setRenameName(e.target.value)}
+                  placeholder="Folder name"
+                  className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] mb-4 focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none"
+                  autoFocus
+                />
+              </div>
               <div className="flex gap-2 justify-end">
                 <button
                   type="button"
@@ -1006,14 +1020,20 @@ export default function DashboardPage() {
               Rename Canvas
             </h3>
             <form onSubmit={renameCanvas}>
-              <input
-                type="text"
-                value={canvasRenameName}
-                onChange={(e) => setCanvasRenameName(e.target.value)}
-                placeholder="Canvas name"
-                className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] mb-4"
-                autoFocus
-              />
+              <div>
+                <label htmlFor="renameCanvasName" className="block text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9] mb-1">
+                  Canvas Name
+                </label>
+                <input
+                  id="renameCanvasName"
+                  type="text"
+                  value={canvasRenameName}
+                  onChange={(e) => setCanvasRenameName(e.target.value)}
+                  placeholder="Canvas name"
+                  className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] mb-4 focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none"
+                  autoFocus
+                />
+              </div>
               <div className="flex gap-2 justify-end">
                 <button
                   type="button"
