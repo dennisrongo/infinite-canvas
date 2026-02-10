@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { isValidUUID } from '@/lib/validation';
 
 export async function PUT(
   request: NextRequest,
@@ -13,6 +14,14 @@ export async function PUT(
     }
 
     const { id } = await params;
+
+    // Security: Validate UUID format to prevent path traversal and injection attacks
+    if (!isValidUUID(id)) {
+      return NextResponse.json(
+        { error: 'Invalid folder ID format' },
+        { status: 400 }
+      );
+    }
     const body = await request.json();
     const { name } = body;
 
@@ -76,6 +85,14 @@ export async function DELETE(
     }
 
     const { id } = await params;
+
+    // Security: Validate UUID format to prevent path traversal and injection attacks
+    if (!isValidUUID(id)) {
+      return NextResponse.json(
+        { error: 'Invalid folder ID format' },
+        { status: 400 }
+      );
+    }
     const { searchParams } = new URL(request.url);
     const moveCanvasesToRoot = searchParams.get('moveCanvasesToRoot') === 'true';
 

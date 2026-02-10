@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { isValidUUID } from '@/lib/validation';
 
 // DELETE /api/connections/:id - Delete a connection
 export async function DELETE(
@@ -18,6 +19,14 @@ export async function DELETE(
     }
 
     const { id } = await params;
+
+    // Security: Validate UUID format to prevent path traversal and injection attacks
+    if (!isValidUUID(id)) {
+      return NextResponse.json(
+        { error: 'Invalid connection ID format' },
+        { status: 400 }
+      );
+    }
 
     // Find the connection and verify it belongs to a canvas owned by the user
     const connection = await prisma.noteConnection.findFirst({

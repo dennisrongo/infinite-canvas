@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Header from '@/components/layout/Header';
 import { useToast } from '@/contexts/ToastContext';
@@ -29,6 +29,8 @@ interface Note {
   height: number;
   fontFamily?: string | null;
   fontSize?: number | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface Connection {
@@ -57,6 +59,7 @@ interface CanvasesResponse {
 export default function CanvasPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { showToast } = useToast();
   const canvasId = params.id as string;
   const [canvas, setCanvas] = useState<Canvas | null>(null);
@@ -69,6 +72,10 @@ export default function CanvasPage() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
   const [viewport, setViewport] = useState<{ x: number; y: number; zoom: number } | null>(null);
+  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
+
+  // Get note ID from URL query parameter for deep linking
+  const noteIdParam = searchParams?.get('note');
 
   useEffect(() => {
     // Load expanded folders from localStorage
@@ -83,6 +90,22 @@ export default function CanvasPage() {
     fetchCanvas();
     fetchFoldersAndCanvases();
   }, [canvasId]);
+
+  // Handle deep linking to specific note
+  useEffect(() => {
+    if (noteIdParam && notes.length > 0) {
+      const targetNote = notes.find(n => n.id === noteIdParam);
+      if (targetNote) {
+        setSelectedNoteId(noteIdParam);
+        showToast(`Opened note: ${targetNote.title}`, 'success');
+      } else {
+        showToast('Note not found', 'error');
+        // Remove the invalid note parameter from URL
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+  }, [noteIdParam, notes, showToast]);
 
   // Save expanded folders to localStorage whenever they change
   useEffect(() => {
@@ -523,6 +546,7 @@ export default function CanvasPage() {
               initialNotes={notes}
               initialConnections={connections}
               initialViewport={viewport || undefined}
+              selectedNoteId={selectedNoteId || undefined}
               onNoteCreate={handleNoteCreate}
               onNoteUpdate={handleNoteUpdate}
               onNoteDelete={handleNoteDelete}

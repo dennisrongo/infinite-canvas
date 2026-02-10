@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/contexts/ThemeContext';
+import { formatDateTime, formatRelativeTime, getUserTimezone } from '@/lib/date';
 
 interface HeaderProps {
   currentCanvasId?: string;
@@ -182,9 +183,9 @@ export default function Header({
   }, []);
 
   return (
-    <header className="bg-white dark:bg-[#0F172A] border-b border-[#E2E8F0] dark:border-[#475569] px-4 md:px-6 py-4 sticky top-0 z-40 transition-colors duration-300">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0">
+    <header className="bg-white dark:bg-[#0F172A] border-b border-[#E2E8F0] dark:border-[#475569] px-4 md:px-6 py-4 sticky top-0 z-40 transition-colors duration-300 overflow-x-hidden">
+      <div className="flex items-center justify-between gap-2 overflow-x-hidden">
+        <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0 overflow-x-hidden">
           {/* Hamburger menu button - visible on mobile */}
           {showMenuButton && onMenuClick && (
             <button
@@ -223,7 +224,7 @@ export default function Header({
           )}
 
           {/* Search Container */}
-          <div className="search-container relative flex-1 max-w-2xl ml-2 md:ml-8 min-w-0">
+          <div className="search-container relative flex-1 max-w-2xl ml-2 md:ml-8 min-w-0 overflow-x-hidden">
             <div className="relative">
               {/* Search Icon */}
               <svg
@@ -401,8 +402,8 @@ export default function Header({
                             <div className="flex items-center gap-2 mt-1 text-xs text-[#94A3B8] dark:text-[#64748B]">
                               <span>in {result.canvasName}</span>
                               <span>•</span>
-                              <span>
-                                {sortBy === 'createdAt' ? 'Created' : 'Updated'}: {new Date(result[sortBy === 'createdAt' ? 'createdAt' : 'updatedAt']).toLocaleDateString()}
+                              <span title={formatDateTime(result[sortBy === 'createdAt' ? 'createdAt' : 'updatedAt'])}>
+                                {sortBy === 'createdAt' ? 'Created' : 'Updated'}: {formatRelativeTime(result[sortBy === 'createdAt' ? 'createdAt' : 'updatedAt'])}
                               </span>
                             </div>
                           </div>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { isValidUUID } from '@/lib/validation';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
@@ -31,6 +32,14 @@ export async function POST(request: NextRequest) {
 
     if (!noteId) {
       return NextResponse.json({ error: 'No note ID provided' }, { status: 400 });
+    }
+
+    // Security: Validate UUID format to prevent path traversal and injection attacks
+    if (!isValidUUID(noteId)) {
+      return NextResponse.json(
+        { error: 'Invalid note ID format' },
+        { status: 400 }
+      );
     }
 
     // Verify note belongs to user

@@ -456,7 +456,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#1E293B]">
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#1E293B] overflow-x-hidden">
       <Header
         showMenuButton={true}
         onMenuClick={() => setSidebarOpen(!sidebarOpen)}
@@ -711,8 +711,8 @@ export default function DashboardPage() {
         </main>
 
       {showNewFolderModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-x-hidden">
+          <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-xl p-6 max-w-md w-full mx-4 overflow-hidden">
             <h3 className="text-lg font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-4">
               Create New Folder
             </h3>
@@ -722,7 +722,7 @@ export default function DashboardPage() {
                 value={newFolderName}
                 onChange={(e) => setNewFolderName(e.target.value)}
                 placeholder="Folder name"
-                className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] mb-4"
+                className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] mb-4 overflow-x-hidden"
                 autoFocus
               />
               <div className="flex gap-2 justify-end">
@@ -764,8 +764,8 @@ export default function DashboardPage() {
       )}
 
       {showDeleteModal && folderToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-x-hidden">
+          <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-xl p-6 max-w-md w-full mx-4 overflow-hidden">
             <h3 className="text-lg font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-4">
               Delete Folder
             </h3>
@@ -833,8 +833,8 @@ export default function DashboardPage() {
       )}
 
       {showRenameModal && folderToRename && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-x-hidden">
+          <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-xl p-6 max-w-md w-full mx-4 overflow-hidden">
             <h3 className="text-lg font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-4">
               Rename Folder
             </h3>
@@ -890,8 +890,8 @@ export default function DashboardPage() {
       )}
 
       {showMoveModal && canvasToMove && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-x-hidden">
+          <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-xl p-6 max-w-md w-full mx-4 overflow-hidden">
             <h3 className="text-lg font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-4">
               Move Canvas
             </h3>
@@ -956,8 +956,8 @@ export default function DashboardPage() {
       )}
 
       {showCanvasDeleteModal && canvasToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-x-hidden">
+          <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-xl p-6 max-w-md w-full mx-4 overflow-hidden">
             <h3 className="text-lg font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-4">
               Delete Canvas
             </h3>
@@ -1000,8 +1000,8 @@ export default function DashboardPage() {
       )}
 
       {showCanvasRenameModal && canvasToRename && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-x-hidden">
+          <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-xl p-6 max-w-md w-full mx-4 overflow-hidden">
             <h3 className="text-lg font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-4">
               Rename Canvas
             </h3>

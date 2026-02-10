@@ -1,6 +1,84 @@
 import { z } from 'zod';
 
 /**
+ * UUID validation regex for standard UUID format (8-4-4-4-12)
+ * Matches: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+ */
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Validate if a string is a valid UUID
+ * @param id - The ID string to validate
+ * @returns true if valid UUID, false otherwise
+ */
+export function isValidUUID(id: string): boolean {
+  return typeof id === 'string' && UUID_REGEX.test(id);
+}
+
+/**
+ * Schema for validating UUID strings
+ */
+export const uuidSchema = z.string().refine(
+  (id) => isValidUUID(id),
+  { message: 'Invalid ID format. Expected a valid UUID.' }
+);
+
+/**
+ * Validate and sanitize URL parameters to prevent path traversal attacks
+ * @param param - The URL parameter to validate
+ * @returns The sanitized parameter or null if invalid
+ */
+export function sanitizeUrlParam(param: string): string | null {
+  if (!param || typeof param !== 'string') {
+    return null;
+  }
+
+  // Check for path traversal attempts
+  if (param.includes('..') || param.includes('\\') || param.includes('/')) {
+    return null;
+  }
+
+  // Check for URL-encoded path traversal
+  if (param.includes('%2e%2e') || param.includes('%2e') || param.includes('%5c')) {
+    return null;
+  }
+
+  return param;
+}
+
+/**
+ * Validate redirect URLs to prevent open redirect attacks
+ * @param redirectUrl - The redirect URL to validate
+ * @returns true if safe, false otherwise
+ */
+export function isSafeRedirectUrl(redirectUrl: string): boolean {
+  if (!redirectUrl || typeof redirectUrl !== 'string') {
+    return false;
+  }
+
+  // Must be a relative URL starting with /
+  if (!redirectUrl.startsWith('/')) {
+    return false;
+  }
+
+  // Prevent protocol-relative URLs (//evil.com)
+  if (redirectUrl.startsWith('//')) {
+    return false;
+  }
+
+  // Prevent javascript: and data: URLs
+  if (redirectUrl.toLowerCase().startsWith('javascript:') ||
+      redirectUrl.toLowerCase().startsWith('data:')) {
+    return false;
+  }
+
+  // Only allow safe characters in path
+  // Allow: alphanumeric, -, _, /, ?, &, =, #
+  const safeUrlRegex = /^\/[a-zA-Z0-9\-_\/?&=#%]*$/;
+  return safeUrlRegex.test(redirectUrl);
+}
+
+/**
  * Schema for validating note content
  * Ensures content is safe and doesn't contain obvious XSS attempts
  */

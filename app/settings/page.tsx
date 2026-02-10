@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { formatDateTime, getUserTimezone } from '@/lib/date';
 
 // Client-side password validation matching the server-side validation
 function validatePasswordClient(password: string): string[] {
@@ -235,8 +236,8 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#1E293B] p-8">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#1E293B] p-4 md:p-8 overflow-x-hidden">
+      <div className="max-w-4xl mx-auto w-full">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -277,7 +278,7 @@ export default function SettingsPage() {
         )}
 
         {/* Profile Information Section */}
-        <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-lg p-6 mb-6">
+        <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-lg p-6 mb-6 overflow-x-hidden w-full">
           <h2 className="text-xl font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-4">
             Profile Information
           </h2>
@@ -321,12 +322,11 @@ export default function SettingsPage() {
                 <label className="block text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9] mb-1">
                   Member Since
                 </label>
-                <p className="text-[#1E293B] dark:text-[#F1F5F9]">
-                  {new Date(user.createdAt).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
+                <p className="text-[#1E293B] dark:text-[#F1F5F9]" title={formatDateTime(user.createdAt)}>
+                  {formatDateTime(user.createdAt)}
+                </p>
+                <p className="mt-1 text-xs text-[#64748B] dark:text-[#94A3B8]">
+                  Your timezone: {getUserTimezone()}
                 </p>
               </div>
             )}
@@ -347,7 +347,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Change Password Section */}
-        <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-lg p-6">
+        <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-lg p-6 overflow-x-hidden w-full">
           <h2 className="text-xl font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-4">
             Change Password
           </h2>

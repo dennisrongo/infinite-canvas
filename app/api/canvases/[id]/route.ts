@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { isValidUUID, sanitizeUrlParam } from '@/lib/validation';
 
 // GET /api/canvases/:id - Get a single canvas with notes and connections
 export async function GET(
@@ -18,6 +19,14 @@ export async function GET(
     }
 
     const { id: canvasId } = await params;
+
+    // Security: Validate UUID format to prevent path traversal and injection attacks
+    if (!isValidUUID(canvasId)) {
+      return NextResponse.json(
+        { error: 'Invalid canvas ID format' },
+        { status: 400 }
+      );
+    }
 
     const canvas = await prisma.canvas.findFirst({
       where: {
@@ -73,8 +82,25 @@ export async function PUT(
     }
 
     const { id: canvasId } = await params;
+
+    // Security: Validate UUID format to prevent path traversal and injection attacks
+    if (!isValidUUID(canvasId)) {
+      return NextResponse.json(
+        { error: 'Invalid canvas ID format' },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
     const { name, folderId, viewportX, viewportY, zoom } = body;
+
+    // Security: Validate folderId UUID if provided
+    if (folderId !== undefined && folderId !== null && !isValidUUID(folderId)) {
+      return NextResponse.json(
+        { error: 'Invalid folder ID format' },
+        { status: 400 }
+      );
+    }
 
     // Verify the canvas belongs to the user
     const existingCanvas = await prisma.canvas.findFirst({
@@ -197,6 +223,14 @@ export async function DELETE(
     }
 
     const { id: canvasId } = await params;
+
+    // Security: Validate UUID format to prevent path traversal and injection attacks
+    if (!isValidUUID(canvasId)) {
+      return NextResponse.json(
+        { error: 'Invalid canvas ID format' },
+        { status: 400 }
+      );
+    }
 
     // Verify the canvas belongs to the user
     const canvas = await prisma.canvas.findFirst({

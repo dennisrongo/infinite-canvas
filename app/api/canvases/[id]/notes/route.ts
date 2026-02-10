@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { noteCreateSchema } from '@/lib/validation';
+import { noteCreateSchema, isValidUUID } from '@/lib/validation';
 import { ZodError } from 'zod';
 
 // POST /api/canvases/:id/notes - Create a new note
@@ -20,6 +20,14 @@ export async function POST(
     }
 
     const { id: canvasId } = await params;
+
+    // Security: Validate UUID format to prevent path traversal and injection attacks
+    if (!isValidUUID(canvasId)) {
+      return NextResponse.json(
+        { error: 'Invalid canvas ID format' },
+        { status: 400 }
+      );
+    }
     const body = await request.json();
     const { id } = body;
 
@@ -110,6 +118,14 @@ export async function GET(
     }
 
     const { id: canvasId } = await params;
+
+    // Security: Validate UUID format to prevent path traversal and injection attacks
+    if (!isValidUUID(canvasId)) {
+      return NextResponse.json(
+        { error: 'Invalid canvas ID format' },
+        { status: 400 }
+      );
+    }
 
     // Verify the canvas belongs to the user
     const canvas = await prisma.canvas.findFirst({

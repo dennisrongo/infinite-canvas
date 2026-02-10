@@ -29,6 +29,8 @@ interface Note {
   positionY: number;
   width: number;
   height: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface NoteConnection {
@@ -54,6 +56,7 @@ interface ReactFlowCanvasProps {
   initialNotes: Note[];
   initialConnections?: NoteConnection[];
   initialViewport?: { x: number; y: number; zoom: number };
+  selectedNoteId?: string; // For deep linking to specific notes
   onNoteCreate?: (position: { x: number; y: number }) => void;
   onNoteUpdate?: (noteId: string, position: { x: number; y: number }, size?: { width: number; height: number }, title?: string, content?: string, fontFamily?: string, fontSize?: number) => void;
   onNoteDelete?: (noteId: string) => void;
@@ -74,6 +77,7 @@ function ReactFlowCanvasInner({
   initialNotes,
   initialConnections,
   initialViewport,
+  selectedNoteId,
   onNoteCreate,
   onNoteUpdate,
   onNoteDelete,
@@ -102,6 +106,26 @@ function ReactFlowCanvasInner({
     noteTitle: '',
   });
 
+  // Handle deep linking - scroll to and select the specified note
+  useEffect(() => {
+    if (selectedNoteId && initialNotes.length > 0) {
+      const targetNote = initialNotes.find(n => n.id === selectedNoteId);
+      if (targetNote) {
+        // Center viewport on the note
+        const noteWidth = targetNote.width || 300;
+        const noteHeight = targetNote.height || 200;
+        setViewport(
+          {
+            x: -targetNote.positionX - noteWidth / 2 + window.innerWidth / 2,
+            y: -targetNote.positionY - noteHeight / 2 + window.innerHeight / 2,
+            zoom: 1,
+          },
+          { duration: 500 }
+        );
+      }
+    }
+  }, [selectedNoteId, initialNotes, setViewport]);
+
   // Handler for duplicating a note
   const handleNoteDuplicate = useCallback((noteId: string) => {
     if (onNoteDuplicate) {
@@ -123,6 +147,8 @@ function ReactFlowCanvasInner({
       width: note.width || 300,
       height: note.height || 200,
     },
+    // Mark the selected note for deep linking
+    selected: selectedNoteId === note.id,
   }));
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);

@@ -11,6 +11,7 @@ import LinkAutocomplete from './LinkAutocomplete';
 import { sanitizeMarkdown } from '@/lib/sanitization';
 import { useToast } from '@/contexts/ToastContext';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { formatDateTime, formatRelativeTime } from '@/lib/date';
 
 // Feature #139: Local storage key for draft backup
 const DRAFT_STORAGE_PREFIX = 'note_draft_';
@@ -25,6 +26,8 @@ interface Note {
   height: number;
   fontFamily?: string | null;
   fontSize?: number | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface NoteEditorProps {
@@ -478,8 +481,8 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
   if (!isOpen || !note) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-[#1E293B] rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col mx-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-x-hidden">
+      <div className="bg-white dark:bg-[#1E293B] rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col mx-4 overflow-hidden">
         {/* Feature #139: Draft restored banner */}
         {showDraftRestoredBanner && (
           <div className="bg-amber-100 dark:bg-amber-900/30 border-b border-amber-300 dark:border-amber-700 px-4 py-2 flex items-center justify-between">
@@ -527,21 +530,11 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
         )}
 
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-[#E2E8F0] dark:border-[#475569]">
-          <h2 className="text-xl font-semibold text-[#1E293B] dark:text-[#F1F5F9]">
-            Edit Note
-          </h2>
-          <div className="flex items-center gap-4">
-            {/* Auto-save status indicator */}
-            {saveStatus === 'saving' && (
-              <span className="text-sm text-[#64748B] dark:text-[#94A3B8]">Saving...</span>
-            )}
-            {saveStatus === 'saved' && (
-              <span className="text-sm text-green-600 dark:text-green-400">Saved ✓</span>
-            )}
-            {hasUnsavedChanges && saveStatus !== 'saving' && saveStatus !== 'saved' && (
-              <span className="text-sm text-amber-600 dark:text-amber-400">Unsaved changes</span>
-            )}
+        <div className="p-4 border-b border-[#E2E8F0] dark:border-[#475569]">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-xl font-semibold text-[#1E293B] dark:text-[#F1F5F9]">
+              Edit Note
+            </h2>
             <button
               onClick={handleClose}
               className="text-[#64748B] hover:text-[#1E293B] dark:hover:text-[#F1F5F9] transition"
@@ -563,6 +556,33 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
               </svg>
             </button>
           </div>
+          {/* Timestamps and Status Row */}
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-3 text-[#94A3B8] dark:text-[#64748B]">
+              {note?.createdAt && (
+                <span title={formatDateTime(note.createdAt)}>
+                  Created: {formatRelativeTime(note.createdAt)}
+                </span>
+              )}
+              {note?.updatedAt && (
+                <span title={formatDateTime(note.updatedAt)}>
+                  • Updated: {formatRelativeTime(note.updatedAt)}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Auto-save status indicator */}
+              {saveStatus === 'saving' && (
+                <span className="text-sm text-[#64748B] dark:text-[#94A3B8]">Saving...</span>
+              )}
+              {saveStatus === 'saved' && (
+                <span className="text-sm text-green-600 dark:text-green-400">Saved ✓</span>
+              )}
+              {hasUnsavedChanges && saveStatus !== 'saving' && saveStatus !== 'saved' && (
+                <span className="text-sm text-amber-600 dark:text-amber-400">Unsaved changes</span>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Rich Text Toolbar */}
@@ -577,7 +597,7 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
         />
 
         {/* Editor Content */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4">
           {/* Title Field */}
           <div className="mb-4">
             <label

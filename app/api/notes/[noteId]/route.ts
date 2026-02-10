@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { noteUpdateSchema } from '@/lib/validation';
+import { noteUpdateSchema, isValidUUID } from '@/lib/validation';
 import { ZodError } from 'zod';
 
 // PUT /api/notes/:noteId - Update note content or position
@@ -20,6 +20,15 @@ export async function PUT(
     }
 
     const { noteId } = await params;
+
+    // Security: Validate UUID format to prevent path traversal and injection attacks
+    if (!isValidUUID(noteId)) {
+      return NextResponse.json(
+        { error: 'Invalid note ID format' },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
 
     // Validate and sanitize input using Zod schema
@@ -144,6 +153,14 @@ export async function DELETE(
     }
 
     const { noteId } = await params;
+
+    // Security: Validate UUID format to prevent path traversal and injection attacks
+    if (!isValidUUID(noteId)) {
+      return NextResponse.json(
+        { error: 'Invalid note ID format' },
+        { status: 400 }
+      );
+    }
 
     // Verify the note exists and belongs to the user's canvas
     const note = await prisma.note.findFirst({

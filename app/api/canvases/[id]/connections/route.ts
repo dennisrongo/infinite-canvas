@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { isValidUUID } from '@/lib/validation';
 
 // POST /api/canvases/:id/connections - Create a new connection between notes
 export async function POST(
@@ -18,8 +19,32 @@ export async function POST(
     }
 
     const { id: canvasId } = await params;
+
+    // Security: Validate UUID format to prevent path traversal and injection attacks
+    if (!isValidUUID(canvasId)) {
+      return NextResponse.json(
+        { error: 'Invalid canvas ID format' },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
     const { sourceNoteId, targetNoteId } = body;
+
+    // Security: Validate note UUID formats
+    if (!isValidUUID(sourceNoteId)) {
+      return NextResponse.json(
+        { error: 'Invalid source note ID format' },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidUUID(targetNoteId)) {
+      return NextResponse.json(
+        { error: 'Invalid target note ID format' },
+        { status: 400 }
+      );
+    }
 
     // Verify the canvas belongs to the user
     const canvas = await prisma.canvas.findFirst({
@@ -132,6 +157,14 @@ export async function GET(
     }
 
     const { id: canvasId } = await params;
+
+    // Security: Validate UUID format to prevent path traversal and injection attacks
+    if (!isValidUUID(canvasId)) {
+      return NextResponse.json(
+        { error: 'Invalid canvas ID format' },
+        { status: 400 }
+      );
+    }
 
     // Verify the canvas belongs to the user
     const canvas = await prisma.canvas.findFirst({

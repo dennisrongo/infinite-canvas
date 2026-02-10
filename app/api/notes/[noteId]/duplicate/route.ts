@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { isValidUUID } from '@/lib/validation';
 
 // POST /api/notes/:noteId/duplicate - Create a copy of a note
 export async function POST(
@@ -18,6 +19,14 @@ export async function POST(
     }
 
     const { noteId } = await params;
+
+    // Security: Validate UUID format to prevent path traversal and injection attacks
+    if (!isValidUUID(noteId)) {
+      return NextResponse.json(
+        { error: 'Invalid note ID format' },
+        { status: 400 }
+      );
+    }
 
     // Verify the note exists and belongs to the user's canvas
     const originalNote = await prisma.note.findFirst({
