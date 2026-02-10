@@ -79,6 +79,7 @@ function CanvasPageContent() {
   const [canvasDeleted, setCanvasDeleted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Feature #175: Hook for cancellable requests to handle late API responses
   const { cancellableFetch, abortRequest, abortAllRequests, isMounted, cleanup } = useCancellableRequest();
@@ -715,7 +716,9 @@ function CanvasPageContent() {
   return (
     <div className="h-screen flex bg-[#F8FAFC] dark:bg-[#1E293B] overflow-hidden">
       {/* Sidebar */}
-      <div className={`${sidebarCollapsed ? 'w-0' : 'w-64'} transition-all duration-300 border-r border-[#E2E8F0] dark:border-[#475569] bg-white dark:bg-[#0F172A] overflow-hidden flex-shrink-0`}>
+      <div className={`${sidebarCollapsed ? 'w-0' : 'w-64'} transition-all duration-300 border-r border-[#E2E8F0] dark:border-[#475569] bg-white dark:bg-[#0F172A] overflow-hidden flex-shrink-0 fixed lg:static inset-y-0 left-0 z-50 transform ${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+      }`}>
         {!sidebarCollapsed && (
           <div className="p-4 h-screen overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
@@ -754,6 +757,7 @@ function CanvasPageContent() {
                         <a
                           key={c.id}
                           href={`/canvas/${c.id}`}
+                          onClick={() => setSidebarOpen(false)}
                           className={`block p-2 rounded text-sm transition ${
                             c.id === canvasId
                               ? 'bg-[#3B82F6] text-white font-medium'
@@ -783,6 +787,7 @@ function CanvasPageContent() {
                       <a
                         key={c.id}
                         href={`/canvas/${c.id}`}
+                        onClick={() => setSidebarOpen(false)}
                         className={`block p-2 rounded text-sm transition ${
                           c.id === canvasId
                             ? 'bg-[#3B82F6] text-white font-medium'
@@ -800,12 +805,23 @@ function CanvasPageContent() {
         )}
       </div>
 
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Header */}
         <Header
           currentCanvasId={canvasId}
           title={canvas?.name || 'Canvas'}
+          showMenuButton={true}
+          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
           showCollapseButton={true}
           onCollapseClick={() => setSidebarCollapsed(!sidebarCollapsed)}
           isCollapsed={sidebarCollapsed}

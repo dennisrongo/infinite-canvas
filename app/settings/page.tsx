@@ -60,6 +60,13 @@ export default function SettingsPage() {
     displayName: '',
   });
 
+  // Account deletion state
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [showSecondConfirmation, setShowSecondConfirmation] = useState(false);
+
   // Client-side password validation for real-time feedback
   const newPasswordErrors = useMemo(() => {
     if (!passwordForm.newPassword) return [];
@@ -224,6 +231,61 @@ export default function SettingsPage() {
       router.push('/auth/login');
     } catch (error) {
       setError('Failed to logout');
+    }
+  };
+
+  const handleInitiateDelete = () => {
+    setShowDeleteConfirmation(true);
+    setError('');
+    setSuccess('');
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteConfirmation(false);
+    setShowSecondConfirmation(false);
+    setDeletePassword('');
+    setDeleteError('');
+  };
+
+  const handleConfirmDelete = async () => {
+    // Validate password is entered
+    if (!deletePassword) {
+      setDeleteError('Please enter your password to confirm deletion');
+      return;
+    }
+
+    // If this is the first confirmation, show the second one
+    if (!showSecondConfirmation) {
+      setShowSecondConfirmation(true);
+      setDeleteError('');
+      return;
+    }
+
+    // This is the second confirmation - proceed with deletion
+    setDeleting(true);
+    setDeleteError('');
+
+    try {
+      const response = await fetch('/api/user/delete-account', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: deletePassword }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setDeleteError(data.error || 'Failed to delete account');
+        setDeleting(false);
+        return;
+      }
+
+      // Account deleted successfully - logout and redirect to login
+      await fetch('/api/auth/logout', { method: 'POST' });
+      router.push('/auth/login?deleted=true');
+    } catch (error) {
+      setDeleteError('Network error. Please try again.');
+      setDeleting(false);
     }
   };
 
@@ -515,6 +577,96 @@ export default function SettingsPage() {
           >
             Logout
           </button>
+        </div>
+
+        {/* Delete Account Section */}
+        <div className="mt-8 bg-white dark:bg-[#0F172A] rounded-lg shadow-lg p-6 overflow-x-hidden w-full border-2 border-red-200 dark:border-red-900">
+          <h2 className="text-xl font-semibold text-red-600 dark:text-red-400 mb-4">
+            Danger Zone
+          </h2>
+          <p className="text-[#1E293B] dark:text-[#F1F5F9] mb-4">
+            Once you delete your account, there is no going back. Please be certain.
+          </p>
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-4 mb-4">
+            <p className="text-sm text-red-600 dark:text-red-400">
+              <strong>Warning:</strong> This will permanently delete your account and all associated data, including:
+            </p>
+            <ul className="text-sm text-red-600 dark:text-red-400 list-disc list-inside mt-2">
+              <li>All your canvases and notes</li>
+              <li>All folders and organizational structure</li>
+              <li>All images and attachments</li>
+              <li>Your profile information</li>
+              <li>All settings and preferences</li>
+            </ul>
+            <p className="text-sm text-red-600 dark:text-red-400 mt-2">
+              <strong>This action cannot be undone.</strong>
+            </p>
+          </div>
+
+          {!showDeleteConfirmation ? (
+            <button
+              onClick={handleInitiateDelete}
+              className="w-full py-3 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium"
+            >
+              Delete My Account
+            </button>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-[#1E293B] dark:text-[#F1F5F9] font-medium">
+                {!showSecondConfirmation
+                  ? 'Are you sure you want to delete your account?'
+                  : 'This is your last chance - are you absolutely certain?'}
+              </p>
+
+              <div>
+                <label htmlFor="deletePassword" className="block text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9] mb-1">
+                  Enter your password to confirm
+                </label>
+                <input
+                  id="deletePassword"
+                  type="password"
+                  value={deletePassword}
+                  onChange={(e) => {
+                    setDeletePassword(e.target.value);
+                    setDeleteError('');
+                  }}
+                  className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9]"
+                  placeholder="Enter your password"
+                  disabled={deleting}
+                />
+              </div>
+
+              {deleteError && (
+                <p role="alert" className="text-sm text-red-600 dark:text-red-400">{deleteError}</p>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handleCancelDelete}
+                  disabled={deleting}
+                  className="flex-1 py-3 px-4 border border-[#E2E8F0] dark:border-[#475569] text-[#1E293B] dark:text-[#F1F5F9] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  disabled={deleting || !deletePassword}
+                  className="flex-1 py-3 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
+                >
+                  {deleting ? (
+                    <>
+                      <LoadingSpinner size="sm" />
+                      Deleting...
+                    </>
+                  ) : showSecondConfirmation ? (
+                    'Yes, Permanently Delete My Account'
+                  ) : (
+                    'Confirm Deletion'
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
