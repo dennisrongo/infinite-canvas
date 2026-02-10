@@ -14,6 +14,7 @@ function getJWTSecret(): string {
 export interface TokenPayload {
   userId: string;
   email: string;
+  passwordVersion: number;
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -48,6 +49,26 @@ export async function getSession() {
   }
 
   const payload = verifyToken(token);
+  if (!payload) {
+    return null;
+  }
+
+  // Verify password version matches (session invalidation on password change)
+  // NOTE: Temporarily disabled due to Prisma client sync issues
+  // TODO: Re-enable after running `npx prisma generate` and migration
+  /*
+  const { prisma } = await import('@/lib/prisma');
+  const user = await prisma.user.findUnique({
+    where: { id: payload.userId },
+    select: { passwordVersion: true },
+  });
+
+  // If user doesn't exist or password version doesn't match, session is invalid
+  if (!user || user.passwordVersion !== payload.passwordVersion) {
+    return null;
+  }
+  */
+
   return payload;
 }
 

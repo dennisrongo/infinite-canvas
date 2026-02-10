@@ -13,6 +13,8 @@ interface HeaderProps {
   showCollapseButton?: boolean;
   onCollapseClick?: () => void;
   isCollapsed?: boolean;
+  onExportClick?: () => void;
+  onImportClick?: () => void;
 }
 
 // Custom hook for debouncing values
@@ -41,7 +43,9 @@ export default function Header({
   title,
   showCollapseButton,
   onCollapseClick,
-  isCollapsed
+  isCollapsed,
+  onExportClick,
+  onImportClick,
 }: HeaderProps) {
   const router = useRouter();
   const { theme, toggleTheme } = useTheme();
@@ -419,6 +423,32 @@ export default function Header({
 
         {/* Right Side Actions */}
         <div className="flex items-center gap-1 md:gap-4 flex-shrink-0">
+          {/* Export/Import buttons - only show on canvas page */}
+          {currentCanvasId && (
+            <>
+              <button
+                onClick={onExportClick}
+                className="px-2 md:px-4 py-2 text-sm border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition text-[#1E293B] dark:text-[#F1F5F9] flex items-center gap-1"
+                title="Export canvas"
+              >
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                <span className="hidden md:inline">Export</span>
+              </button>
+              <button
+                onClick={onImportClick}
+                className="px-2 md:px-4 py-2 text-sm border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition text-[#1E293B] dark:text-[#F1F5F9] flex items-center gap-1"
+                title="Import canvas"
+              >
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                <span className="hidden md:inline">Import</span>
+              </button>
+            </>
+          )}
+
           <a
             href="/settings"
             className="hidden md:inline-block px-4 py-2 text-sm border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition text-[#1E293B] dark:text-[#F1F5F9]"

@@ -82,6 +82,7 @@ export async function POST(request: NextRequest) {
         email: email.toLowerCase(),
         passwordHash,
         displayName: email.split('@')[0],
+        passwordVersion: 0, // Initialize password version
       },
     });
 
@@ -89,7 +90,11 @@ export async function POST(request: NextRequest) {
       data: { userId: user.id, theme: 'light' },
     });
 
-    const token = generateToken({ userId: user.id, email: user.email });
+    const token = generateToken({
+      userId: user.id,
+      email: user.email,
+      passwordVersion: 0
+    });
 
     const response = NextResponse.json(
       {

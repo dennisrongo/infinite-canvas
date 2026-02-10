@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
+import ImportModal from '@/components/canvas/ImportModal';
 import { useToast } from '@/contexts/ToastContext';
 
 interface Canvas {

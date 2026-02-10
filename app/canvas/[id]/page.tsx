@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, Suspense, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Header from '@/components/layout/Header';
+import ImportModal from '@/components/canvas/ImportModal';
 import { useToast } from '@/contexts/ToastContext';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useCancellableRequest } from '@/hooks/useCancellableRequest';
@@ -77,6 +78,7 @@ function CanvasPageContent() {
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [canvasDeleted, setCanvasDeleted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   // Feature #175: Hook for cancellable requests to handle late API responses
   const { cancellableFetch, abortRequest, abortAllRequests, cleanup } = useCancellableRequest();
@@ -590,6 +592,57 @@ function CanvasPageContent() {
     }
   }, [cancellableFetch, cleanup]);
 
+  // Export canvas handler
+  const handleExport = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/canvases/${canvasId}/export`);
+      if (res.ok) {
+        // Download the file
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${canvas?.name.replace(/[^a-z0-9]/gi, '_')}_export.json`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        showToast('Canvas exported successfully', 'success');
+      } else {
+        showToast('Failed to export canvas', 'error');
+      }
+    } catch (error) {
+      console.error('Error exporting canvas:', error);
+      showToast('Failed to export canvas', 'error');
+    }
+  }, [canvasId, canvas?.name, showToast]);
+
+  // Import canvas handler
+  const handleImport = useCallback(async (importData: any, folderId?: string) => {
+    try {
+      const res = await fetch('/api/canvases/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ importData, folderId }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        showToast('Canvas imported successfully', 'success');
+        // Refresh the folders and canvases list
+        fetchFoldersAndCanvases();
+        // Navigate to the imported canvas
+        router.push(`/canvas/${data.canvas.id}`);
+      } else {
+        const errorData = await res.json();
+        showToast(errorData.error || 'Failed to import canvas', 'error');
+      }
+    } catch (error) {
+      console.error('Error importing canvas:', error);
+      showToast('Failed to import canvas', 'error');
+    }
+  }, [router, showToast]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#1E293B] flex items-center justify-center overflow-hidden">
@@ -756,6 +809,8 @@ function CanvasPageContent() {
           showCollapseButton={true}
           onCollapseClick={() => setSidebarCollapsed(!sidebarCollapsed)}
           isCollapsed={sidebarCollapsed}
+          onExportClick={handleExport}
+          onImportClick={() => setShowImportModal(true)}
         />
 
         {/* Canvas Area */}
@@ -790,6 +845,14 @@ function CanvasPageContent() {
           )}
         </main>
       </div>
+
+      {/* Import Modal */}
+      <ImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImport={handleImport}
+        folders={folders}
+      />
     </div>
   );
 }

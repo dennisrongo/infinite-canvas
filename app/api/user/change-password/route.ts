@@ -82,14 +82,26 @@ export async function POST(request: NextRequest) {
     // Hash new password
     const newPasswordHash = await hashPassword(newPassword);
 
-    // Update user password
+    // Get current password version to increment it
+    const currentUser = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { passwordVersion: true },
+    });
+
+    const newPasswordVersion = (currentUser?.passwordVersion || 0) + 1;
+
+    // Update user password and increment password version
     await prisma.user.update({
       where: { id: session.userId },
-      data: { passwordHash: newPasswordHash },
+      data: {
+        passwordHash: newPasswordHash,
+        passwordVersion: newPasswordVersion,
+      },
     });
 
     return NextResponse.json({
       message: 'Password changed successfully',
+      passwordVersion: newPasswordVersion,
     });
   } catch (error) {
     console.error('Password change error:', error);
