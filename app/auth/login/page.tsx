@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
@@ -9,7 +9,7 @@ interface ValidationErrors {
   password?: string;
 }
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
@@ -117,7 +117,7 @@ export default function LoginPage() {
           </p>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
+            <div role="alert" className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
               <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
             </div>
           )}
@@ -129,6 +129,7 @@ export default function LoginPage() {
               </label>
               <input
                 id="email"
+                name="email"
                 type="email"
                 value={formData.email}
                 onChange={(e) => {
@@ -147,7 +148,7 @@ export default function LoginPage() {
                 placeholder="you@example.com"
               />
               {touched.has('email') && fieldErrors.email && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.email}</p>
+                <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.email}</p>
               )}
             </div>
 
@@ -157,6 +158,7 @@ export default function LoginPage() {
               </label>
               <input
                 id="password"
+                name="password"
                 type="password"
                 value={formData.password}
                 onChange={(e) => {
@@ -175,7 +177,7 @@ export default function LoginPage() {
                 placeholder="Enter your password"
               />
               {touched.has('password') && fieldErrors.password && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.password}</p>
+                <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.password}</p>
               )}
               <div className="mt-1 text-right">
                 <a href="/auth/forgot-password" className="text-sm text-[#3B82F6] hover:underline">
@@ -187,6 +189,7 @@ export default function LoginPage() {
             <div className="flex items-center">
               <input
                 id="rememberMe"
+                name="rememberMe"
                 type="checkbox"
                 checked={formData.rememberMe}
                 onChange={(e) => setFormData({ ...formData, rememberMe: e.target.checked })}
@@ -237,3 +240,13 @@ export default function LoginPage() {
     </div>
   );
 }
+
+function LoginPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+export default LoginPage;

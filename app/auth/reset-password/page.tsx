@@ -154,7 +154,7 @@ function ResetPasswordForm() {
           </p>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
+            <div role="alert" aria-live="assertive" className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
               <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
             </div>
           )}
@@ -178,6 +178,7 @@ function ResetPasswordForm() {
                 </label>
                 <input
                   id="password"
+                  name="password"
                   type="password"
                   value={formData.password}
                   onChange={(e) => {
@@ -196,7 +197,7 @@ function ResetPasswordForm() {
                   placeholder="Enter new password"
                 />
                 {touched.has('password') && fieldErrors.password && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.password}</p>
+                  <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.password}</p>
                 )}
                 <p className="mt-1 text-xs text-[#1E293B] dark:text-[#F1F5F9]">
                   Must be at least 8 characters with uppercase, lowercase, number, and special character
@@ -209,6 +210,7 @@ function ResetPasswordForm() {
                 </label>
                 <input
                   id="confirmPassword"
+                  name="confirmPassword"
                   type="password"
                   value={formData.confirmPassword}
                   onChange={(e) => {
@@ -227,7 +229,7 @@ function ResetPasswordForm() {
                   placeholder="Confirm new password"
                 />
                 {touched.has('confirmPassword') && fieldErrors.confirmPassword && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.confirmPassword}</p>
+                  <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.confirmPassword}</p>
                 )}
               </div>
 
