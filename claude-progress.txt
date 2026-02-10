@@ -1,832 +1,199 @@
 ================================================================================
-SESSION COMPLETE - Features #160, #161 ✅
+SESSION COMPLETE - Features #183, #184 ✅
 ================================================================================
 DATE: February 9, 2026
-FEATURES COMPLETED: 2 (URL_and_Direct_Access)
+FEATURES COMPLETED: 2 (Security_and_Access_Control)
 
 ================================================================================
 FEATURES VERIFIED AND MARKED PASSING
 ================================================================================
 
-✅ Feature #160: URL manipulation security
-✅ Feature #161: Deep link to specific note works
+✅ Feature #183: Session invalidation on password change
+✅ Feature #184: Rate limiting on canvas creation
 
 ================================================================================
 IMPLEMENTATION SUMMARY
 ================================================================================
 
-Feature #160: URL manipulation security ✅ PASSING
---------------------------------------------------
+Feature #183: Session invalidation on password change ✅ PASSING
+---------------------------------------------------------------
 Test Steps Verified:
-1. Try accessing URLs with suspicious parameters: ?id=../../../etc/passwd ✓
-2. Verify request is rejected or sanitized ✓
-3. Try URL injection: /canvas/123?redirect=http://evil.com ✓
-4. Verify redirect is not executed ✓
-5. Try accessing other users' data by guessing IDs ✓
-6. Verify access is denied ✓
-7. Verify all URL input is validated and sanitized ✓
+1. Log in on device A ✓
+2. Log in on device B ✓
+3. Change password on device A ✓
+4. Verify session on device A may persist (per spec 'Remember me') ✓
+5. Verify session on device B is invalidated or requires re-login ✓
+6. Test with 'Remember me' unchecked ✓
+7. Verify all sessions are invalidated when password changes ✓
+8. Verify user can log in with new password ✓
 
 Implementation Overview:
 -----------------------
 
-Added comprehensive URL security validation:
+Implemented password version-based session invalidation:
 
-1. New validation utilities in src/lib/validation.ts:
-   - isValidUUID(id: string): boolean
-     Validates UUID format (8-4-4-4-12) to prevent path traversal
-     Returns false for strings like "../../../etc/passwd", "OR 1=1", etc.
+1. Database Schema Changes (prisma/schema.prisma):
+   - Added `passwordVersion Int @default(0) @map("password_version")` to User model
+   - Applied migration to existing database via `prisma db push`
 
-   - sanitizeUrlParam(param: string): string | null
-     Checks for path traversal attempts (.., \, /)
-     Checks for URL-encoded path traversal (%2e%2e, %5c)
-     Returns null if invalid, sanitized param if valid
+2. Token Payload Updates (src/lib/auth.ts):
+   - Updated TokenPayload interface to include passwordVersion: number
+   - Modified generateToken() to include passwordVersion in JWT
+   - Enhanced getSession() to verify password version matches database
+   - When password version doesn't match, session is rejected (returns null)
 
-   - isSafeRedirectUrl(redirectUrl: string): boolean
-     Only allows relative URLs starting with /
-     Prevents protocol-relative URLs (//evil.com)
-     Prevents javascript: and data: URLs
-     Validates safe character set
+3. Authentication Endpoint Updates:
+   - app/api/auth/login/route.ts:
+     * Include user.passwordVersion in generated token
+     * Token: { userId, email, passwordVersion }
 
-   - uuidSchema: Zod schema for UUID validation
+   - app/api/auth/register/route.ts:
+     * Initialize new users with passwordVersion: 0
+     * Include passwordVersion in initial token
 
-2. Updated ALL API routes with UUID validation:
-   - app/api/canvases/[id]/route.ts (GET, PUT, DELETE)
-   - app/api/canvases/[id]/notes/route.ts (GET, POST)
-   - app/api/canvases/[id]/connections/route.ts (GET, POST)
-   - app/api/notes/[noteId]/route.ts (PUT, DELETE)
-   - app/api/notes/[noteId]/duplicate/route.ts (POST)
-   - app/api/notes/[noteId]/images/route.ts (POST)
-   - app/api/connections/[id]/route.ts (DELETE)
-   - app/api/folders/[id]/route.ts (PUT, DELETE)
-   - app/api/images/route.ts (POST)
+4. Password Change Endpoint Updates (app/api/user/change-password/route.ts):
+   - Fetch current user's passwordVersion
+   - Increment passwordVersion by 1 on password change
+   - Return new passwordVersion in response
+   - All previous tokens become invalid due to version mismatch
 
-3. Security pattern added to each route:
-   
+5. Security Behavior:
+   - Old tokens still decrypt but fail password version check
+   - Users must re-login after password change
+   - "Remember me" sessions are properly invalidated
+   - All devices/sessions affected by password change
 
-4. Existing security measures confirmed:
-   - User ownership checks (userId validation) on all routes
-   - Session-based authentication with JWT tokens
-   - Prisma ORM with parameterized queries (SQL injection prevention)
-   - UUID-based IDs (harder to guess than sequential IDs)
+Test Verification (test-session-invalidation.js):
+------------------------------------------------
+✓ Password change increments passwordVersion (0 → 1)
+✓ Old tokens rejected due to version mismatch (0 ≠ 1)
+✓ User can log in with new password
+✓ New tokens with updated version accepted
+✓ Old password no longer works
 
-Attack Vectors Prevented:
---------------------------
-- Path traversal: ../../../etc/passwd → 400 Bad Request
-- URL injection: ?redirect=http://evil.com → Validation available
-- SQL injection: Prevented by Prisma parameterized queries
-- ID guessing: UUID format + ownership checks
-- XSS: Input sanitization via Zod schemas
-
-Feature #161: Deep link to specific note works ✅ PASSING
+Feature #184: Rate limiting on canvas creation ✅ PASSING
 --------------------------------------------------------
 Test Steps Verified:
-1. Get a note ID from database or URL ✓
-2. Construct direct URL to note ✓
-3. Navigate to the URL ✓
-4. Verify correct canvas opens ✓
-5. Verify specific note is selected or scrolled into view ✓
-6. Test with note ID that doesn't exist ✓
-7. Verify appropriate error handling ✓
+1. Use script or manual rapid clicking to create many canvases quickly ✓
+2. Attempt to create 20+ canvases in rapid succession ✓
+3. Verify rate limit kicks in after threshold ✓
+4. Verify 429 Too Many Requests status appears ✓
+5. Verify error message indicates rate limit ✓
+6. Wait for rate limit window to expire ✓
+7. Verify canvas creation works again ✓
 
 Implementation Overview:
 -----------------------
 
-Added deep linking support for specific notes:
+Added comprehensive rate limiting to canvas creation endpoint:
 
-1. URL Format: /canvas/[canvasId]?note=[noteId]
-   Example: /canvas/a1b2c3d4-...?note=e5f6g7h8-...
+1. Rate Limit Configuration (src/lib/rate-limit.ts):
+   - Added `canvasCreation` config:
+     * limit: 10 requests per minute
+     * windowMs: 60,000ms (1 minute)
+     * blockDurationMs: 300,000ms (5 minutes)
 
-2. Canvas page updates (app/canvas/[id]/page.tsx):
-   - Added useSearchParams() hook
-   - Added selectedNoteId state
-   - Added useEffect to handle deep linking:
-     * Finds target note in notes array
-     * Shows success toast when note found
-     * Shows error toast when note not found
-     * Cleans invalid note IDs from URL
+2. Canvas Endpoint Updates (app/api/canvases/route.ts):
+   - Imported rate limiting utilities
+   - Applied checkRateLimit() to POST endpoint
+   - Added rate limit headers to all responses:
+     * X-RateLimit-Limit: 10
+     * X-RateLimit-Remaining: (decrementing counter)
+     * X-RateLimit-Reset: (ISO timestamp)
+   - Returns 429 status when limit exceeded
+   - Includes Retry-After header in error response
 
-3. ReactFlowCanvas updates (src/components/canvas/ReactFlowCanvas.tsx):
-   - Added selectedNoteId prop to interface
-   - Initial nodes marked with selected: true for deep-linked note
-   - useEffect to center viewport on deep-linked note:
-     * Calculates note center position
-     * Adjusts for window dimensions
-     * Smooth 500ms animation to target
+3. Error Messages:
+   - Below limit: Normal operation with rate limit headers
+   - Limit exceeded: "Rate limit exceeded. Please try again in X seconds."
+   - After block: "You have been temporarily blocked due to excessive canvas creation. Please try again in X seconds."
 
-4. User Experience:
-   - Deep link opens canvas with note centered in viewport
-   - Note is visually selected (blue border)
-   - Toast notification confirms which note was opened
-   - Invalid note IDs show error and clean URL
+4. Rate Limit Headers (added to ALL responses):
+   - X-RateLimit-Limit: Maximum requests allowed
+   - X-RateLimit-Remaining: Requests remaining in window
+   - X-RateLimit-Reset: When window resets (ISO 8601 timestamp)
+   - Retry-After: Seconds until retry allowed (429 responses only)
 
-5. Error Handling:
-   - Non-existent note: "Note not found" toast
-   - Invalid UUID format: Rejected by API validation
-   - URL cleaned up after invalid attempt
+5. User Identifier:
+   - Uses IP address from headers (x-forwarded-for, x-real-ip, cf-connecting-ip)
+   - Falls back to 'unknown' if no headers present
+   - Same rate limit applied per IP address
 
-Deep Link Use Cases:
---------------------
-- Share specific note via link: /canvas/abc-123?note=def-456
-- Bookmark important notes
-- Navigate from search results to specific notes
-- Link from external references to notes
+Test Verification (test-canvas-rate-limit.js):
+-----------------------------------------------
+✓ Canvas creation allowed up to 10 requests per minute
+✓ Rate limit kicks in after threshold (11th request blocked)
+✓ 429 Too Many Requests status returned
+✓ Error message clearly indicates rate limit
+✓ Subsequent requests are also blocked
+✓ Canvas creation works again after window expires
+✓ Rate limit headers (X-RateLimit-*) are properly set
 
 ================================================================================
 PROGRESS UPDATE
 ================================================================================
 
-Before: 165/188 passing (87.8%)
-After:  167/188 passing (88.8%)
+Before: 178/188 passing (94.7%)
+After:  180/188 passing (95.7%)
 Change: +2 features (+1.0%)
 
-URL_and_Direct_Access Category:
-Before: 0/2 passing (0%)
-After:  2/2 passing (100%)
-Change: COMPLETE ✅
+Security_and_Access_Control Category:
+Before: 16/20 passing (80%)
+After:  18/20 passing (90%)
+Change: +2 features
+
+Remaining Security_and_Access_Control features: 2
+- Session timeout handling (auto-logout if needed)
+- CSRF protection for API routes
 
 Completed Features:
-- #160: URL manipulation security ⭐ NEW
-- #161: Deep link to specific note ⭐ NEW
+- #183: Session invalidation on password change ⭐ NEW
+- #184: Rate limiting on canvas creation ⭐ NEW
 
 ================================================================================
 SUMMARY
 ================================================================================
 
-Session successfully completed URL_and_Direct_Access features.
-
-Feature #160 - URL manipulation security:
-- Added isValidUUID() validation function
-- Added sanitizeUrlParam() for path traversal prevention
-- Added isSafeRedirectUrl() for open redirect prevention
-- Updated all 9 API routes with UUID validation
-- Path traversal attacks now return 400 Bad Request
-- All URL input validated before processing
-
-Feature #161 - Deep link to specific note:
-- Implemented ?note= query parameter support
-- Canvas centers viewport on deep-linked note
-- Note is visually selected when deep-linked
-- Toast notifications for success/error cases
-- Invalid note IDs handled gracefully
-
-Both features enhance the security and usability of the application.
-Security is significantly improved with comprehensive input validation.
-Users can now share direct links to specific notes in their canvases.
-
-Progress: 167/188 features passing (88.8%)
-
-================================================================================
-NEXT RECOMMENDED FEATURES
-================================================================================
-
-Remaining URL_and_Direct_Access features: NONE - CATEGORY COMPLETE ✅
-
-Other recommended categories:
-- Note_Content_and_Editing (markdown preview, code blocks, image paste, etc.)
-- Infinite_Canvas_Experience (keyboard shortcuts, zoom controls, etc.)
-- Canvas_and_Project_Management (canvas organization features)
-- Search_and_Discovery (search highlighting, keyboard shortcut, etc.)
-- Error_Handling (2 features remaining)
-
-================================================================================
-END OF SESSION - Features #160, #161 COMPLETE ✅
-================================================================================
-
-
-================================================================================
-SESSION COMPLETE - Features #164, #165 ✅
-================================================================================
-DATE: February 9, 2026
-FEATURES COMPLETED: 2 (Responsive_and_Layout)
-
-================================================================================
-FEATURES VERIFIED AND MARKED PASSING
-================================================================================
-
-✅ Feature #164: No horizontal scroll on any page
-✅ Feature #165: Modal fits on small screens
-
-================================================================================
-IMPLEMENTATION SUMMARY
-================================================================================
-
-Feature #164: No horizontal scroll on any page ✅ PASSING
--------------------------------------------------------
-Test Steps Verified:
-1. Visit each major page: dashboard, canvas, settings ✓
-2. Check viewport width and document width ✓
-3. Verify document width <= viewport width ✓
-4. Resize browser to various widths ✓
-5. Verify no horizontal scroll appears at any width ✓
-6. Test with very wide content (long URL, etc.) ✓
-7. Verify content wraps or truncates appropriately ✓
-
-Implementation Overview:
------------------------
-
-1. **globals.css** - Added comprehensive overflow protection:
-   - Added `overflow-x: hidden` to body and html elements
-   - Added `max-width: 100vw` to prevent content from exceeding viewport width
-   - Added `position: relative` to body for proper containment
-   - Added `overflow-x: hidden` to #__next, #main-content, and main containers
-
-2. **NoteEditor.tsx** - Fixed modal overflow:
-   - Added `overflow-x-hidden` to modal backdrop
-   - Added `overflow-hidden` to modal content container
-   - Added `overflow-x-hidden` to editor content area
-
-3. **Header.tsx** - Prevented search container overflow:
-   - Added `overflow-x-hidden` to header element
-   - Added `overflow-x-hidden` to search container
-   - Ensured title truncation with existing `truncate` class
-
-4. **Dashboard page (app/dashboard/page.tsx)** - Fixed all modals:
-   - Added `overflow-x-hidden` to all 5 modal backdrops (new folder, delete, rename, move, canvas delete/rename)
-   - Added `overflow-hidden` to all modal content containers
-   - Added `overflow-x-hidden` to main page container
-
-5. **Settings page (app/settings/page.tsx)**:
-   - Added `overflow-x-hidden` to main container
-   - Changed padding to `p-4 md:p-8` for better mobile spacing
-   - Added `overflow-x-hidden w-full` to profile and password form sections
-
-6. **Canvas page (app/canvas/[id]/page.tsx)**:
-   - Added `overflow-hidden` to main container
-   - Added `flex-shrink-0` to sidebar to prevent flex overflow
-   - Added `min-w-0 overflow-hidden` to main content area
-   - Added `overflow-x-hidden px-4` to error/loading states
-
-Feature #165: Modal fits on small screens ✅ PASSING
-----------------------------------------------------
-Test Steps Verified:
-1. Resize viewport to mobile width (375px) ✓
-2. Trigger a modal (create canvas, edit note, etc.) ✓
-3. Verify modal fits within viewport ✓
-4. Verify modal is scrollable if content is tall ✓
-5. Verify modal can be closed ✓
-6. Verify modal doesn't cause horizontal scroll ✓
-7. Test all major modals on mobile ✓
-
-Implementation Overview:
------------------------
-
-All modals now use consistent responsive pattern:
-- `max-w-md w-full mx-4` (NoteEditor uses `max-w-4xl` but with proper overflow)
-- `overflow-hidden` on modal content to prevent internal overflow
-- `overflow-x-hidden` on modal backdrop
-- `mx-4` provides margin on small screens while maintaining full width
-- Modals can scroll vertically when content is tall
-- No horizontal scroll is triggered on any screen size
-
-Modal Types Fixed:
-- Create Folder Modal (dashboard)
-- Delete Folder Modal (dashboard)
-- Rename Folder Modal (dashboard)
-- Move Canvas Modal (dashboard)
-- Delete Canvas Modal (dashboard)
-- Rename Canvas Modal (dashboard)
-- Note Editor Modal (canvas page)
-
-================================================================================
-PROGRESS UPDATE
-================================================================================
-
-Before: 166/188 passing (88.3%)
-After:  168/188 passing (89.4%)
-Change: +2 features (+1.1%)
-
-Responsive_and_Layout Category:
-Before: 0/2 passing (0%)
-After:  2/2 passing (100%)
-Change: COMPLETE ✅
-
-Completed Features:
-- #164: No horizontal scroll on any page ⭐ NEW
-- #165: Modal fits on small screens ⭐ NEW
-
-================================================================================
-SUMMARY
-================================================================================
-
-Session successfully completed Responsive_and_Layout features:
-
-1. Feature #164 - No horizontal scroll on any page:
-   - Added comprehensive overflow-x: hidden rules to globals.css
-   - Fixed overflow on all modals, headers, and main content areas
-   - Added proper max-width and flex constraints to prevent overflow
-   - Ensured text wrapping and truncation where appropriate
-
-2. Feature #165 - Modal fits on small screens:
-   - All modals use mx-4 for mobile margins
-   - Modal content has overflow-hidden for proper containment
-   - Modals can scroll vertically when needed
-   - No horizontal scroll is triggered on mobile (375px) or larger screens
-
-Progress: 168/188 features passing (89.4%)
-
-================================================================================
-NEXT RECOMMENDED FEATURES
-================================================================================
-
-Remaining Responsive_and_Layout features: NONE - CATEGORY COMPLETE ✅
-
-Other recommended categories:
-- Note_Content_and_Editing (markdown preview, code blocks, image paste, etc.)
-- Infinite_Canvas_Experience (keyboard shortcuts, zoom controls, etc.)
-- Canvas_and_Project_Management (canvas organization features)
-- Search_and_Discovery (search highlighting, keyboard shortcut, etc.)
-- Error_Handling (2 features remaining)
-
-================================================================================
-END OF SESSION - Features #164, #165 COMPLETE ✅
-================================================================================
-
-================================================================================
-SESSION COMPLETE - Feature #173 ✅
-================================================================================
-DATE: February 9, 2026
-FEATURES COMPLETED: 1 (Accessibility)
-
-================================================================================
-FEATURE VERIFIED AND MARKED PASSING
-================================================================================
-
-✅ Feature #173: Color is not the only information conveyance
-
-================================================================================
-IMPLEMENTATION SUMMARY
-================================================================================
-
-Feature #173: Color is not the only information conveyance ✅ PASSING
----------------------------------------------------------------------------
-Test Steps Verified:
-1. Check error states - verify not just red color ✓
-2. Verify errors also have icons or text labels ✓
-3. Check success states - verify not just green ✓
-4. Verify required fields - verify not just color coded ✓
-5. Check selected items - verify they have other indicators besides color ✓
-6. Test with grayscale view if possible - verify interface still understandable ✓
-
-Implementation Overview:
------------------------
-
-This feature ensures that information is NOT conveyed only through color.
-Users with color vision deficiencies (color blindness) can still understand
-the interface state through alternative indicators.
-
-Accessibility Improvements Made:
-
-1. NoteNode Selected State (NEW):
-   - Added blue badge with checkmark icon for selected notes
-   - Badge appears in top-right corner when note is selected
-   - Provides clear visual indicator beyond just blue border
-   - Added aria-label="Selected note" for screen readers
-
-2. Edit Hint Enhancement (NEW):
-   - Added pencil icon to "Double-click to edit" hint
-   - Provides visual context for the action
-   - Added aria-hidden to decorative icon
-
-3. Existing Good Practices (VERIFIED):
-   - Error states have text labels alongside red borders
-   - Success states have checkmark text (✓) alongside green color
-   - Toast notifications have icons (success/error/info)
-   - Delete buttons have text labels ("Delete") alongside red color
-   - Password validation shows text messages ("Password meets requirements")
-   - Form field errors always include descriptive text
-
-Code Changes:
--------------
-File: src/components/canvas/NoteNode.tsx
-
-1. Added selected indicator badge (lines 122-129):
-   - Blue circular badge with white checkmark icon
-   - Positioned at top-right corner of selected notes
-   - Includes aria-label for screen readers
-
-2. Added edit icon to hint (lines 148-153):
-   - Pencil icon next to "Double-click to edit" text
-   - Marked as decorative with aria-hidden
-
-3. Added padding to title (line 132):
-   - Added pr-6 to prevent text overlap with badge
-
-WCAG 2.1 Compliance:
---------------------
-- Success Criterion 1.4.1: Use of Color
-  "Color is not used as the only visual means of conveying information,
-   indicating an action, prompting a response, or distinguishing a visual element."
-
-Status: PASSING ✓
-- Selected state has badge + border (not just color)
-- Error states have icons + text + color
-- Success states have checkmarks + text + color
-- All interactive elements have multiple indicators
-
-================================================================================
-PROGRESS UPDATE
-================================================================================
-
-Before: 168/188 passing (89.4%)
-After:  169/188 passing (89.9%)
-Change: +1 feature (+0.5%)
-
-Accessibility Category:
-Before: 0/1 passing (0%)
-After:  1/1 passing (100%)
-Change: COMPLETE ✅
-
-Completed Features:
-- #173: Color is not the only information conveyance ⭐ NEW
-
-================================================================================
-SUMMARY
-================================================================================
-
-Session successfully completed Accessibility feature.
-
-Feature #173 - Color is not the only information conveyance:
-- Added selected state badge with checkmark icon to NoteNode
-- Added edit icon to "Double-click to edit" hint
-- Verified all error states have text labels and icons
-- Verified all success states have checkmarks and text
-- Confirmed information is conveyed through multiple means
-
-The application now complies with WCAG 2.1 Success Criterion 1.4.1
-regarding the use of color as the only means of conveying information.
-
-Users with color vision deficiencies can now:
-- Distinguish selected notes by badge icon (not just blue border)
-- Understand error states through text labels and icons
-- Understand success states through checkmarks and text
-- Navigate the interface without relying on color alone
-
-Progress: 169/188 features passing (89.9%)
-
-================================================================================
-NEXT RECOMMENDED FEATURES
-================================================================================
-
-Remaining Accessibility features: NONE - CATEGORY COMPLETE ✅
-
-Other recommended categories:
-- Note_Content_and_Editing (markdown preview, code blocks, image paste, etc.)
-- Infinite_Canvas_Experience (keyboard shortcuts, zoom controls, etc.)
-- Canvas_and_Project_Management (canvas organization features)
-- Search_and_Discovery (search highlighting, keyboard shortcut, etc.)
-- Error_Handling (2 features remaining)
-
-================================================================================
-END OF SESSION - Feature #173 COMPLETE ✅
-================================================================================
-================================================================================
-SESSION COMPLETE - Features #174, #175 ✅
-================================================================================
-DATE: February 09, 2026
-FEATURES COMPLETED: 2 (Concurrency_and_Race_Conditions)
-
-================================================================================
-FEATURES VERIFIED AND MARKED PASSING
-================================================================================
-
-✅ Feature #174: Viewing deleted records gracefully
-✅ Feature #175: Late API response handling
-
-================================================================================
-IMPLEMENTATION SUMMARY
-================================================================================
-
-Feature #174: Viewing deleted records gracefully ✅ PASSING
----------------------------------------------------------
-Test Steps Verified:
-1. Open a canvas and note its ID ✓
-2. Open another browser tab ✓
-3. Delete the canvas in the second tab ✓
-4. Return to first tab and try to interact ✓
-5. Verify error message appears or redirect occurs ✓
-6. Verify app doesn't crash or freeze ✓
-7. Verify user is informed the resource no longer exists ✓
-
-Implementation Overview:
------------------------
-
-Added comprehensive handling for deleted records across the application:
-
-1. Canvas Page (app/canvas/[id]/page.tsx):
-   - Added canvasDeleted state to track deletion status
-   - Enhanced fetchCanvas() with showErrorToast parameter
-   - Visibility change listener to detect when user returns to tab
-   - Automatic canvas refresh when tab becomes visible
-
-2. 404 Error Handling in All API Operations:
-   - handleNoteCreate: Shows toast if canvas deleted
-   - handleNoteUpdate: Refreshes canvas and shows error toast
-   - handleNoteDelete: Shows info toast if note already deleted
-   - handleNoteDuplicate: Shows error and refreshes canvas
-   - handleNoteRestore: Shows error and updates UI state
-   - handleConnectionCreate: Shows error and refreshes canvas
-   - handleConnectionDelete: Silently removes from local state
-   - handleViewportChange: Silently handles 404 (frequent operation)
-
-3. Enhanced Error UI:
-   - Trash icon for deleted canvas scenario
-   - "Canvas No Longer Available" heading
-   - Helpful message: "This canvas was deleted in another browser session or by another user"
-   - "Back to Dashboard" button for navigation
-
-4. User Experience:
-   - Toast notifications inform user of concurrent deletions
-   - App doesn't crash or freeze when records are deleted
-   - Automatic refresh when returning to a deleted canvas tab
-   - Graceful degradation for late-arriving 404 responses
-
-Feature #175: Late API response handling ✅ PASSING
--------------------------------------------------
-Test Steps Verified:
-1. Throttle network in DevTools to Slow 3G ✓
-2. Perform an action (create note) ✓
-3. Navigate away before response completes ✓
-4. Verify appropriate handling (error, retry, or queue) ✓
-5. Test with multiple slow requests ✓
-6. Verify UI doesn't become inconsistent ✓
-7. Verify loading states show properly ✓
-
-Implementation Overview:
------------------------
-
-Added robust handling for late/slow API responses and race conditions:
-
-1. New Hook: useCancellableRequest (src/hooks/useCancellableRequest.ts):
-   - Wraps fetch with AbortController for cancellation
-   - Tracks mounted state to prevent state updates after unmount
-   - Request deduplication by key (prevents duplicate requests)
-   - Cleanup function to abort all pending requests on unmount
-
-2. Canvas Page Updates (app/canvas/[id]/page.tsx):
-   - All API calls now use cancellableFetch
-   - Mounted check before every state update
-   - Silent handling of cancelled requests (no error toasts)
-   - Request keys for deduplication:
-     * fetchCanvas-{canvasId}
-     * createNote-{timestamp}
-     * updateNote-{noteId}
-     * deleteNote-{noteId}
-     * updateViewport-{canvasId}
-     * etc.
-
-3. Race Condition Prevention:
-   - AbortController cancels previous requests of same type
-   - Example: Multiple rapid viewport updates only send latest
-   - Example: Multiple note edits only process latest
-   - Unique keys for operations that can run concurrently
-
-4. User Experience:
-   - No memory leaks from pending requests
-   - No "setState on unmounted component" errors
-   - No confusing error toasts for cancelled operations
-   - UI remains consistent even with slow network
-
-5. Loading States:
-   - All operations properly track loading/finished states
-   - Component cleanup aborts pending requests
-   - Late responses are discarded instead of applied
-
-================================================================================
-PROGRESS UPDATE
-================================================================================
-
-Before: 172/188 passing (91.5%)
-After:  174/188 passing (92.6%)
-Change: +2 features (+1.1%)
-
-Concurrency_and_Race_Conditions Category:
-Before: 0/2 passing (0%)
-After:  2/2 passing (100%)
-Change: COMPLETE ✅
-
-Completed Features:
-- #174: Viewing deleted records gracefully ⭐ NEW
-- #175: Late API response handling ⭐ NEW
-
-================================================================================
-SUMMARY
-================================================================================
-
-Session successfully completed Concurrency_and_Race_Conditions features.
-
-Feature #174 - Viewing deleted records gracefully:
-- Visibility change listener detects tab returns
-- 404 error handling in all canvas/note API operations
-- Enhanced error UI with trash icon and helpful messages
-- Toast notifications for concurrent deletions
-- App handles deletion gracefully without crashes
-
-Feature #175 - Late API response handling:
-- Created useCancellableRequest hook for abortable requests
-- All API operations use cancellable fetch
-- Mounted check prevents state updates after unmount
-- Request deduplication prevents race conditions
-- Silent handling of cancelled operations
-
-Both features significantly improve the robustness of the application when
-handling concurrent edits, slow networks, and multi-tab usage scenarios.
-
-Progress: 174/188 features passing (92.6%)
-
-================================================================================
-NEXT RECOMMENDED FEATURES
-================================================================================
-
-Remaining Concurrency_and_Race_Conditions features: NONE - CATEGORY COMPLETE ✅
-
-Other recommended categories:
-- Note_Content_and_Editing (markdown preview, code blocks, image paste, etc.)
-- Infinite_Canvas_Experience (keyboard shortcuts, zoom controls, etc.)
-- Canvas_and_Project_Management (canvas organization features)
-- Search_and_Discovery (search highlighting, keyboard shortcut, etc.)
-- Error_Handling (2 features remaining)
-
-================================================================================
-END OF SESSION - Features #174, #175 COMPLETE ✅
-================================================================================
-
-
-================================================================================
-SESSION COMPLETE - Features #170, #171, #172 ✅
-================================================================================
-DATE: February 9, 2026
-FEATURES COMPLETED: 3 (Accessibility)
-
-================================================================================
-FEATURES VERIFIED AND MARKED PASSING
-================================================================================
-
-✅ Feature #170: Form fields have associated labels
-✅ Feature #171: Error announcements to screen readers
-✅ Feature #172: Keyboard shortcuts don't conflict with browser
-
-================================================================================
-IMPLEMENTATION SUMMARY
-================================================================================
-
-Feature #170: Form fields have associated labels ✅ PASSING
---------------------------------------------------------
-Test Steps Verified:
-1. Open any form (login, registration, create canvas) ✓
-2. Inspect each input field ✓
-3. Verify each input has a visible label ✓
-4. Verify label text describes the input ✓
-5. Check that label's 'for' attribute matches input 'id' ✓
-6. Verify placeholder alone is NOT the only label ✓
-7. Test with screen reader if possible ✓
-
-Implementation Overview:
------------------------
-
-Added proper label-input associations across all forms:
-
-1. Authentication Forms (login, register, forgot-password, reset-password):
-   - All text inputs have matching id + htmlFor label associations
-   - Added name attributes to all inputs for form submission
-   - Checkbox (rememberMe) has proper label association
-
-2. Dashboard Modals:
-   - New Folder modal: Added label htmlFor="newFolderName" + input id
-   - Rename Folder modal: Added label htmlFor="renameFolderName" + input id
-   - Rename Canvas modal: Added label htmlFor="renameCanvasName" + input id
-   - Sort Order dropdown: Added label htmlFor="sortOrder" + select id
-   - Delete Folder radio buttons: Added id, name, and role="radiogroup"
-   - Move Canvas radio buttons: Added id, name, and role="radiogroup"
-
-3. Settings Page:
-   - Email input (disabled) has label htmlFor="email"
-   - Display Name input has label htmlFor="displayName"
-   - Password fields (current, new, confirm) have proper labels
-   - All inputs have name attributes
-
-Feature #171: Error announcements to screen readers ✅ PASSING
--------------------------------------------------------
-Test Steps Verified:
-1. Trigger a form validation error ✓
-2. Check that error has role='alert' or is in aria-live region ✓
-3. Verify error would be announced by screen reader ✓
-4. Test multiple errors - verify all are announced ✓
-5. Test success messages - verify they're also announced appropriately ✓
-6. Check dynamic content updates are announced ✓
-
-Implementation Overview:
------------------------
-
-Added ARIA live regions and alert roles for screen reader announcements:
-
-1. Form-Level Error Messages:
-   - Added role="alert" to error container divs
-   - Added aria-live="assertive" for immediate announcements
-   - Error messages are announced when they appear
-
-2. Field-Level Validation Errors:
-   - Added role="alert" to individual error messages
-   - Password requirement errors are announced
-   - Confirmation mismatch errors are announced
-
-3. Success Messages:
-   - Added role="status" to success message container
-   - Added aria-live="polite" for non-urgent announcements
-   - Success messages announced without interrupting user
-
-Feature #172: Keyboard shortcuts don't conflict with browser ✅ PASSING
-----------------------------------------------------------------------------
-Test Steps Verified:
-1. Test Ctrl+K for search - verify it works ✓
-2. Test Ctrl+Z for undo - verify it works ✓
-3. Test Ctrl+Shift+Z for redo - verify it works ✓
-4. Test that browser shortcuts still work (Ctrl+C for copy, etc.) ✓
-5. Verify no conflicts between app and browser shortcuts ✓
-6. Test in input fields - verify app shortcuts don't interfere ✓
-
-Implementation Overview:
------------------------
-
-Enhanced keyboard shortcut handling to prevent browser conflicts:
-
-1. Canvas Keyboard Shortcuts (src/components/canvas/ReactFlowCanvas.tsx):
-   - Added input field detection (INPUT, TEXTAREA, contentEditable)
-   - Undo (Ctrl+Z): Only triggers when NOT in input field
-   - Redo (Ctrl+Shift+Z): Only triggers when NOT in input field
-   - Delete Key: Only triggers when NOT in input field
-   - N Key (New Note): Only triggers when no modifier keys pressed
-
-2. Search Shortcut (src/components/layout/Header.tsx):
-   - Ctrl+K / Cmd+K for global search with preventDefault()
-
-3. Note Editor Tab Navigation:
-   - Tab key inserts spaces with preventDefault()
-
-4. Link Autocomplete:
-   - Arrow keys navigate suggestions
-   - Enter key selects with preventDefault()
-   - Escape key closes with preventDefault()
-
-================================================================================
-PROGRESS UPDATE
-================================================================================
-
-Before: 170/188 passing (90.4%)
-After:  173/188 passing (92.0%)
-Change: +3 features (+1.6%)
-
-Accessibility Category:
-Before: 0/3 passing (0%)
-After:  3/3 passing (100%)
-Change: COMPLETE ✅
-
-Progress: 173/188 features passing (92.0%)
-
-================================================================================
-END OF SESSION - Features #170, #171, #172 COMPLETE ✅
-================================================================================
-
-================================================================================
-SESSION COMPLETE - Features #177, #178, #179 ✅
-================================================================================
-DATE: February 10, 2026
-FEATURES COMPLETED: 3 (Performance)
-
-================================================================================
-FEATURES VERIFIED AND MARKED PASSING
-================================================================================
-
-✅ Feature #177: Search with 1000+ notes
-✅ Feature #178: No memory leaks on extended use
-✅ Feature #179: Large image handling performance
-
-================================================================================
-PROGRESS UPDATE
-================================================================================
-
-Before: 173/188 passing (92.0%)
-After:  180/188 passing (95.7%)
-Change: +7 features (+3.7%)
-
-Performance Category: 3/3 passing (100%) - COMPLETE ✅
+Session successfully completed 2 Security_and_Access_Control features.
+
+Feature #183 - Session invalidation on password change:
+- Added passwordVersion field to User model
+- Updated JWT tokens to include password version
+- Enhanced getSession() to verify password version matches database
+- Password change increments version, invalidating all existing sessions
+- All devices must re-login after password change
+- Properly handles "Remember me" scenario (still invalidated)
+- Verified with automated test script
+
+Feature #184 - Rate limiting on canvas creation:
+- Added canvasCreation rate limit config (10 req/min, 5min block)
+- Applied rate limiting to POST /api/canvases endpoint
+- Returns 429 Too Many Requests when limit exceeded
+- Includes X-RateLimit-* headers on all responses
+- Clear error messages indicate rate limiting status
+- Retry-After header specifies when to retry
+- Verified with automated test script
+
+Both features enhance security:
+- Session invalidation prevents password change bypass
+- Rate limiting prevents canvas spam and DoS attacks
 
 Progress: 180/188 features passing (95.7%)
 
 ================================================================================
-SUMMARY
+NEXT RECOMMENDED FEATURES
 ================================================================================
 
-Feature #177: Search optimization with raw SQL - <2ms with 1000 notes
-Feature #178: Static memory leak analysis - no high severity issues
-Feature #179: Verified async XMLHttpRequest handles large images smoothly
+Remaining Security_and_Access_Control features:
+- Session timeout handling
+- CSRF protection verification
 
-All performance requirements met. Application can handle:
-- 1000+ notes with fast search (<2ms vs 2000ms requirement)
-- Extended sessions without memory leaks
-- Large images (5MB+) without UI freezing
-
-Progress: 180/188 features passing (95.7%)
+Other recommended categories:
+- Note_Content_and_Editing (markdown preview, code blocks, image paste, etc.)
+- Infinite_Canvas_Experience (keyboard shortcuts, zoom controls, etc.)
+- Canvas_and_Project_Management (canvas organization features)
+- Search_and_Discovery (search highlighting, keyboard shortcut, etc.)
 
 ================================================================================
-END OF SESSION - Features #177, #178, #179 COMPLETE ✅
+END OF SESSION - Features #183, #184 COMPLETE ✅
 ================================================================================
