@@ -406,7 +406,7 @@ export default function CanvasPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#1E293B] flex items-center justify-center">
+      <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#1E293B] flex items-center justify-center overflow-hidden">
         <div className="text-[#1E293B] dark:text-[#F1F5F9]">Loading canvas...</div>
       </div>
     );
@@ -414,7 +414,7 @@ export default function CanvasPage() {
 
   if (error || !canvas) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#1E293B] flex items-center justify-center">
+      <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#1E293B] flex items-center justify-center overflow-x-hidden px-4">
         <div className="text-center">
           <p className="text-red-600 dark:text-red-400 mb-4">{error || 'Canvas not found'}</p>
           <button
@@ -429,9 +429,9 @@ export default function CanvasPage() {
   }
 
   return (
-    <div className="h-screen flex bg-[#F8FAFC] dark:bg-[#1E293B]">
+    <div className="h-screen flex bg-[#F8FAFC] dark:bg-[#1E293B] overflow-hidden">
       {/* Sidebar */}
-      <div className={`${sidebarCollapsed ? 'w-0' : 'w-64'} transition-all duration-300 border-r border-[#E2E8F0] dark:border-[#475569] bg-white dark:bg-[#0F172A] overflow-hidden`}>
+      <div className={`${sidebarCollapsed ? 'w-0' : 'w-64'} transition-all duration-300 border-r border-[#E2E8F0] dark:border-[#475569] bg-white dark:bg-[#0F172A] overflow-hidden flex-shrink-0`}>
         {!sidebarCollapsed && (
           <div className="p-4 h-screen overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
@@ -517,7 +517,7 @@ export default function CanvasPage() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Header */}
         <Header
           currentCanvasId={canvasId}
