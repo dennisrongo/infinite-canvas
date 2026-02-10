@@ -119,8 +119,17 @@ export default function NoteNode({ data, selected, id }: NoteNodeProps) {
       <Handle type="target" position={Position.Top} className="!bg-[#3B82F6]" />
       <Handle type="source" position={Position.Bottom} className="!bg-[#3B82F6]" />
 
+      {/* Selected indicator - visible badge with icon for accessibility */}
+      {selected && (
+        <div className="absolute -top-3 -right-3 w-6 h-6 bg-[#3B82F6] rounded-full flex items-center justify-center shadow-md" aria-label="Selected note">
+          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+      )}
+
       {/* Title */}
-      <div className="font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-2 truncate">
+      <div className="font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-2 truncate pr-6">
         {data.title || 'Untitled Note'}
       </div>
 
@@ -136,7 +145,10 @@ export default function NoteNode({ data, selected, id }: NoteNodeProps) {
       )}
 
       {/* Edit hint */}
-      <div className="mt-2 text-xs text-[#94A3B8] dark:text-[#64748B] italic">
+      <div className="mt-2 text-xs text-[#94A3B8] dark:text-[#64748B] italic flex items-center gap-1">
+        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+        </svg>
         Double-click to edit
       </div>
 
