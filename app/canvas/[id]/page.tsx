@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Header from '@/components/layout/Header';
 import { useToast } from '@/contexts/ToastContext';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 // Dynamically import ReactFlowCanvas with SSR disabled
 const ReactFlowCanvas = dynamic(
@@ -56,7 +57,7 @@ interface CanvasesResponse {
   canvases: Canvas[];
 }
 
-export default function CanvasPage() {
+function CanvasPageContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -73,6 +74,7 @@ export default function CanvasPage() {
   const [connections, setConnections] = useState<Connection[]>([]);
   const [viewport, setViewport] = useState<{ x: number; y: number; zoom: number } | null>(null);
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
+  const [canvasDeleted, setCanvasDeleted] = useState(false);
 
   // Get note ID from URL query parameter for deep linking
   const noteIdParam = searchParams?.get('note');
@@ -114,12 +116,30 @@ export default function CanvasPage() {
     }
   }, [expandedFolders]);
 
-  const fetchCanvas = async () => {
+  // Handle visibility change - check if canvas still exists when returning to tab
+  // Feature #174: Detect when canvas was deleted in another tab
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && canvas && !canvasDeleted) {
+        // Page became visible again, check if canvas still exists
+        fetchCanvas(true);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [canvas, canvasDeleted]);
+
+  const fetchCanvas = async (showErrorToast = false) => {
     try {
       const res = await fetch(`/api/canvases/${canvasId}`);
       if (!res.ok) {
         if (res.status === 404) {
-          setError('Canvas not found');
+          setError('This canvas no longer exists');
+          setCanvasDeleted(true);
+          if (showErrorToast) {
+            showToast('This canvas was deleted in another session', 'error');
+          }
         } else if (res.status === 403) {
           setError('You do not have access to this canvas');
         } else {
@@ -130,6 +150,7 @@ export default function CanvasPage() {
       const data = await res.json();
       setCanvas(data.canvas);
       setNotes(data.canvas.notes || []);
+      setCanvasDeleted(false);
 
       // Fetch connections for this canvas
       fetchConnections(canvasId);
@@ -220,6 +241,13 @@ export default function CanvasPage() {
         setNotes(prev => [...prev, data.note]);
         showToast('Note created successfully', 'success');
       } else {
+        // Feature #174: Handle canvas deleted case
+        if (res.status === 404) {
+          setError('This canvas no longer exists');
+          setCanvasDeleted(true);
+          showToast('This canvas was deleted in another session', 'error');
+          return;
+        }
         const errorData = await res.json();
         if (res.status === 409 && errorData.field === 'title') {
           // Duplicate title - this shouldn't happen with our unique naming, but handle it
@@ -270,6 +298,13 @@ export default function CanvasPage() {
       });
 
       if (!response.ok) {
+        // Feature #174: Handle canvas/note deleted case
+        if (response.status === 404) {
+          showToast('This note or canvas was deleted in another session', 'error');
+          // Refresh canvas to get updated state
+          fetchCanvas(true);
+          return;
+        }
         const errorData = await response.json();
         if (response.status === 409 && errorData.field === 'title') {
           // Duplicate title error
@@ -297,11 +332,11 @@ export default function CanvasPage() {
     } catch (error) {
       console.error('Error updating note:', error);
     }
-  }, []);
+  }, [showToast]);
 
   const handleViewportChange = useCallback(async (newViewport: { x: number; y: number; zoom: number }) => {
     try {
-      await fetch(`/api/canvases/${canvasId}`, {
+      const res = await fetch(`/api/canvases/${canvasId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -310,6 +345,11 @@ export default function CanvasPage() {
           zoom: newViewport.zoom,
         }),
       });
+      // Feature #174: Handle canvas deleted case - silently fail for viewport updates
+      if (!res.ok && res.status === 404) {
+        // Canvas was deleted, will be caught by next fetchCanvas call
+        console.warn('Canvas was deleted while updating viewport');
+      }
     } catch (error) {
       console.error('Error saving viewport state:', error);
     }
@@ -324,11 +364,16 @@ export default function CanvasPage() {
       if (res.ok) {
         // Remove note from state
         setNotes(prev => prev.filter(note => note.id !== noteId));
+      } else if (res.status === 404) {
+        // Feature #174: Note was already deleted in another session
+        showToast('This note was already deleted', 'info');
+        // Remove from local state anyway
+        setNotes(prev => prev.filter(note => note.id !== noteId));
       }
     } catch (error) {
       console.error('Error deleting note:', error);
     }
-  }, []);
+  }, [showToast]);
 
   const handleNoteDuplicate = useCallback(async (noteId: string) => {
     try {
@@ -340,11 +385,15 @@ export default function CanvasPage() {
         const data = await res.json();
         // Add duplicated note to state
         setNotes(prev => [...prev, data.note]);
+      } else if (res.status === 404) {
+        // Feature #174: Note or canvas was deleted in another session
+        showToast('This note or canvas was deleted in another session', 'error');
+        fetchCanvas(true);
       }
     } catch (error) {
       console.error('Error duplicating note:', error);
     }
-  }, []);
+  }, [showToast]);
 
   const handleNoteRestore = useCallback(async (note: Note) => {
     try {
@@ -365,11 +414,16 @@ export default function CanvasPage() {
       if (res.ok) {
         // Add restored note to state
         setNotes(prev => [...prev, note]);
+      } else if (res.status === 404) {
+        // Feature #174: Canvas was deleted
+        showToast('This canvas was deleted in another session', 'error');
+        setError('This canvas no longer exists');
+        setCanvasDeleted(true);
       }
     } catch (error) {
       console.error('Error restoring note:', error);
     }
-  }, [canvasId]);
+  }, [canvasId, showToast]);
 
   const handleConnectionCreate = useCallback(async (sourceNoteId: string, targetNoteId: string) => {
     try {
@@ -383,11 +437,15 @@ export default function CanvasPage() {
         const data = await res.json();
         // Add new connection to state
         setConnections(prev => [...prev, data.connection]);
+      } else if (res.status === 404) {
+        // Feature #174: Canvas or note was deleted in another session
+        showToast('This canvas or note was deleted in another session', 'error');
+        fetchCanvas(true);
       }
     } catch (error) {
       console.error('Error creating connection:', error);
     }
-  }, [canvasId]);
+  }, [canvasId, showToast]);
 
   const handleConnectionDelete = useCallback(async (connectionId: string) => {
     try {
@@ -397,6 +455,10 @@ export default function CanvasPage() {
 
       if (res.ok) {
         // Remove connection from state
+        setConnections(prev => prev.filter(conn => conn.id !== connectionId));
+      } else if (res.status === 404) {
+        // Feature #174: Connection was already deleted in another session
+        // Just remove from local state
         setConnections(prev => prev.filter(conn => conn.id !== connectionId));
       }
     } catch (error) {
@@ -415,11 +477,56 @@ export default function CanvasPage() {
   if (error || !canvas) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#1E293B] flex items-center justify-center overflow-x-hidden px-4">
-        <div className="text-center">
-          <p className="text-red-600 dark:text-red-400 mb-4">{error || 'Canvas not found'}</p>
+        <div className="text-center max-w-md">
+          {/* Feature #174: Show appropriate icon and message for deleted canvas */}
+          {canvasDeleted ? (
+            <>
+              <svg
+                className="w-16 h-16 mx-auto mb-4 text-gray-400 dark:text-gray-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+              <h2 className="text-xl font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-2">
+                Canvas No Longer Available
+              </h2>
+              <p className="text-[#64748B] dark:text-[#94A3B8] mb-6">
+                This canvas was deleted in another browser session or by another user.
+              </p>
+            </>
+          ) : (
+            <>
+              <svg
+                className="w-16 h-16 mx-auto mb-4 text-gray-400 dark:text-gray-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <h2 className="text-xl font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-2">
+                Canvas Not Found
+              </h2>
+              <p className="text-[#64748B] dark:text-[#94A3B8] mb-6">
+                {error || 'The canvas you are looking for does not exist.'}
+              </p>
+            </>
+          )}
           <button
             onClick={() => router.push('/dashboard')}
-            className="px-4 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] transition"
+            className="px-6 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] transition"
           >
             Back to Dashboard
           </button>
@@ -560,5 +667,17 @@ export default function CanvasPage() {
         </main>
       </div>
     </div>
+  );
+}
+
+export default function CanvasPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#1E293B] flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    }>
+      <CanvasPageContent />
+    </Suspense>
   );
 }
