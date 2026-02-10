@@ -725,6 +725,7 @@ export default function DashboardPage() {
                 </label>
                 <input
                   id="newFolderName"
+                  name="newFolderName"
                   type="text"
                   value={newFolderName}
                   onChange={(e) => setNewFolderName(e.target.value)}
@@ -774,7 +775,7 @@ export default function DashboardPage() {
       {showDeleteModal && folderToDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-x-hidden">
           <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-xl p-6 max-w-md w-full mx-4 overflow-hidden">
-            <h3 className="text-lg font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-4">
+            <h3 id="delete-folder-heading" className="text-lg font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-4">
               Delete Folder
             </h3>
             {folderToDelete.canvases.length > 0 ? (
@@ -782,9 +783,11 @@ export default function DashboardPage() {
                 <p className="text-[#1E293B] dark:text-[#F1F5F9] mb-4">
                   This folder contains {folderToDelete.canvases.length} canvas(es). What would you like to do?
                 </p>
-                <div className="space-y-3 mb-4">
+                <div className="space-y-3 mb-4" role="radiogroup" aria-labelledby="delete-folder-heading">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
+                      id="deleteMoveToRoot"
+                      name="deleteAction"
                       type="radio"
                       checked={deleteMoveToRoot}
                       onChange={() => setDeleteMoveToRoot(true)}
@@ -796,6 +799,8 @@ export default function DashboardPage() {
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
+                      id="deleteAllCanvases"
+                      name="deleteAction"
                       type="radio"
                       checked={!deleteMoveToRoot}
                       onChange={() => setDeleteMoveToRoot(false)}
@@ -853,6 +858,7 @@ export default function DashboardPage() {
                 </label>
                 <input
                   id="renameFolderName"
+                  name="renameFolderName"
                   type="text"
                   value={renameName}
                   onChange={(e) => setRenameName(e.target.value)}
@@ -906,16 +912,18 @@ export default function DashboardPage() {
       {showMoveModal && canvasToMove && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-x-hidden">
           <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-xl p-6 max-w-md w-full mx-4 overflow-hidden">
-            <h3 className="text-lg font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-4">
+            <h3 id="move-canvas-heading" className="text-lg font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-4">
               Move Canvas
             </h3>
             <p className="text-[#1E293B] dark:text-[#F1F5F9] mb-4">
               Select destination for "{canvasToMove.name}":
             </p>
             <form onSubmit={moveCanvas}>
-              <div className="space-y-2 mb-4">
+              <div className="space-y-2 mb-4" role="radiogroup" aria-labelledby="move-canvas-heading">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
+                    id="moveToRoot"
+                    name="moveDestination"
                     type="radio"
                     checked={moveTargetFolderId === null}
                     onChange={() => setMoveTargetFolderId(null)}
@@ -928,6 +936,8 @@ export default function DashboardPage() {
                 {folders.map((folder) => (
                   <label key={folder.id} className="flex items-center gap-2 cursor-pointer">
                     <input
+                      id={`moveToFolder-${folder.id}`}
+                      name="moveDestination"
                       type="radio"
                       checked={moveTargetFolderId === folder.id}
                       onChange={() => setMoveTargetFolderId(folder.id)}
@@ -1026,6 +1036,7 @@ export default function DashboardPage() {
                 </label>
                 <input
                   id="renameCanvasName"
+                  name="renameCanvasName"
                   type="text"
                   value={canvasRenameName}
                   onChange={(e) => setCanvasRenameName(e.target.value)}

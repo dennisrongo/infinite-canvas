@@ -154,7 +154,7 @@ export default function RegisterPage() {
           </p>
 
           {errors.length > 0 && (
-            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
+            <div role="alert" aria-live="assertive" className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
               {errors.map((error, index) => (
                 <p key={index} className="text-red-600 dark:text-red-400 text-sm">
                   {error}
@@ -170,6 +170,7 @@ export default function RegisterPage() {
               </label>
               <input
                 id="email"
+                name="email"
                 type="email"
                 value={formData.email}
                 onChange={(e) => {
@@ -188,7 +189,7 @@ export default function RegisterPage() {
                 placeholder="you@example.com"
               />
               {touched.has('email') && fieldErrors.email && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.email}</p>
+                <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.email}</p>
               )}
             </div>
 
@@ -198,6 +199,7 @@ export default function RegisterPage() {
               </label>
               <input
                 id="password"
+                name="password"
                 type="password"
                 value={formData.password}
                 onChange={(e) => {
@@ -220,10 +222,10 @@ export default function RegisterPage() {
                 placeholder="Min 8 chars, uppercase, lowercase, number, special"
               />
               {touched.has('password') && fieldErrors.password && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.password}</p>
+                <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.password}</p>
               )}
               {formData.password && hasPasswordErrors && (
-                <ul className="mt-2 text-sm text-red-600 dark:text-red-400 list-disc list-inside">
+                <ul role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400 list-disc list-inside">
                   {passwordErrors.map((error, index) => (
                     <li key={index}>{error}</li>
                   ))}
@@ -242,6 +244,7 @@ export default function RegisterPage() {
               </label>
               <input
                 id="confirmPassword"
+                name="confirmPassword"
                 type="password"
                 value={formData.confirmPassword}
                 onChange={(e) => {
@@ -264,7 +267,7 @@ export default function RegisterPage() {
                 placeholder="Repeat your password"
               />
               {touched.has('confirmPassword') && fieldErrors.confirmPassword && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.confirmPassword}</p>
+                <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.confirmPassword}</p>
               )}
               {formData.confirmPassword && !fieldErrors.confirmPassword && formData.password === formData.confirmPassword && (
                 <p className="mt-1 text-sm text-green-600 dark:text-green-400">

@@ -76,7 +76,7 @@ export default function ForgotPasswordPage() {
           </p>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
+            <div role="alert" aria-live="assertive" className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
               <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
             </div>
           )}
@@ -106,6 +106,7 @@ export default function ForgotPasswordPage() {
                 </label>
                 <input
                   id="email"
+                  name="email"
                   type="email"
                   value={email}
                   onChange={(e) => {
@@ -124,7 +125,7 @@ export default function ForgotPasswordPage() {
                   placeholder="you@example.com"
                 />
                 {touched && fieldError && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldError}</p>
+                  <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldError}</p>
                 )}
               </div>
 

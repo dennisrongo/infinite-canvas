@@ -476,8 +476,16 @@ function ReactFlowCanvasInner({
   // Handle keyboard shortcuts for undo, redo, and creating notes
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Don't trigger shortcuts when user is typing in input fields
+      const target = event.target as HTMLElement;
+      const isInInputField =
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable;
+
       // Check for Ctrl+Z or Cmd+Z for undo (Feature #55)
-      if ((event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey) {
+      // Only trigger if not in an input field to avoid conflicts with browser undo
+      if ((event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey && !isInInputField) {
         event.preventDefault();
         if (undoStack.length > 0) {
           const lastAction = undoStack[undoStack.length - 1];
@@ -511,7 +519,8 @@ function ReactFlowCanvasInner({
       }
 
       // Check for Ctrl+Shift+Z or Cmd+Shift+Z for redo (Feature #56)
-      if ((event.ctrlKey || event.metaKey) && event.key === 'z' && event.shiftKey) {
+      // Only trigger if not in an input field to avoid conflicts with browser redo
+      if ((event.ctrlKey || event.metaKey) && event.key === 'z' && event.shiftKey && !isInInputField) {
         event.preventDefault();
         if (redoStack.length > 0) {
           const lastRedoAction = redoStack[redoStack.length - 1];

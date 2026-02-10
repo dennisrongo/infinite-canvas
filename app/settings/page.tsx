@@ -258,7 +258,7 @@ export default function SettingsPage() {
 
         {/* Error and Success Messages */}
         {error && (
-          <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
+          <div role="alert" aria-live="assertive" className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
             {Array.isArray(error) ? (
               <ul className="text-red-600 dark:text-red-400 list-disc list-inside">
                 {error.map((err, index) => (
@@ -272,7 +272,7 @@ export default function SettingsPage() {
         )}
 
         {success && (
-          <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded">
+          <div role="status" aria-live="polite" className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded">
             <p className="text-green-600 dark:text-green-400">{success}</p>
           </div>
         )}
@@ -358,6 +358,7 @@ export default function SettingsPage() {
               </label>
               <input
                 id="currentPassword"
+                name="currentPassword"
                 type="password"
                 value={passwordForm.currentPassword}
                 onChange={(e) => {
@@ -376,7 +377,7 @@ export default function SettingsPage() {
                 placeholder="Enter your current password"
               />
               {passwordTouched.has('currentPassword') && passwordFieldErrors.currentPassword && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{passwordFieldErrors.currentPassword}</p>
+                <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">{passwordFieldErrors.currentPassword}</p>
               )}
             </div>
 
@@ -386,6 +387,7 @@ export default function SettingsPage() {
               </label>
               <input
                 id="newPassword"
+                name="newPassword"
                 type="password"
                 value={passwordForm.newPassword}
                 onChange={(e) => {
@@ -408,10 +410,10 @@ export default function SettingsPage() {
                 placeholder="Enter new password"
               />
               {passwordTouched.has('newPassword') && passwordFieldErrors.newPassword && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{passwordFieldErrors.newPassword}</p>
+                <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">{passwordFieldErrors.newPassword}</p>
               )}
               {passwordForm.newPassword && hasPasswordErrors && !passwordFieldErrors.newPassword && (
-                <ul className="mt-2 text-sm text-red-600 dark:text-red-400 list-disc list-inside">
+                <ul role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400 list-disc list-inside">
                   {newPasswordErrors.map((error, index) => (
                     <li key={index}>{error}</li>
                   ))}
@@ -435,6 +437,7 @@ export default function SettingsPage() {
               </label>
               <input
                 id="confirmNewPassword"
+                name="confirmNewPassword"
                 type="password"
                 value={passwordForm.confirmNewPassword}
                 onChange={(e) => {
@@ -457,7 +460,7 @@ export default function SettingsPage() {
                 placeholder="Confirm new password"
               />
               {passwordTouched.has('confirmNewPassword') && passwordFieldErrors.confirmNewPassword && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{passwordFieldErrors.confirmNewPassword}</p>
+                <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">{passwordFieldErrors.confirmNewPassword}</p>
               )}
               {passwordForm.confirmNewPassword && !passwordFieldErrors.confirmNewPassword && passwordForm.newPassword === passwordForm.confirmNewPassword && (
                 <p className="mt-1 text-sm text-green-600 dark:text-green-400">
