@@ -81,7 +81,7 @@ function CanvasPageContent() {
   const [showImportModal, setShowImportModal] = useState(false);
 
   // Feature #175: Hook for cancellable requests to handle late API responses
-  const { cancellableFetch, abortRequest, abortAllRequests, cleanup } = useCancellableRequest();
+  const { cancellableFetch, abortRequest, abortAllRequests, isMounted, cleanup } = useCancellableRequest();
   const pendingRequestsRef = useRef<Set<string>>(new Set());
 
   // Get note ID from URL query parameter for deep linking
@@ -152,7 +152,7 @@ function CanvasPageContent() {
       const res = await cancellableFetch(requestKey, `/api/canvases/${canvasId}`);
 
       // Check if component is still mounted
-      if (!cleanup.isMounted()) return;
+      if (!isMounted()) return;
 
       if (!res.ok) {
         if (res.status === 404) {
@@ -171,7 +171,7 @@ function CanvasPageContent() {
       const data = await res.json();
 
       // Feature #175: Check if component is still mounted before state update
-      if (!cleanup.isMounted()) return;
+      if (!isMounted()) return;
 
       setCanvas(data.canvas);
       setNotes(data.canvas.notes || []);
@@ -195,11 +195,11 @@ function CanvasPageContent() {
         return;
       }
       console.error('Error fetching canvas:', err);
-      if (cleanup.isMounted()) {
+      if (isMounted()) {
         setError('Failed to load canvas');
       }
     } finally {
-      if (cleanup.isMounted()) {
+      if (isMounted()) {
         setLoading(false);
       }
     }
@@ -234,7 +234,7 @@ function CanvasPageContent() {
       const res = await cancellableFetch(requestKey, `/api/canvases/${id}/connections`);
 
       // Feature #175: Check if component is still mounted
-      if (!cleanup.isMounted()) return;
+      if (!isMounted()) return;
 
       if (res.ok) {
         const data = await res.json();
@@ -285,7 +285,7 @@ function CanvasPageContent() {
       });
 
       // Feature #175: Check if component is still mounted
-      if (!cleanup.isMounted()) return;
+      if (!isMounted()) return;
 
       if (res.ok) {
         const data = await res.json();
@@ -316,7 +316,7 @@ function CanvasPageContent() {
         return;
       }
       console.error('Error creating note:', error);
-      if (cleanup.isMounted()) {
+      if (isMounted()) {
         showToast('Failed to create note. Please try again.', 'error');
       }
     }
@@ -359,7 +359,7 @@ function CanvasPageContent() {
       });
 
       // Feature #175: Check if component is still mounted
-      if (!cleanup.isMounted()) return;
+      if (!isMounted()) return;
 
       if (!response.ok) {
         // Feature #174: Handle canvas/note deleted case
@@ -440,7 +440,7 @@ function CanvasPageContent() {
       });
 
       // Feature #175: Check if component is still mounted
-      if (!cleanup.isMounted()) return;
+      if (!isMounted()) return;
 
       if (res.ok) {
         // Remove note from state
@@ -470,7 +470,7 @@ function CanvasPageContent() {
       });
 
       // Feature #175: Check if component is still mounted
-      if (!cleanup.isMounted()) return;
+      if (!isMounted()) return;
 
       if (res.ok) {
         const data = await res.json();
@@ -510,7 +510,7 @@ function CanvasPageContent() {
       });
 
       // Feature #175: Check if component is still mounted
-      if (!cleanup.isMounted()) return;
+      if (!isMounted()) return;
 
       if (res.ok) {
         // Add restored note to state
@@ -542,7 +542,7 @@ function CanvasPageContent() {
       });
 
       // Feature #175: Check if component is still mounted
-      if (!cleanup.isMounted()) return;
+      if (!isMounted()) return;
 
       if (res.ok) {
         const data = await res.json();
@@ -572,7 +572,7 @@ function CanvasPageContent() {
       });
 
       // Feature #175: Check if component is still mounted
-      if (!cleanup.isMounted()) return;
+      if (!isMounted()) return;
 
       if (res.ok) {
         // Remove connection from state

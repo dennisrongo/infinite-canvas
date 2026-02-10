@@ -229,4 +229,11 @@ export const rateLimitConfigs = {
     windowMs: 60 * 1000, // 20 requests per minute
     blockDurationMs: 2 * 60 * 1000, // 2 minute block
   },
+
+  // Canvas creation rate limiting - prevent spam
+  canvasCreation: {
+    limit: 10, // Allow 10 canvas creations per minute
+    windowMs: 60 * 1000, // 1 minute window
+    blockDurationMs: 5 * 60 * 1000, // 5 minute block after exceeding
+  },
 };

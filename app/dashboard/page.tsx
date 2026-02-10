@@ -57,6 +57,7 @@ export default function DashboardPage() {
   const [isRenamingCanvas, setIsRenamingCanvas] = useState(false);
   const [isMovingCanvas, setIsMovingCanvas] = useState(false);
   const [isUpdatingSortOrder, setIsUpdatingSortOrder] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   useEffect(() => {
     // Load expanded folders from localStorage
@@ -132,6 +133,31 @@ export default function DashboardPage() {
       showToast('Failed to update sort order', 'error');
     } finally {
       setIsUpdatingSortOrder(false);
+    }
+  };
+
+  const handleImport = async (importData: any, folderId?: string) => {
+    try {
+      const res = await fetch('/api/canvases/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ importData, folderId }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        showToast('Canvas imported successfully', 'success');
+        setShowImportModal(false);
+        await fetchFolders(); // Refresh the canvas list
+        // Navigate to the imported canvas
+        router.push(`/canvas/${data.canvas.id}`);
+      } else {
+        const errorData = await res.json();
+        showToast(errorData.error || 'Failed to import canvas', 'error');
+      }
+    } catch (error) {
+      console.error('Error importing canvas:', error);
+      showToast('Failed to import canvas', 'error');
     }
   };
 
@@ -521,6 +547,19 @@ export default function DashboardPage() {
                         New Canvas
                       </>
                     ) : '+ New Canvas'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowImportModal(true);
+                      setSidebarOpen(false);
+                    }}
+                    className="px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition text-sm text-[#1E293B] dark:text-[#F1F5F9] flex items-center gap-1"
+                    title="Import canvas"
+                  >
+                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Import
                   </button>
                 </div>
               </div>
@@ -1087,6 +1126,14 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Import Modal */}
+      <ImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImport={handleImport}
+        folders={folders}
+      />
     </div>
   );
 }
