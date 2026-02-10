@@ -181,19 +181,221 @@ Both features enhance security:
 Progress: 180/188 features passing (95.7%)
 
 ================================================================================
+SESSION COMPLETE - Features #180, #181, #182 ✅
+================================================================================
+DATE: February 9, 2026
+FEATURES COMPLETED: 3 (Export_Import)
+
+================================================================================
+FEATURES VERIFIED AND MARKED PASSING
+================================================================================
+
+✅ Feature #180: Canvas export functionality
+✅ Feature #181: Canvas import functionality
+✅ Feature #182: Round-trip data integrity
+
+================================================================================
+IMPLEMENTATION SUMMARY
+================================================================================
+
+Feature #180: Canvas export functionality ✅ PASSING
+-----------------------------------------------------
+Test Steps Verified:
+1. Export button visible in header on canvas page ✓
+2. Export button visible in dashboard ✓
+3. Export API endpoint created at /api/canvases/[id]/export ✓
+4. Download triggers JSON file with canvas name ✓
+5. Exported file contains all note data (title, content, position) ✓
+6. Connections included in export with source/target indices ✓
+7. Images included in export with storage path and metadata ✓
+
+Implementation Details:
+-----------------------
+API Route: app/api/canvases/[id]/export/route.ts
+
+Export Data Structure:
+{
+  version: '1.0',
+  exportedAt: ISO timestamp,
+  canvas: {
+    name: string,
+    viewportX/Y, zoom: number,
+    notes: [{
+      title, content, positionX/Y, width, height,
+      fontFamily, fontSize,
+      images: [{ storagePath, fileName, mimeType, sizeBytes }]
+    }],
+    connections: [{ sourceIndex, targetIndex }]
+  }
+}
+
+- Downloads file named "{CanvasName}_export.json"
+- Content-Type: application/json with Content-Disposition header
+- Uses array indices for connections to avoid UUID dependencies
+- Includes all note formatting and image metadata
+
+Feature #181: Canvas import functionality ✅ PASSING
+----------------------------------------------------
+Test Steps Verified:
+1. Import button visible in header and dashboard ✓
+2. Clicking import opens ImportModal ✓
+3. File selection accepts .json files ✓
+4. Import dialog shows preview (name, notes count, connections count) ✓
+5. Folder selector allows choosing destination ✓
+6. Import creates new canvas with all data ✓
+7. Notes, connections, and images preserved ✓
+
+Implementation Details:
+-----------------------
+API Route: app/api/canvases/import/route.ts
+Component: src/components/canvas/ImportModal.tsx
+
+Import Flow:
+1. User selects JSON file
+2. File parsed and preview shown
+3. User selects destination folder (optional)
+4. POST to /api/canvases/import with importData and folderId
+5. New canvas created with imported data
+6. User redirected to imported canvas
+
+Validation:
+- Validates importData.canvas exists
+- Validates canvas name (1-255 characters)
+- Validates folderId belongs to user if provided
+- Skips invalid notes gracefully
+- Handles duplicate connections (unique constraint)
+
+Feature #182: Round-trip data integrity ✅ PASSING
+---------------------------------------------------
+Test Steps Verified:
+1. Export creates valid JSON file ✓
+2. Import successfully reads exported JSON ✓
+3. All notes restored with correct content ✓
+4. Note positions, size preserved ✓
+5. Connections restored between notes ✓
+6. Image metadata preserved ✓
+7. Viewport state preserved ✓
+
+Implementation Details:
+-----------------------
+- Uses array indices for connections (sourceIndex, targetIndex)
+- Remaps to new UUIDs during import
+- Preserves all note properties:
+  - title, content
+  - positionX, positionY
+  - width, height
+  - fontFamily, fontSize
+- Preserves canvas viewport state:
+  - viewportX, viewportY
+  - zoom
+- Handles circular dependencies gracefully
+- Skips invalid notes without failing entire import
+
+Code Changes:
+-------------
+1. app/api/canvases/[id]/export/route.ts (NEW)
+   - GET endpoint for canvas export
+   - Fetches canvas with notes, connections, images
+   - Generates JSON with proper structure
+
+2. app/api/canvases/import/route.ts (NEW)
+   - POST endpoint for canvas import
+   - Validates import data
+   - Creates canvas, notes, connections, images
+   - Returns imported canvas with all data
+
+3. src/components/canvas/ImportModal.tsx (NEW)
+   - File upload interface
+   - Preview of import data
+   - Folder selection
+   - Import/cancel actions
+
+4. src/components/layout/Header.tsx (MODIFIED)
+   - Added onExportClick and onImportClick props
+   - Added export/import buttons (shown when currentCanvasId present)
+   - Icon + text on desktop, icons only on mobile
+   - SVG icons for upload/download
+
+5. app/canvas/[id]/page.tsx (MODIFIED)
+   - Added showImportModal state
+   - Added handleExport function (downloads export)
+   - Added handleImport function (POSTs to API)
+   - Added isMounted to hook destructuring
+   - Fixed cleanup.isMounted() calls to isMounted()
+   - Integrated ImportModal component
+
+6. app/dashboard/page.tsx (MODIFIED)
+   - Added showImportModal state
+   - Added handleImport function
+   - Added Import button next to New Canvas button
+   - Integrated ImportModal component
+
+================================================================================
+PROGRESS UPDATE
+================================================================================
+
+Before: 182/188 passing (96.8%)
+After:  185/188 passing (98.4%)
+Change: +3 features (+1.6%)
+
+Export_Import Category:
+Before: 0/3 passing (0%)
+After:  3/3 passing (100%)
+Change: COMPLETE ✅
+
+Completed Features:
+- #180: Canvas export functionality ⭐ NEW
+- #181: Canvas import functionality ⭐ NEW
+- #182: Round-trip data integrity ⭐ NEW
+
+================================================================================
+SUMMARY
+================================================================================
+
+Session successfully completed Export_Import features:
+
+1. Feature #180 - Canvas export functionality:
+   - Export API endpoint generates JSON file
+   - Includes all notes, connections, images, and viewport state
+   - Downloads as {CanvasName}_export.json
+   - Connections use array indices for portability
+
+2. Feature #181 - Canvas import functionality:
+   - Import API endpoint accepts JSON file
+   - Creates new canvas with imported data
+   - ImportModal provides file upload and preview
+   - Folder selector for import destination
+   - Handles validation and errors gracefully
+
+3. Feature #182 - Round-trip data integrity:
+   - Export → Import cycle preserves all data
+   - Notes, connections, images fully restored
+   - Viewport state preserved
+   - No data loss or corruption
+
+All three features complete the Export_Import category, allowing users to:
+- Backup their canvases to JSON files
+- Share canvases with other users
+- Migrate canvases between accounts
+- Archive canvases for later restoration
+
+Progress: 185/188 features passing (98.4%)
+
+================================================================================
 NEXT RECOMMENDED FEATURES
 ================================================================================
 
-Remaining Security_and_Access_Control features:
-- Session timeout handling
-- CSRF protection verification
+Remaining Export_Import features: NONE - CATEGORY COMPLETE ✅
+
+Remaining features (3 total):
+- Note_Content_and_Editing category features (2 remaining)
+- Error_Handling category features (1 remaining)
 
 Other recommended categories:
-- Note_Content_and_Editing (markdown preview, code blocks, image paste, etc.)
-- Infinite_Canvas_Experience (keyboard shortcuts, zoom controls, etc.)
-- Canvas_and_Project_Management (canvas organization features)
-- Search_and_Discovery (search highlighting, keyboard shortcut, etc.)
+- Infinite_Canvas_Experience (zoom controls, keyboard shortcuts)
+- Search_and_Discovery (search highlighting, result filtering)
+- Canvas_and_Project_Management (additional organization features)
 
 ================================================================================
-END OF SESSION - Features #183, #184 COMPLETE ✅
+END OF SESSION - Features #180, #181, #182 COMPLETE ✅
 ================================================================================
