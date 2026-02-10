@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useEffect, useState, useCallback, Suspense, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Header from '@/components/layout/Header';
 import { useToast } from '@/contexts/ToastContext';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { useCancellableRequest } from '@/hooks/useCancellableRequest';
 
 // Dynamically import ReactFlowCanvas with SSR disabled
 const ReactFlowCanvas = dynamic(
@@ -75,9 +76,21 @@ function CanvasPageContent() {
   const [viewport, setViewport] = useState<{ x: number; y: number; zoom: number } | null>(null);
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [canvasDeleted, setCanvasDeleted] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Feature #175: Hook for cancellable requests to handle late API responses
+  const { cancellableFetch, abortRequest, abortAllRequests, cleanup } = useCancellableRequest();
+  const pendingRequestsRef = useRef<Set<string>>(new Set());
 
   // Get note ID from URL query parameter for deep linking
   const noteIdParam = searchParams?.get('note');
+
+  // Feature #175: Clean up on unmount
+  useEffect(() => {
+    return () => {
+      abortAllRequests();
+    };
+  }, [abortAllRequests]);
 
   useEffect(() => {
     // Load expanded folders from localStorage
@@ -131,8 +144,14 @@ function CanvasPageContent() {
   }, [canvas, canvasDeleted]);
 
   const fetchCanvas = async (showErrorToast = false) => {
+    const requestKey = `fetchCanvas-${canvasId}`;
     try {
-      const res = await fetch(`/api/canvases/${canvasId}`);
+      // Feature #175: Use cancellable fetch for late response handling
+      const res = await cancellableFetch(requestKey, `/api/canvases/${canvasId}`);
+
+      // Check if component is still mounted
+      if (!cleanup.isMounted()) return;
+
       if (!res.ok) {
         if (res.status === 404) {
           setError('This canvas no longer exists');
@@ -148,6 +167,10 @@ function CanvasPageContent() {
         return;
       }
       const data = await res.json();
+
+      // Feature #175: Check if component is still mounted before state update
+      if (!cleanup.isMounted()) return;
+
       setCanvas(data.canvas);
       setNotes(data.canvas.notes || []);
       setCanvasDeleted(false);
@@ -164,8 +187,19 @@ function CanvasPageContent() {
         });
       }
     } catch (err) {
+      // Feature #175: Handle cancelled requests silently
+      if (err instanceof Error && err.message === 'Request cancelled') {
+        console.log('Canvas fetch cancelled (user navigated away)');
+        return;
+      }
       console.error('Error fetching canvas:', err);
-      setError('Failed to load canvas');
+      if (cleanup.isMounted()) {
+        setError('Failed to load canvas');
+      }
+    } finally {
+      if (cleanup.isMounted()) {
+        setLoading(false);
+      }
     }
   };
 
@@ -192,13 +226,24 @@ function CanvasPageContent() {
   };
 
   const fetchConnections = async (id: string) => {
+    const requestKey = `fetchConnections-${id}`;
     try {
-      const res = await fetch(`/api/canvases/${id}/connections`);
+      // Feature #175: Use cancellable fetch
+      const res = await cancellableFetch(requestKey, `/api/canvases/${id}/connections`);
+
+      // Feature #175: Check if component is still mounted
+      if (!cleanup.isMounted()) return;
+
       if (res.ok) {
         const data = await res.json();
         setConnections(data.connections || []);
       }
     } catch (err) {
+      // Feature #175: Handle cancelled requests silently
+      if (err instanceof Error && err.message === 'Request cancelled') {
+        console.log('Connections fetch cancelled (user navigated away)');
+        return;
+      }
       console.error('Error fetching connections:', err);
     }
   };
@@ -214,6 +259,7 @@ function CanvasPageContent() {
   };
 
   const handleNoteCreate = useCallback(async (position: { x: number; y: number }) => {
+    const requestKey = `createNote-${Date.now()}`;
     try {
       // Generate a unique title for "Untitled Note"
       const existingUntitledNotes = notes.filter(n => n.title.startsWith('Untitled Note'));
@@ -222,7 +268,8 @@ function CanvasPageContent() {
         newTitle = `Untitled Note ${existingUntitledNotes.length + 1}`;
       }
 
-      const res = await fetch(`/api/canvases/${canvasId}/notes`, {
+      // Feature #175: Use cancellable fetch
+      const res = await cancellableFetch(requestKey, `/api/canvases/${canvasId}/notes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -234,6 +281,9 @@ function CanvasPageContent() {
           height: 200,
         }),
       });
+
+      // Feature #175: Check if component is still mounted
+      if (!cleanup.isMounted()) return;
 
       if (res.ok) {
         const data = await res.json();
@@ -258,10 +308,17 @@ function CanvasPageContent() {
         }
       }
     } catch (error) {
+      // Feature #175: Handle cancelled requests silently
+      if (error instanceof Error && error.message === 'Request cancelled') {
+        console.log('Note creation cancelled (user navigated away)');
+        return;
+      }
       console.error('Error creating note:', error);
-      showToast('Failed to create note. Please try again.', 'error');
+      if (cleanup.isMounted()) {
+        showToast('Failed to create note. Please try again.', 'error');
+      }
     }
-  }, [canvasId, notes, showToast]);
+  }, [canvasId, notes, showToast, cancellableFetch, cleanup]);
 
   const handleNoteUpdate = useCallback(async (noteId: string, newPosition: { x: number; y: number }, newSize?: { width: number; height: number }, newTitle?: string, newContent?: string, newFontFamily?: string, newFontSize?: number) => {
     try {
@@ -291,11 +348,16 @@ function CanvasPageContent() {
         body.fontSize = newFontSize;
       }
 
-      const response = await fetch(`/api/notes/${noteId}`, {
+      const requestKey = `updateNote-${noteId}`;
+      // Feature #175: Use cancellable fetch
+      const response = await cancellableFetch(requestKey, `/api/notes/${noteId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
+
+      // Feature #175: Check if component is still mounted
+      if (!cleanup.isMounted()) return;
 
       if (!response.ok) {
         // Feature #174: Handle canvas/note deleted case
@@ -330,13 +392,20 @@ function CanvasPageContent() {
           : note
       ));
     } catch (error) {
+      // Feature #175: Handle cancelled requests silently
+      if (error instanceof Error && error.message === 'Request cancelled') {
+        console.log('Note update cancelled (user navigated away)');
+        return;
+      }
       console.error('Error updating note:', error);
     }
-  }, [showToast]);
+  }, [showToast, cancellableFetch, cleanup, fetchCanvas]);
 
   const handleViewportChange = useCallback(async (newViewport: { x: number; y: number; zoom: number }) => {
+    const requestKey = `updateViewport-${canvasId}`;
     try {
-      const res = await fetch(`/api/canvases/${canvasId}`, {
+      // Feature #175: Use cancellable fetch - viewport changes are frequent
+      const res = await cancellableFetch(requestKey, `/api/canvases/${canvasId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -346,20 +415,30 @@ function CanvasPageContent() {
         }),
       });
       // Feature #174: Handle canvas deleted case - silently fail for viewport updates
-      if (!res.ok && res.status === 404) {
+      if (res && !res.ok && res.status === 404) {
         // Canvas was deleted, will be caught by next fetchCanvas call
         console.warn('Canvas was deleted while updating viewport');
       }
     } catch (error) {
+      // Feature #175: Silently handle cancelled viewport updates (they happen frequently)
+      if (error instanceof Error && error.message === 'Request cancelled') {
+        // Expected - user panned/zoomed quickly
+        return;
+      }
       console.error('Error saving viewport state:', error);
     }
-  }, [canvasId]);
+  }, [canvasId, cancellableFetch]);
 
   const handleNoteDelete = useCallback(async (noteId: string) => {
+    const requestKey = `deleteNote-${noteId}`;
     try {
-      const res = await fetch(`/api/notes/${noteId}`, {
+      // Feature #175: Use cancellable fetch
+      const res = await cancellableFetch(requestKey, `/api/notes/${noteId}`, {
         method: 'DELETE',
       });
+
+      // Feature #175: Check if component is still mounted
+      if (!cleanup.isMounted()) return;
 
       if (res.ok) {
         // Remove note from state
@@ -371,15 +450,25 @@ function CanvasPageContent() {
         setNotes(prev => prev.filter(note => note.id !== noteId));
       }
     } catch (error) {
+      // Feature #175: Handle cancelled requests silently
+      if (error instanceof Error && error.message === 'Request cancelled') {
+        console.log('Note deletion cancelled (user navigated away)');
+        return;
+      }
       console.error('Error deleting note:', error);
     }
-  }, [showToast]);
+  }, [showToast, cancellableFetch, cleanup]);
 
   const handleNoteDuplicate = useCallback(async (noteId: string) => {
+    const requestKey = `duplicateNote-${noteId}`;
     try {
-      const res = await fetch(`/api/notes/${noteId}/duplicate`, {
+      // Feature #175: Use cancellable fetch
+      const res = await cancellableFetch(requestKey, `/api/notes/${noteId}/duplicate`, {
         method: 'POST',
       });
+
+      // Feature #175: Check if component is still mounted
+      if (!cleanup.isMounted()) return;
 
       if (res.ok) {
         const data = await res.json();
@@ -391,13 +480,20 @@ function CanvasPageContent() {
         fetchCanvas(true);
       }
     } catch (error) {
+      // Feature #175: Handle cancelled requests silently
+      if (error instanceof Error && error.message === 'Request cancelled') {
+        console.log('Note duplication cancelled (user navigated away)');
+        return;
+      }
       console.error('Error duplicating note:', error);
     }
-  }, [showToast]);
+  }, [showToast, cancellableFetch, cleanup, fetchCanvas]);
 
   const handleNoteRestore = useCallback(async (note: Note) => {
+    const requestKey = `restoreNote-${note.id}`;
     try {
-      const res = await fetch(`/api/canvases/${canvasId}/notes`, {
+      // Feature #175: Use cancellable fetch
+      const res = await cancellableFetch(requestKey, `/api/canvases/${canvasId}/notes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -411,6 +507,9 @@ function CanvasPageContent() {
         }),
       });
 
+      // Feature #175: Check if component is still mounted
+      if (!cleanup.isMounted()) return;
+
       if (res.ok) {
         // Add restored note to state
         setNotes(prev => [...prev, note]);
@@ -421,17 +520,27 @@ function CanvasPageContent() {
         setCanvasDeleted(true);
       }
     } catch (error) {
+      // Feature #175: Handle cancelled requests silently
+      if (error instanceof Error && error.message === 'Request cancelled') {
+        console.log('Note restore cancelled (user navigated away)');
+        return;
+      }
       console.error('Error restoring note:', error);
     }
-  }, [canvasId, showToast]);
+  }, [canvasId, showToast, cancellableFetch, cleanup]);
 
   const handleConnectionCreate = useCallback(async (sourceNoteId: string, targetNoteId: string) => {
+    const requestKey = `createConnection-${sourceNoteId}-${targetNoteId}`;
     try {
-      const res = await fetch(`/api/canvases/${canvasId}/connections`, {
+      // Feature #175: Use cancellable fetch
+      const res = await cancellableFetch(requestKey, `/api/canvases/${canvasId}/connections`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sourceNoteId, targetNoteId }),
       });
+
+      // Feature #175: Check if component is still mounted
+      if (!cleanup.isMounted()) return;
 
       if (res.ok) {
         const data = await res.json();
@@ -443,15 +552,25 @@ function CanvasPageContent() {
         fetchCanvas(true);
       }
     } catch (error) {
+      // Feature #175: Handle cancelled requests silently
+      if (error instanceof Error && error.message === 'Request cancelled') {
+        console.log('Connection creation cancelled (user navigated away)');
+        return;
+      }
       console.error('Error creating connection:', error);
     }
-  }, [canvasId, showToast]);
+  }, [canvasId, showToast, cancellableFetch, cleanup, fetchCanvas]);
 
   const handleConnectionDelete = useCallback(async (connectionId: string) => {
+    const requestKey = `deleteConnection-${connectionId}`;
     try {
-      const res = await fetch(`/api/connections/${connectionId}`, {
+      // Feature #175: Use cancellable fetch
+      const res = await cancellableFetch(requestKey, `/api/connections/${connectionId}`, {
         method: 'DELETE',
       });
+
+      // Feature #175: Check if component is still mounted
+      if (!cleanup.isMounted()) return;
 
       if (res.ok) {
         // Remove connection from state
@@ -462,9 +581,14 @@ function CanvasPageContent() {
         setConnections(prev => prev.filter(conn => conn.id !== connectionId));
       }
     } catch (error) {
+      // Feature #175: Handle cancelled requests silently
+      if (error instanceof Error && error.message === 'Request cancelled') {
+        console.log('Connection deletion cancelled (user navigated away)');
+        return;
+      }
       console.error('Error deleting connection:', error);
     }
-  }, []);
+  }, [cancellableFetch, cleanup]);
 
   if (loading) {
     return (
