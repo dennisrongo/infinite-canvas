@@ -1,27 +1,12 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { useDebounce } from '@/hooks/useDebounce';
+import Icon from '@/components/ui/Icon';
 
 interface SearchBarProps {
   currentCanvasId?: string;
-}
-
-// Custom hook for debouncing values
-function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [value, delay]);
-
-  return debouncedValue;
 }
 
 /**
@@ -46,6 +31,7 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month' | 'year'>('all');
   const [showFilters, setShowFilters] = useState(false);
   const [searchWarning, setSearchWarning] = useState<string | null>(null);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
 
   // Debounce search query with 400ms delay
   const debouncedSearchQuery = useDebounce(searchQuery, 400);
@@ -122,6 +108,7 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
         setSearchResults(data.results || []);
         setSearchWarning(data.warning || null);
         setShowResults(true);
+        setFocusedIndex(-1);
       } catch (error) {
         console.error('Search error:', error);
         setSearchResults([]);
@@ -148,13 +135,14 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
   }, []);
 
   // Handle clicking a search result
-  const handleResultClick = (result: any) => {
+  const handleResultClick = useCallback((result: any) => {
     setShowResults(false);
     setSearchQuery('');
     setSearchResults([]);
     setSearchWarning(null);
+    setFocusedIndex(-1);
     router.push(`/canvas/${result.canvasId}`);
-  };
+  }, [router]);
 
   // Format date for display
   const formatDateTime = (dateString: string) => {
@@ -177,23 +165,39 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
     return date.toLocaleDateString();
   };
 
+  // Handle keyboard navigation for search results
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!showResults || searchResults.length === 0) return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setFocusedIndex(prev =>
+          prev < searchResults.length - 1 ? prev + 1 : prev
+        );
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setFocusedIndex(prev => prev > 0 ? prev - 1 : 0);
+      } else if (e.key === 'Enter' && focusedIndex >= 0) {
+        e.preventDefault();
+        handleResultClick(searchResults[focusedIndex]);
+      } else if (e.key === 'Escape') {
+        setShowResults(false);
+        setFocusedIndex(-1);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [showResults, searchResults, focusedIndex, handleResultClick]);
+
   return (
     <div className="search-container relative flex-1 max-w-2xl ml-2 md:ml-8 min-w-0">
       <div className="relative">
         {/* Search Icon */}
-        <svg
-          className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-light-text-secondary dark:text-dark-text-secondary"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-          />
-        </svg>
+        <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-light-text-secondary dark:text-dark-text-secondary">
+          <Icon name="search" size="md" ariaLabel="Search" />
+        </div>
 
         {/* Search Input */}
         <input
@@ -321,7 +325,11 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
 
       {/* Search Results Dropdown */}
       {showResults && searchQuery.trim() && (
-        <div className="absolute mt-2 w-full bg-white dark:bg-dark-bg border border-light-note-border dark:border-dark-note-border rounded-lg shadow-lg max-h-96 overflow-y-auto z-50">
+        <div
+          role="listbox"
+          aria-label="Search results"
+          className="absolute mt-2 w-full bg-white dark:bg-dark-bg border border-light-note-border dark:border-dark-note-border rounded-lg shadow-lg max-h-96 overflow-y-auto z-50"
+        >
           {searchWarning && (
             <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-sm">
               ⚠️ {searchWarning}
@@ -337,11 +345,16 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
             </div>
           ) : (
             <div className="divide-y divide-light-note-border dark:divide-dark-note-border">
-              {highlightedResults.map((result) => (
+              {highlightedResults.map((result, index) => (
                 <button
                   key={result.id}
+                  role="option"
+                  aria-selected={focusedIndex === index}
+                  aria-label={`Go to ${result.title} in ${result.canvasName}`}
                   onClick={() => handleResultClick(result)}
-                  className="w-full text-left p-4 hover:bg-light-canvas dark:hover:bg-dark-canvas transition min-h-[44px] flex items-start"
+                  className={`w-full text-left p-4 hover:bg-light-canvas dark:hover:bg-dark-canvas transition min-h-[44px] flex items-start${
+                    focusedIndex === index ? ' bg-light-hover dark:bg-dark-hover' : ''
+                  }`}
                 >
                   <div className="flex items-start justify-between gap-3 w-full">
                     <div className="flex-1 min-w-0">

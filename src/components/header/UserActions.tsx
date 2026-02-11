@@ -1,6 +1,8 @@
 'use client';
 
 import { useTheme } from '@/contexts/ThemeContext';
+import Icon from '@/components/ui/Icon';
+import MobileMenu from './MobileMenu';
 
 interface UserActionsProps {
   currentCanvasId?: string;
@@ -31,9 +33,7 @@ export default function UserActions({
             className="min-w-[44px] min-h-[44px] px-2 md:px-4 py-2 text-sm border border-light-note-border dark:border-dark-note-border rounded-lg hover:bg-light-hover dark:hover:bg-dark-hover transition text-light-text dark:text-dark-text flex items-center gap-1"
             title="Export canvas"
           >
-            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-            </svg>
+            <Icon name="upload" size="sm" ariaLabel="Export canvas" />
             <span className="hidden md:inline">Export</span>
           </button>
           <button
@@ -41,21 +41,26 @@ export default function UserActions({
             className="min-w-[44px] min-h-[44px] px-2 md:px-4 py-2 text-sm border border-light-note-border dark:border-dark-note-border rounded-lg hover:bg-light-hover dark:hover:bg-dark-hover transition text-light-text dark:text-dark-text flex items-center gap-1"
             title="Import canvas"
           >
-            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
+            <Icon name="download" size="sm" ariaLabel="Import canvas" />
             <span className="hidden md:inline">Import</span>
           </button>
         </>
       )}
 
-      {/* Settings link */}
+      {/* Settings link - desktop only */}
       <a
         href="/settings"
         className="hidden md:inline-flex min-w-[44px] min-h-[44px] items-center justify-center px-4 py-2 text-sm border border-light-note-border dark:border-dark-note-border rounded-lg hover:bg-light-hover dark:hover:bg-dark-hover transition text-light-text dark:text-dark-text"
       >
         Settings
       </a>
+
+      {/* Mobile Menu - mobile only */}
+      <MobileMenu
+        currentCanvasId={currentCanvasId}
+        onExportClick={onExportClick}
+        onImportClick={onImportClick}
+      />
 
       {/* Theme Toggle Button - icon only on mobile */}
       <button
@@ -65,18 +70,12 @@ export default function UserActions({
       >
         {theme === 'light' ? (
           <>
-            {/* Moon icon for dark mode */}
-            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-            </svg>
+            <Icon name="moon" size="sm" ariaLabel="Switch to dark mode" />
             <span className="hidden md:inline">Dark</span>
           </>
         ) : (
           <>
-            {/* Sun icon for light mode */}
-            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
+            <Icon name="sun" size="sm" ariaLabel="Switch to light mode" />
             <span className="hidden md:inline">Light</span>
           </>
         )}

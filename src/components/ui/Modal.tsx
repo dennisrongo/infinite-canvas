@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import Icon from './Icon';
 
 export interface ModalProps {
   /**
@@ -222,19 +223,7 @@ export default function Modal({
               className="min-w-[44px] min-h-[44px] p-2 text-light-text-secondary dark:text-dark-text-secondary hover:text-light-text dark:hover:text-dark-text hover:bg-light-hover dark:hover:bg-dark-hover rounded-lg transition-colors"
               aria-label="Close modal"
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
+              <Icon name="close" size="md" ariaLabel="Close modal" />
             </button>
           </div>
         )}

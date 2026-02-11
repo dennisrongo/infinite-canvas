@@ -192,28 +192,28 @@ export default function NoteNode({ data, selected, id }: NoteNodeProps) {
       {selected && (
         <>
           <div
-            className="absolute bottom-0 right-0 w-3 h-3 cursor-se-resize touch:touch touch:touch-lg"
+            className="absolute bottom-0 right-0 w-3 h-3 cursor-se-resize min-w-[44px] min-h-[44px]"
             style={{
               background: 'linear-gradient(135deg, transparent 50%, #3B82F6 50%)',
             }}
             onMouseDown={(e) => handleResizeStart(e, 'se')}
           />
           <div
-            className="absolute bottom-0 left-0 w-3 h-3 cursor-sw-resize touch:touch touch:touch-lg"
+            className="absolute bottom-0 left-0 w-3 h-3 cursor-sw-resize min-w-[44px] min-h-[44px]"
             style={{
               background: 'linear-gradient(225deg, transparent 50%, #3B82F6 50%)',
             }}
             onMouseDown={(e) => handleResizeStart(e, 'sw')}
           />
           <div
-            className="absolute top-0 right-0 w-3 h-3 cursor-ne-resize touch:touch touch:touch-lg"
+            className="absolute top-0 right-0 w-3 h-3 cursor-ne-resize min-w-[44px] min-h-[44px]"
             style={{
               background: 'linear-gradient(45deg, transparent 50%, #3B82F6 50%)',
             }}
             onMouseDown={(e) => handleResizeStart(e, 'ne')}
           />
           <div
-            className="absolute top-0 left-0 w-3 h-3 cursor-nw-resize touch:touch touch:touch-lg"
+            className="absolute top-0 left-0 w-3 h-3 cursor-nw-resize min-w-[44px] min-h-[44px]"
             style={{
               background: 'linear-gradient(-45deg, transparent 50%, #3B82F6 50%)',
             }}
