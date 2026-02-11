@@ -206,7 +206,7 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search notes... (Ctrl+K)"
-          className="w-full pl-10 pr-24 py-2 border border-light-note-border dark:border-dark-note-border rounded-lg bg-white dark:bg-dark-input text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary"
+          className="search-input w-full pl-10 pr-24 py-2 border border-light-note-border dark:border-dark-note-border rounded-lg bg-white dark:bg-dark-input text-light-text dark:text-dark-text focus:outline-none focus:border-light-primary dark:focus:border-dark-primary"
         />
 
         {/* Scope Selector and Filter Button */}

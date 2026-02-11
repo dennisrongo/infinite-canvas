@@ -221,8 +221,6 @@ function CanvasPageContent() {
       }
     } catch (err) {
       console.error('Error fetching folders and canvases:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -647,7 +645,7 @@ function CanvasPageContent() {
     }
   }, [router, showToast]);
 
-  if (loading) {
+  if (loading || (!canvas && !error)) {
     return <CanvasSkeleton />;
   }
 

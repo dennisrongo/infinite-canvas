@@ -110,7 +110,7 @@ export default function NoteNode({ data, selected, id }: NoteNodeProps) {
       ref={nodeRef}
       className={`group px-4 py-3 bg-white dark:bg-dark-note border-2 rounded-lg shadow-md transition-all relative ${
         selected
-          ? 'border-light-primary dark:border-dark-primary ring-2 ring-light-primary dark:ring-dark-primary ring-opacity-50'
+          ? 'border-light-primary dark:border-dark-primary shadow-[0_0_0_3px_rgba(59,130,246,0.15)] dark:shadow-[0_0_0_3px_rgba(96,165,250,0.2)]'
           : 'border-light-note-border dark:border-dark-note-border hover:border-light-primary dark:hover:border-dark-primary'
       }`}
       style={{ width: `${size.width}px`, minHeight: `${size.height}px` }}
@@ -193,30 +193,18 @@ export default function NoteNode({ data, selected, id }: NoteNodeProps) {
         <>
           <div
             className="absolute bottom-0 right-0 w-3 h-3 cursor-se-resize min-w-[44px] min-h-[44px]"
-            style={{
-              background: 'linear-gradient(135deg, transparent 50%, #3B82F6 50%)',
-            }}
             onMouseDown={(e) => handleResizeStart(e, 'se')}
           />
           <div
             className="absolute bottom-0 left-0 w-3 h-3 cursor-sw-resize min-w-[44px] min-h-[44px]"
-            style={{
-              background: 'linear-gradient(225deg, transparent 50%, #3B82F6 50%)',
-            }}
             onMouseDown={(e) => handleResizeStart(e, 'sw')}
           />
           <div
             className="absolute top-0 right-0 w-3 h-3 cursor-ne-resize min-w-[44px] min-h-[44px]"
-            style={{
-              background: 'linear-gradient(45deg, transparent 50%, #3B82F6 50%)',
-            }}
             onMouseDown={(e) => handleResizeStart(e, 'ne')}
           />
           <div
             className="absolute top-0 left-0 w-3 h-3 cursor-nw-resize min-w-[44px] min-h-[44px]"
-            style={{
-              background: 'linear-gradient(-45deg, transparent 50%, #3B82F6 50%)',
-            }}
             onMouseDown={(e) => handleResizeStart(e, 'nw')}
           />
         </>
