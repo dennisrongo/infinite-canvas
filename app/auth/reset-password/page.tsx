@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { AuthFormSkeleton } from '@/components/ui/SkeletonLoader';
 
 interface ValidationErrors {
   password?: string;
@@ -270,11 +271,7 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-light-canvas dark:bg-dark-canvas flex items-center justify-center">
-        <div className="text-light-text dark:text-dark-text">Loading...</div>
-      </div>
-    }>
+    <Suspense fallback={<AuthFormSkeleton />}>
       <ResetPasswordForm />
     </Suspense>
   );

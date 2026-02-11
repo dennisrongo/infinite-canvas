@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { SettingsSkeleton } from '@/components/ui/SkeletonLoader';
 import { formatDateTime, getUserTimezone } from '@/lib/date';
 
 // Client-side password validation matching the server-side validation
@@ -290,11 +291,7 @@ export default function SettingsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-light-canvas dark:bg-dark-canvas flex items-center justify-center">
-        <div className="text-light-text dark:text-dark-text">Loading...</div>
-      </div>
-    );
+    return <SettingsSkeleton />;
   }
 
   return (

@@ -5,7 +5,7 @@ export { ModalHeader, ModalTitle, ModalBody, ModalFooter } from './Modal';
 
 // Skeleton loading components
 export { default as SkeletonLoader } from './SkeletonLoader';
-export { CardSkeleton, ListSkeleton, TextSkeleton, CircleSkeleton } from './SkeletonLoader';
+export { CardSkeleton, ListSkeleton, TextSkeleton, CircleSkeleton, DashboardSkeleton, CanvasSkeleton, SettingsSkeleton, AuthFormSkeleton } from './SkeletonLoader';
 
 // Other UI components
 export { default as ToastContainer } from './Toast';

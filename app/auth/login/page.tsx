@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { AuthFormSkeleton } from '@/components/ui/SkeletonLoader';
 
 interface ValidationErrors {
   email?: string;
@@ -243,7 +244,7 @@ function LoginForm() {
 
 function LoginPage() {
   return (
-    <Suspense fallback={<LoadingSpinner />}>
+    <Suspense fallback={<AuthFormSkeleton />}>
       <LoginForm />
     </Suspense>
   );

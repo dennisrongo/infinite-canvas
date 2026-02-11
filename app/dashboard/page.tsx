@@ -6,6 +6,7 @@ import Header from '@/components/layout/Header';
 import ImportModal from '@/components/canvas/ImportModal';
 import { useToast } from '@/contexts/ToastContext';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { DashboardSkeleton } from '@/components/ui/SkeletonLoader';
 import { FolderPlus, FilePlus, Download, ChevronDown, ChevronRight, Pencil, Trash2, ArrowRightLeft, Folder } from 'lucide-react';
 
 interface Canvas {
@@ -60,6 +61,9 @@ export default function DashboardPage() {
   const [isMovingCanvas, setIsMovingCanvas] = useState(false);
   const [isUpdatingSortOrder, setIsUpdatingSortOrder] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showNewCanvasModal, setShowNewCanvasModal] = useState(false);
+  const [newCanvasName, setNewCanvasName] = useState('');
+  const [newCanvasFolderId, setNewCanvasFolderId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     // Load expanded folders from localStorage
@@ -276,16 +280,21 @@ export default function DashboardPage() {
     setExpandedFolders(newExpanded);
   };
 
-  const createCanvas = async (folderId?: string) => {
+  const createCanvas = (folderId?: string) => {
     if (isCreatingCanvas) return; // Prevent double-click
+    setNewCanvasFolderId(folderId);
+    setNewCanvasName('');
+    setShowNewCanvasModal(true);
+  };
 
-    const canvasName = prompt(folderId ? 'Enter canvas name:' : 'Enter canvas name for root:');
-    if (!canvasName || !canvasName.trim()) return;
+  const submitCreateCanvas = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCanvasName.trim() || isCreatingCanvas) return;
 
     setIsCreatingCanvas(true);
     try {
-      const body: any = { name: canvasName.trim() };
-      if (folderId) body.folderId = folderId;
+      const body: any = { name: newCanvasName.trim() };
+      if (newCanvasFolderId) body.folderId = newCanvasFolderId;
 
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (csrfToken) {
@@ -301,9 +310,9 @@ export default function DashboardPage() {
       if (!res.ok) throw new Error('Failed to create canvas');
 
       const data = await res.json();
-      if (folderId) {
+      if (newCanvasFolderId) {
         setFolders(folders.map(f => {
-          if (f.id === folderId) {
+          if (f.id === newCanvasFolderId) {
             return { ...f, canvases: [...f.canvases, data.canvas] };
           }
           return f;
@@ -312,6 +321,9 @@ export default function DashboardPage() {
         setRootCanvases([...rootCanvases, data.canvas]);
       }
 
+      setShowNewCanvasModal(false);
+      setNewCanvasName('');
+      setNewCanvasFolderId(undefined);
       showToast(`Canvas "${data.canvas.name}" created successfully`, 'success');
     } catch (error) {
       console.error('Error creating canvas:', error);
@@ -477,11 +489,7 @@ export default function DashboardPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-light-canvas dark:bg-dark-canvas flex items-center justify-center">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   return (
@@ -1088,6 +1096,52 @@ export default function DashboardPage() {
                   {isRenamingCanvas ? (
                     <><LoadingSpinner size="sm" /> Saving...</>
                   ) : 'Save'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showNewCanvasModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-dark-bg rounded-2xl shadow-xl p-6 max-w-md w-full animate-scale-in">
+            <h3 className="text-lg font-semibold text-light-text dark:text-dark-text mb-4">
+              Create New Canvas
+            </h3>
+            <form onSubmit={submitCreateCanvas}>
+              <div>
+                <label htmlFor="newCanvasName" className="block text-sm font-medium text-light-text dark:text-dark-text mb-1">
+                  Canvas Name
+                </label>
+                <input
+                  id="newCanvasName"
+                  name="newCanvasName"
+                  type="text"
+                  value={newCanvasName}
+                  onChange={(e) => setNewCanvasName(e.target.value)}
+                  placeholder="Canvas name"
+                  className="w-full px-4 py-2 border border-light-note-border dark:border-dark-note-border rounded-xl bg-white dark:bg-dark-canvas text-light-text dark:text-dark-text mb-4 focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary focus:border-transparent outline-none"
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => { setShowNewCanvasModal(false); setNewCanvasName(''); setNewCanvasFolderId(undefined); }}
+                  disabled={isCreatingCanvas}
+                  className="px-4 py-2 border border-light-note-border dark:border-dark-note-border rounded-xl hover:bg-light-canvas dark:hover:bg-dark-canvas transition disabled:opacity-50 disabled:cursor-not-allowed text-light-text dark:text-dark-text"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCreatingCanvas || !newCanvasName.trim()}
+                  className="px-4 py-2 bg-light-primary dark:bg-dark-primary text-white rounded-xl hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isCreatingCanvas ? (
+                    <><LoadingSpinner size="sm" /> Creating...</>
+                  ) : 'Create'}
                 </button>
               </div>
             </form>

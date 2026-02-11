@@ -7,6 +7,7 @@ import Header from '@/components/layout/Header';
 import ImportModal from '@/components/canvas/ImportModal';
 import { useToast } from '@/contexts/ToastContext';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { CanvasSkeleton } from '@/components/ui/SkeletonLoader';
 import { useCancellableRequest } from '@/hooks/useCancellableRequest';
 import { ChevronDown, ChevronRight, Folder, LayoutDashboard } from 'lucide-react';
 
@@ -15,11 +16,7 @@ const ReactFlowCanvas = dynamic(
   () => import('@/components/canvas/ReactFlowCanvas'),
   {
     ssr: false,
-    loading: () => (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-light-text dark:text-dark-text">Loading canvas...</div>
-      </div>
-    )
+    loading: () => <CanvasSkeleton />
   }
 );
 
@@ -651,11 +648,7 @@ function CanvasPageContent() {
   }, [router, showToast]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-light-canvas dark:bg-dark-canvas flex items-center justify-center overflow-hidden">
-        <div className="text-light-text dark:text-dark-text">Loading canvas...</div>
-      </div>
-    );
+    return <CanvasSkeleton />;
   }
 
   if (error || !canvas) {
@@ -873,11 +866,7 @@ function CanvasPageContent() {
 
 export default function CanvasPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-light-canvas dark:bg-dark-canvas flex items-center justify-center">
-        <LoadingSpinner />
-      </div>
-    }>
+    <Suspense fallback={<CanvasSkeleton />}>
       <CanvasPageContent />
     </Suspense>
   );
