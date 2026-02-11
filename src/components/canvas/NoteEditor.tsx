@@ -13,9 +13,6 @@ import { useToast } from '@/contexts/ToastContext';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { formatDateTime, formatRelativeTime } from '@/lib/date';
 
-// Feature #139: Local storage key for draft backup
-const DRAFT_STORAGE_PREFIX = 'note_draft_';
-
 interface Note {
   id: string;
   title: string;
@@ -53,18 +50,13 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
   const [imageUploadProgress, setImageUploadProgress] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // FIX: Track initialization to prevent autosave from wiping data
-  const [isInitializing, setIsInitializing] = useState(false);
-  const [initialValues, setInitialValues] = useState<{title: string; content: string}>({ title: '', content: '' });
-
   // Link autocomplete state
   const [showLinkAutocomplete, setShowLinkAutocomplete] = useState(false);
   const [linkSearchQuery, setLinkSearchQuery] = useState('');
   const [linkedNoteTitles, setLinkedNoteTitles] = useState<Set<string>>(new Set());
 
-  // Feature #139: Track unsaved changes for refresh warning
+  // Track unsaved changes for refresh warning
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [showDraftRestoredBanner, setShowDraftRestoredBanner] = useState(false);
 
   // Extract linked note titles from content
   useEffect(() => {
@@ -74,7 +66,7 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
     setLinkedNoteTitles(new Set(titles));
   }, [content]);
 
-  // Feature #139: Track unsaved changes
+  // Track unsaved changes
   useEffect(() => {
     if (note) {
       const hasChanges =
@@ -83,32 +75,18 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
         fontFamily !== (note.fontFamily || 'Inter') ||
         fontSize !== (note.fontSize || 14);
       setHasUnsavedChanges(hasChanges);
-
-      // Save draft to localStorage whenever content changes
-      if (hasChanges && isOpen) {
-        const draftData = {
-          title,
-          content,
-          fontFamily,
-          fontSize,
-          timestamp: Date.now(),
-        };
-        localStorage.setItem(`${DRAFT_STORAGE_PREFIX}${note.id}`, JSON.stringify(draftData));
-      }
     }
-  }, [title, content, fontFamily, fontSize, note, isOpen]);
+  }, [title, content, fontFamily, fontSize, note]);
 
-  // Feature #139: Warn before page unload if there are unsaved changes
+  // Warn before page unload if there are unsaved changes
   useEffect(() => {
     if (!isOpen || !hasUnsavedChanges) return;
 
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      // Standard message that browsers display
-      const message =
-        'You have unsaved changes. Are you sure you want to leave? Your changes will be lost.';
+      const message = 'You have unsaved changes. Are you sure you want to leave? Your changes will be lost.';
       e.preventDefault();
-      e.returnValue = message; // Required for Chrome
-      return message; // Required for other browsers
+      e.returnValue = message;
+      return message;
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -118,74 +96,14 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
     };
   }, [isOpen, hasUnsavedChanges]);
 
-  // Feature #139: Clean up draft when closing (after save completes)
-  useEffect(() => {
-    if (!isOpen && note && saveStatus === 'saved') {
-      // Clear draft after successful save
-      const timer = setTimeout(() => {
-        localStorage.removeItem(`${DRAFT_STORAGE_PREFIX}${note.id}`);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen, note, saveStatus]);
-
+  // Load note data when note changes - database is single source of truth
   useEffect(() => {
     if (note) {
-      // CRITICAL FIX: Set initialization flag IMMEDIATELY to block autosave
-      setIsInitializing(true);
-
-      // Feature #139: Check for draft restoration
-      const draftKey = `${DRAFT_STORAGE_PREFIX}${note.id}`;
-      const savedDraft = localStorage.getItem(draftKey);
-
-      if (savedDraft) {
-        try {
-          const draft = JSON.parse(savedDraft);
-          // Check if draft is recent (within 1 hour)
-          const draftAge = Date.now() - draft.timestamp;
-          const oneHour = 60 * 60 * 1000;
-
-          // Feature #139 fix: Compare draft timestamp with note's updatedAt
-          // Only restore draft if it's newer than the server version
-          const noteUpdatedAt = note.updatedAt ? new Date(note.updatedAt).getTime() : 0;
-          const draftTimestamp = draft.timestamp || 0;
-
-          if (draftAge < oneHour && draftTimestamp > noteUpdatedAt) {
-            // Draft is newer than server version, restore from draft
-            setTitle(draft.title);
-            setContent(draft.content);
-            setFontFamily(draft.fontFamily || 'Inter');
-            setFontSize(draft.fontSize || 14);
-            setShowDraftRestoredBanner(true);
-
-            // Auto-hide the banner after 5 seconds
-            setTimeout(() => {
-              setShowDraftRestoredBanner(false);
-            }, 5000);
-          } else {
-            // Draft is old or older than server version, use server data and clear draft
-            localStorage.removeItem(draftKey);
-            setTitle(note.title || '');
-            setContent(note.content || '');
-            setFontFamily(note.fontFamily || 'Inter');
-            setFontSize(note.fontSize || 14);
-          }
-        } catch (e) {
-          // Invalid draft data, use server data
-          console.error('Error parsing draft:', e);
-          localStorage.removeItem(draftKey);
-          setTitle(note.title || '');
-          setContent(note.content || '');
-          setFontFamily(note.fontFamily || 'Inter');
-          setFontSize(note.fontSize || 14);
-        }
-      } else {
-        // No draft, use server data
-        setTitle(note.title || '');
-        setContent(note.content || '');
-        setFontFamily(note.fontFamily || 'Inter');
-        setFontSize(note.fontSize || 14);
-      }
+      console.log('[NoteEditor] Loading note from database:', note);
+      setTitle(note.title || '');
+      setContent(note.content || '');
+      setFontFamily(note.fontFamily || 'Inter');
+      setFontSize(note.fontSize || 14);
     } else {
       setTitle('');
       setContent('');
@@ -193,34 +111,6 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
       setFontSize(14);
     }
   }, [note]);
-
-  useEffect(() => {
-    // Auto-save with debouncing
-    // FIX: Skip autosave during initialization to prevent wiping data
-    if (isOpen && note && !isInitializing) {
-      const timer = setTimeout(() => {
-        // FIX: Also check for empty values before saving
-        if (
-          title !== note.title ||
-          content !== note.content ||
-          fontFamily !== (note.fontFamily || 'Inter') ||
-          fontSize !== (note.fontSize || 14)
-        ) {
-          // FIX: Don't save if values match initial empty values (during initialization)
-          if (
-            title !== initialValues.title ||
-            content !== initialValues.content ||
-            fontFamily !== (note.fontFamily || 'Inter') ||
-            fontSize !== (note.fontSize || 14)
-          ) {
-            handleSave();
-          }
-        }
-      }, 2000); // 2 second debounce
-
-      return () => clearTimeout(timer);
-    }
-  }, [title, content, fontFamily, fontSize, isOpen, note, isInitializing, initialValues]);
 
   const handleSave = async () => {
     if (!note) return;
@@ -388,7 +278,6 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
   };
 
   const handleNoteLinkClick = (noteTitle: string) => {
-    // Feature #74: Navigate to the linked note
     console.log('Clicked link to note:', noteTitle);
 
     // Check if the note exists in the current canvas
@@ -505,52 +394,6 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-x-hidden">
       <div className="bg-white dark:bg-[#1E293B] rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col mx-4 overflow-hidden">
-        {/* Feature #139: Draft restored banner */}
-        {showDraftRestoredBanner && (
-          <div className="bg-amber-100 dark:bg-amber-900/30 border-b border-amber-300 dark:border-amber-700 px-4 py-2 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="text-amber-600 dark:text-amber-400"
-              >
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                <line x1="12" y1="9" x2="12" y2="13" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
-              </svg>
-              <span className="text-sm text-amber-800 dark:text-amber-200">
-                Unsaved changes restored from browser storage
-              </span>
-            </div>
-            <button
-              onClick={() => setShowDraftRestoredBanner(false)}
-              className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          </div>
-        )}
-
         {/* Header */}
         <div className="p-4 border-b border-[#E2E8F0] dark:border-[#475569]">
           <div className="flex items-center justify-between mb-2">
@@ -593,7 +436,6 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
               )}
             </div>
             <div className="flex items-center gap-2">
-              {/* Auto-save status indicator */}
               {saveStatus === 'saving' && (
                 <span className="text-sm text-[#64748B] dark:text-[#94A3B8]">Saving...</span>
               )}
@@ -752,7 +594,6 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
                                     href="#"
                                     onClick={(e) => {
                                       e.preventDefault();
-                                      // Feature #74: Navigate to linked note
                                       handleNoteLinkClick(noteTitle);
                                     }}
                                     className={`font-medium ${
@@ -808,7 +649,7 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
         {/* Footer with action buttons */}
         <div className="flex items-center justify-between p-4 border-t border-[#E2E8F0] dark:border-[#475569]">
           <div className="text-sm text-[#64748B] dark:text-[#94A3B8]">
-            Auto-save enabled (2s after typing stops)
+            Changes are saved manually or when closing
           </div>
           <div className="flex gap-3">
             <button

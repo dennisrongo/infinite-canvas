@@ -29,6 +29,8 @@ interface Note {
   positionY: number;
   width: number;
   height: number;
+  fontFamily?: string | null;
+  fontSize?: number | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -302,41 +304,37 @@ function ReactFlowCanvasInner({
       event.stopPropagation();
       console.log('[onNodeDoubleClick] Opening node:', node.id, node.data);
 
-      // CRITICAL FIX: Search current nodes state FIRST (which has most up-to-date data)
-      // Then fall back to initialNotes for additional metadata like createdAt, updatedAt
-      let note = nodes.find(n => n.id === node.id);
+      // CRITICAL FIX: Need to construct a Note object from the Node
+      // Nodes have structure: { id, data: { title, content, ... }, position, ... }
+      // Notes have structure: { id, title, content, positionX, positionY, ... }
+      let note: Note | undefined;
 
-      // If found in current nodes, use it directly (it has fontFamily and fontSize now)
-      if (!note) {
-        // Not in current nodes, try initialNotes for metadata
-        note = initialNotes.find(n => n.id === node.id);
+      // First, check initialNotes for a Note object with metadata like createdAt, updatedAt
+      const initialNote = initialNotes.find(n => n.id === node.id);
+      if (initialNote) {
+        note = initialNote;
       }
 
-      // If not found in initialNotes (e.g., newly created note), construct from node data
-      if (!note) {
-        console.log('[onNodeDoubleClick] Note not found in initialNotes, using current node data');
-        note = {
-          id: node.id,
-          title: (node.data as any).title || 'Untitled Note',
-          content: (node.data as any).content || '',
-          positionX: node.position.x,
-          positionY: node.position.y,
-          width: typeof node.style?.width === 'number' ? node.style.width : 300,
-          height: typeof node.style?.height === 'number' ? node.style.height : 200,
-          fontFamily: (node.data as any).fontFamily,
-          fontSize: (node.data as any).fontSize,
-        };
-      }
+      // Always construct Note object from current node data (most up-to-date)
+      note = {
+        id: node.id,
+        title: (node.data as any).title || 'Untitled Note',
+        content: (node.data as any).content || '',
+        positionX: node.position.x,
+        positionY: node.position.y,
+        width: typeof node.style?.width === 'number' ? node.style.width : 300,
+        height: typeof node.style?.height === 'number' ? node.style.height : 200,
+        fontFamily: (node.data as any).fontFamily,
+        fontSize: (node.data as any).fontSize,
+        createdAt: initialNote?.createdAt,
+        updatedAt: initialNote?.updatedAt,
+      };
 
-      if (note) {
-        console.log('[onNodeDoubleClick] Setting editing note:', note);
-        setEditingNote(note);
-        setIsEditorOpen(true);
-      } else {
-        console.error('[onNodeDoubleClick] Could not find note data for node:', node.id);
-      }
+      console.log('[onNodeDoubleClick] Constructed note object:', note);
+      setEditingNote(note);
+      setIsEditorOpen(true);
     },
-    [nodes, initialNotes]  // Updated dependency to include nodes
+    [nodes, initialNotes]
   );
 
   // Handle saving note content from editor
@@ -410,19 +408,19 @@ function ReactFlowCanvasInner({
 
       // Optional: Center the view on the target note
       const viewport = getViewport();
-      const noteWidth = Number(targetNote.style?.width || 300);
-      const noteHeight = Number(targetNote.style?.height || 200);
+      const noteWidth = Number(targetNode.style?.width || 300);
+      const noteHeight = Number(targetNode.style?.height || 200);
       setViewport({
-        x: -targetNote.position.x + window.innerWidth / 2 / viewport.zoom - noteWidth / 2,
-        y: -targetNote.position.y + window.innerHeight / 2 / viewport.zoom - noteHeight / 2,
+        x: -targetNode.position.x + window.innerWidth / 2 / viewport.zoom - noteWidth / 2,
+        y: -targetNode.position.y + window.innerHeight / 2 / viewport.zoom - noteHeight / 2,
         zoom: viewport.zoom,
       });
 
       // Save viewport change
       if (onViewportChange) {
         onViewportChange({
-          x: -targetNote.position.x + window.innerWidth / 2 / viewport.zoom - noteWidth / 2,
-          y: -targetNote.position.y + window.innerHeight / 2 / viewport.zoom - noteHeight / 2,
+          x: -targetNode.position.x + window.innerWidth / 2 / viewport.zoom - noteWidth / 2,
+          y: -targetNode.position.y + window.innerHeight / 2 / viewport.zoom - noteHeight / 2,
           zoom: viewport.zoom,
         });
       }
