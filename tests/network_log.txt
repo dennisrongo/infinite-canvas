@@ -1,0 +1,17 @@
+[GET] http://localhost:3001/auth/login => [FAILED] NS_BINDING_ABORTED
+[GET] http://localhost:3001/api/user/settings => [401] Unauthorized
+[PUT] http://localhost:3001/api/user/settings => [401] Unauthorized
+[POST] http://localhost:3001/api/auth/login => [200] OK
+[GET] http://localhost:3001/_next/static/webpack/6a485f8177bb9e7b.webpack.hot-update.json => [200] OK
+[GET] http://localhost:3001/dashboard?_rsc=vmuo9 => [200] OK
+[GET] http://localhost:3001/_next/static/webpack/adafaec9ac210430.webpack.hot-update.json => [200] OK
+[GET] http://localhost:3001/api/folders => [200] OK
+[GET] http://localhost:3001/api/folders => [200] OK
+[GET] http://localhost:3001/dashboard?_rsc=nqbh3 => [200] OK
+[GET] http://localhost:3001/_next/static/webpack/0cf58948e51841a3.webpack.hot-update.json => [200] OK
+[GET] http://localhost:3001/api/canvases => [200] OK
+[GET] http://localhost:3001/api/canvases => [200] OK
+[GET] http://localhost:3001/_next/static/webpack/70c57c5bb146b544.webpack.hot-update.json => [200] OK
+[POST] http://localhost:3001/api/canvases
+[GET] http://localhost:3001/dashboard?_rsc=nqbh3
+[GET] http://localhost:3001/_next/static/webpack/19acb1b0ab0b4567.webpack.hot-update.json => [200] OK
