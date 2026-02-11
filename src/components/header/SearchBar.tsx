@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDebounce } from '@/hooks/useDebounce';
-import Icon from '@/components/ui/Icon';
+import { Search, SlidersHorizontal } from 'lucide-react';
 
 interface SearchBarProps {
   currentCanvasId?: string;
@@ -196,7 +196,7 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
       <div className="relative">
         {/* Search Icon */}
         <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-light-text-secondary dark:text-dark-text-secondary">
-          <Icon name="search" size="md" ariaLabel="Search" />
+          <Search className="w-5 h-5" />
         </div>
 
         {/* Search Input */}
@@ -225,10 +225,11 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
           {/* Filter Toggle Button */}
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="px-2 py-1 text-xs border border-light-note-border dark:border-dark-note-border rounded bg-white dark:bg-dark-bg text-light-text-secondary dark:text-dark-text-tertiary hover:bg-light-hover dark:hover:bg-dark-hover transition focus:outline-none"
+            className="flex items-center gap-1 px-2 py-1 text-xs border border-light-note-border dark:border-dark-note-border rounded bg-white dark:bg-dark-bg text-light-text-secondary dark:text-dark-text-tertiary hover:bg-light-hover dark:hover:bg-dark-hover transition focus:outline-none"
             title="Filter and sort options"
           >
-            ⚙️ Filters
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+            <span>Filters</span>
           </button>
         </div>
       </div>

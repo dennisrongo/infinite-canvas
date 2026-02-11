@@ -165,8 +165,8 @@ h6, .h6 {
    Component Base Styles
    ======================================== */
 
-/* Button base styles */
-button, .btn {
+/* Button base styles - scoped to .btn class to avoid breaking dropdowns/radios */
+.btn {
   @apply inline-flex items-center justify-center;
   min-height: var(--spacing-touch, 44px);
   min-width: var(--spacing-touch, 44px);
@@ -176,32 +176,8 @@ button, .btn {
               transform var(--transition-fast);
 }
 
-button:active:not(:disabled),
 .btn:active:not(:disabled) {
   transform: scale(0.98);
-}
-
-/* Input base styles */
-input, textarea, select {
-  @apply w-full px-4 py-2 border rounded-lg;
-  min-height: var(--spacing-touch, 44px);
-  transition: border-color var(--transition-normal),
-              box-shadow var(--transition-normal);
-}
-
-/* Focus styles - consistent across all interactive elements */
-*:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
-}
-
-/* Remove default outline for mouse users */
-button:focus:not(:focus-visible),
-a:focus:not(:focus-visible),
-input:focus:not(:focus-visible),
-textarea:focus:not(:focus-visible),
-select:focus:not(:focus-visible) {
-  outline: none;
 }
 
 /* ========================================

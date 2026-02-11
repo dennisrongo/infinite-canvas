@@ -2,7 +2,7 @@
 
 import SearchBar from '@/components/header/SearchBar';
 import UserActions from '@/components/header/UserActions';
-import Icon from '@/components/ui/Icon';
+import { Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
 interface HeaderProps {
   currentCanvasId?: string;
@@ -40,17 +40,17 @@ export default function Header({
   onImportClick,
 }: HeaderProps) {
   return (
-    <header className="bg-white dark:bg-dark-bg border-b border-light-note-border dark:border-dark-note-border px-4 md:px-6 py-4 sticky top-0 z-40 transition-colors duration-300 overflow-x-hidden">
+    <header className="bg-white/80 dark:bg-dark-bg/80 backdrop-blur-xl border-b border-light-note-border/60 dark:border-dark-note-border/60 px-3 md:px-5 py-2.5 sticky top-0 z-40 transition-all duration-300 overflow-x-hidden shadow-sm">
       <div className="flex items-center justify-between gap-2 overflow-x-hidden">
-        <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0 overflow-x-hidden">
+        <div className="flex items-center gap-1.5 md:gap-3 flex-1 min-w-0 overflow-x-hidden">
           {/* Hamburger menu button - visible on mobile */}
           {showMenuButton && onMenuClick && (
             <button
               onClick={onMenuClick}
-              className="lg:hidden min-w-[44px] min-h-[44px] p-2 rounded-lg hover:bg-light-hover dark:hover:bg-dark-hover transition flex-shrink-0"
+              className="lg:hidden min-w-[40px] min-h-[40px] p-2 rounded-xl hover:bg-light-primary/10 dark:hover:bg-dark-primary/10 active:scale-95 transition-all duration-150 flex-shrink-0 text-light-text dark:text-dark-text"
               aria-label="Toggle menu"
             >
-              <Icon name="menu" size="lg" ariaLabel="Toggle menu" />
+              <Menu className="w-5 h-5" />
             </button>
           )}
 
@@ -58,21 +58,26 @@ export default function Header({
           {showCollapseButton && onCollapseClick && (
             <button
               onClick={onCollapseClick}
-              className="hidden md:block min-w-[44px] min-h-[44px] px-4 py-2 text-sm border border-light-note-border dark:border-dark-note-border rounded-lg hover:bg-light-hover dark:hover:bg-dark-hover transition flex-shrink-0"
+              className="hidden md:flex min-w-[40px] min-h-[40px] items-center justify-center p-2 rounded-xl hover:bg-light-primary/10 dark:hover:bg-dark-primary/10 active:scale-95 transition-all duration-150 flex-shrink-0 text-light-text/70 dark:text-dark-text/70 hover:text-light-text dark:hover:text-dark-text"
               aria-label="Toggle sidebar"
+              title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
-              {isCollapsed ? '☰' : '«'}
+              {isCollapsed ? (
+                <PanelLeftOpen className="w-5 h-5" />
+              ) : (
+                <PanelLeftClose className="w-5 h-5" />
+              )}
             </button>
           )}
 
           {/* Logo or Title - truncate on small screens */}
           {title ? (
-            <h1 className="text-lg md:text-2xl font-bold text-light-text dark:text-dark-text truncate">
+            <h1 className="text-base md:text-xl font-semibold text-light-text dark:text-dark-text truncate">
               {title}
             </h1>
           ) : (
-            <a href="/dashboard" className="flex items-center gap-1 md:gap-2 flex-shrink-0">
-              <h1 className="text-lg md:text-2xl font-bold text-light-text dark:text-dark-text">
+            <a href="/dashboard" className="flex items-center gap-1.5 flex-shrink-0 group">
+              <h1 className="text-base md:text-xl font-semibold text-light-text dark:text-dark-text group-hover:text-light-primary dark:group-hover:text-dark-primary transition-colors">
                 Infinite Canvas
               </h1>
             </a>

@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import ImportModal from '@/components/canvas/ImportModal';
 import { useToast } from '@/contexts/ToastContext';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { FolderPlus, FilePlus, Download, ChevronDown, ChevronRight, Pencil, Trash2, ArrowRightLeft, Folder } from 'lucide-react';
 
 interface Canvas {
   id: string;
@@ -476,14 +478,14 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#1E293B] flex items-center justify-center">
-        <div className="text-[#1E293B] dark:text-[#F1F5F9]">Loading...</div>
+      <div className="min-h-screen bg-light-canvas dark:bg-dark-canvas flex items-center justify-center">
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#1E293B] overflow-x-hidden">
+    <div className="min-h-screen bg-light-canvas dark:bg-dark-canvas overflow-x-hidden">
       <Header
         showMenuButton={true}
         onMenuClick={() => setSidebarOpen(!sidebarOpen)}
@@ -493,7 +495,7 @@ export default function DashboardPage() {
         {/* Mobile sidebar overlay */}
         {sidebarOpen && (
           <div
-            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
             onClick={() => setSidebarOpen(false)}
             aria-hidden="true"
           />
@@ -502,71 +504,61 @@ export default function DashboardPage() {
         <div className="flex">
           {/* Sidebar - responsive */}
           <aside
-            className={`fixed lg:static inset-y-0 left-0 z-50 w-80 bg-white dark:bg-[#0F172A] border-r border-[#E2E8F0] dark:border-[#475569] transform transition-transform duration-300 ease-in-out overflow-y-auto ${
+            className={`fixed lg:static inset-y-0 left-0 z-50 w-80 bg-white/95 dark:bg-dark-bg/95 backdrop-blur-xl border-r border-light-note-border/60 dark:border-dark-note-border/60 transform transition-transform duration-300 ease-in-out overflow-y-auto ${
               sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
             }`}
           >
-            <div className="p-6 border-b border-[#E2E8F0] dark:border-[#475569]">
+            <div className="p-5 border-b border-light-note-border/60 dark:border-dark-note-border/60">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-[#1E293B] dark:text-[#F1F5F9]">
+                <h2 className="text-lg font-semibold text-light-text dark:text-dark-text">
                   My Canvases
                 </h2>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      setShowNewFolderModal(true);
-                      setSidebarOpen(false);
-                    }}
-                    disabled={isCreatingFolder}
-                    className="px-4 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] transition text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-                  >
-                    {isCreatingFolder ? (
-                      <>
-                        <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        New Folder
-                      </>
-                    ) : '+ New Folder'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      createCanvas();
-                      setSidebarOpen(false);
-                    }}
-                    disabled={isCreatingCanvas}
-                    className="px-4 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] transition text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-                  >
-                    {isCreatingCanvas ? (
-                      <>
-                        <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        New Canvas
-                      </>
-                    ) : '+ New Canvas'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowImportModal(true);
-                      setSidebarOpen(false);
-                    }}
-                    className="px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition text-sm text-[#1E293B] dark:text-[#F1F5F9] flex items-center gap-1"
-                    title="Import canvas"
-                  >
-                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    Import
-                  </button>
-                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 mb-4">
+                <button
+                  onClick={() => {
+                    setShowNewFolderModal(true);
+                    setSidebarOpen(false);
+                  }}
+                  disabled={isCreatingFolder}
+                  className="flex-1 min-w-[120px] px-3 py-2 bg-light-primary text-white rounded-xl hover:bg-light-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover transition-all duration-150 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 active:scale-95"
+                >
+                  {isCreatingFolder ? (
+                    <><LoadingSpinner size="sm" /> Folder</>
+                  ) : (
+                    <><FolderPlus className="w-4 h-4" /> Folder</>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    createCanvas();
+                    setSidebarOpen(false);
+                  }}
+                  disabled={isCreatingCanvas}
+                  className="flex-1 min-w-[120px] px-3 py-2 bg-light-primary text-white rounded-xl hover:bg-light-primary-hover dark:bg-dark-primary dark:hover:bg-dark-primary-hover transition-all duration-150 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 active:scale-95"
+                >
+                  {isCreatingCanvas ? (
+                    <><LoadingSpinner size="sm" /> Canvas</>
+                  ) : (
+                    <><FilePlus className="w-4 h-4" /> Canvas</>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowImportModal(true);
+                    setSidebarOpen(false);
+                  }}
+                  className="px-3 py-2 border border-light-note-border/60 dark:border-dark-note-border/60 rounded-xl hover:bg-light-primary/10 dark:hover:bg-dark-primary/10 transition-all duration-150 text-sm font-medium text-light-text dark:text-dark-text flex items-center justify-center gap-1.5 active:scale-95"
+                  title="Import canvas"
+                >
+                  <Download className="w-4 h-4" />
+                  Import
+                </button>
               </div>
 
               {/* Sort Order Selector */}
               <div className="flex items-center gap-2">
-                <label htmlFor="sortOrder" className="text-sm font-medium text-[#64748B] dark:text-[#94A3B8]">
+                <label htmlFor="sortOrder" className="text-sm font-medium text-light-text/60 dark:text-dark-text/60">
                   Sort by:
                 </label>
                 <select
@@ -575,7 +567,7 @@ export default function DashboardPage() {
                   value={sortOrder}
                   onChange={(e) => updateSortOrder(e.target.value as 'updated' | 'alphabetical' | 'created')}
                   disabled={isUpdatingSortOrder}
-                  className="flex-1 px-3 py-2 text-sm border border-[#E2E8F0] dark:border-[#475569] rounded-lg bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] focus:outline-none focus:ring-2 focus:ring-[#3B82F6] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-3 py-2 text-sm border border-light-note-border/60 dark:border-dark-note-border/60 rounded-xl bg-white dark:bg-dark-canvas text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <option value="updated">Recently Updated</option>
                   <option value="created">Recently Created</option>
@@ -584,89 +576,98 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="p-6">
+            <div className="p-5">
               {folders.length === 0 && rootCanvases.length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-[#1E293B] dark:text-[#F1F5F9] mb-4">
+                  <p className="text-light-text dark:text-dark-text mb-4">
                     No canvases yet. Create your first canvas or folder to get started!
                   </p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {folders.map((folder) => (
-                    <div key={folder.id} className="border border-[#E2E8F0] dark:border-[#475569] rounded-lg">
+                    <div key={folder.id} className="border border-light-note-border/60 dark:border-dark-note-border/60 rounded-xl overflow-hidden">
                       <div
-                        className="flex items-center justify-between p-4 bg-[#F8FAFC] dark:bg-[#1E293B] cursor-pointer"
+                        className="flex items-center justify-between p-3 bg-light-canvas dark:bg-dark-canvas cursor-pointer hover:bg-light-primary/5 dark:hover:bg-dark-primary/5 transition-colors"
                         onClick={() => toggleFolder(folder.id)}
                       >
-                        <div className="flex items-center gap-3">
-                          <span className="text-[#1E293B] dark:text-[#F1F5F9]">
-                            {expandedFolders.has(folder.id) ? '▼' : '▶'}
-                          </span>
-                          <span className="font-medium text-[#1E293B] dark:text-[#F1F5F9]">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {expandedFolders.has(folder.id) ? (
+                            <ChevronDown className="w-4 h-4 text-light-text/50 dark:text-dark-text/50 flex-shrink-0" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-light-text/50 dark:text-dark-text/50 flex-shrink-0" />
+                          )}
+                          <Folder className="w-4 h-4 text-light-primary dark:text-dark-primary flex-shrink-0" />
+                          <span className="font-medium text-sm text-light-text dark:text-dark-text truncate">
                             {folder.name}
                           </span>
-                          <span className="text-sm text-[#64748B]">
-                            ({folder.canvases.length} canvases)
+                          <span className="text-xs text-light-text/50 dark:text-dark-text/50 flex-shrink-0">
+                            ({folder.canvases.length})
                           </span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 flex-shrink-0">
                           <button
                             onClick={(e) => { e.stopPropagation(); createCanvas(folder.id); }}
                             disabled={isCreatingCanvas}
-                            className="px-3 py-1 text-xs bg-[#3B82F6] text-white rounded hover:bg-[#2563EB] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="p-1.5 text-light-text/60 dark:text-dark-text/60 hover:text-light-primary dark:hover:text-dark-primary hover:bg-light-primary/10 dark:hover:bg-dark-primary/10 rounded-lg transition-all disabled:opacity-50"
+                            title="Add canvas"
                           >
-                            {isCreatingCanvas ? '...' : '+ Canvas'}
+                            <FilePlus className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); openRenameModal(folder); }}
-                            className="px-3 py-1 text-xs border border-[#E2E8F0] dark:border-[#475569] rounded hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
+                            className="p-1.5 text-light-text/60 dark:text-dark-text/60 hover:text-light-primary dark:hover:text-dark-primary hover:bg-light-primary/10 dark:hover:bg-dark-primary/10 rounded-lg transition-all"
+                            title="Rename folder"
                           >
-                            Rename
+                            <Pencil className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); confirmDeleteFolder(folder); }}
-                            className="px-3 py-1 text-xs border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                            className="p-1.5 text-light-text/60 dark:text-dark-text/60 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-500/10 dark:hover:bg-red-400/10 rounded-lg transition-all"
+                            title="Delete folder"
                           >
-                            Delete
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </div>
                       {expandedFolders.has(folder.id) && (
-                        <div className="p-4 border-t border-[#E2E8F0] dark:border-[#475569]">
+                        <div className="px-3 pb-3 border-t border-light-note-border/40 dark:border-dark-note-border/40">
                           {folder.canvases.length === 0 ? (
-                            <p className="text-sm text-[#64748B]">No canvases in this folder</p>
+                            <p className="text-sm text-light-text/50 dark:text-dark-text/50 py-3 pl-6">No canvases in this folder</p>
                           ) : (
-                            <div className="space-y-2">
+                            <div className="space-y-1 pt-2">
                               {folder.canvases.map((canvas) => (
                                 <div
                                   key={canvas.id}
-                                  className="flex items-center justify-between p-3 bg-white dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-[#475569] rounded"
+                                  className="flex items-center justify-between p-2.5 pl-7 rounded-lg hover:bg-light-primary/5 dark:hover:bg-dark-primary/5 transition-colors group"
                                 >
                                   <a
                                     href={`/canvas/${canvas.id}`}
-                                    className="text-[#3B82F6] hover:underline font-medium"
+                                    className="text-sm text-light-primary dark:text-dark-primary hover:underline font-medium truncate"
                                   >
                                     {canvas.name}
                                   </a>
-                                  <div className="flex gap-1">
+                                  <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                                     <button
                                       onClick={() => openCanvasRenameModal(canvas, folder.id)}
-                                      className="px-2 py-1 text-xs border border-[#E2E8F0] dark:border-[#475569] rounded hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
+                                      className="p-1.5 text-light-text/60 dark:text-dark-text/60 hover:text-light-primary dark:hover:text-dark-primary hover:bg-light-primary/10 dark:hover:bg-dark-primary/10 rounded-lg transition-all"
+                                      title="Rename"
                                     >
-                                      Rename
+                                      <Pencil className="w-3 h-3" />
                                     </button>
                                     <button
                                       onClick={() => openMoveModal(canvas, folder.id)}
-                                      className="px-2 py-1 text-xs border border-[#E2E8F0] dark:border-[#475569] rounded hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
+                                      className="p-1.5 text-light-text/60 dark:text-dark-text/60 hover:text-light-primary dark:hover:text-dark-primary hover:bg-light-primary/10 dark:hover:bg-dark-primary/10 rounded-lg transition-all"
+                                      title="Move"
                                     >
-                                      Move
+                                      <ArrowRightLeft className="w-3 h-3" />
                                     </button>
                                     <button
                                       onClick={() => confirmDeleteCanvas(canvas, folder.id)}
-                                      className="px-2 py-1 text-xs border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                                      className="p-1.5 text-light-text/60 dark:text-dark-text/60 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-500/10 dark:hover:bg-red-400/10 rounded-lg transition-all"
+                                      title="Delete"
                                     >
-                                      Delete
+                                      <Trash2 className="w-3 h-3" />
                                     </button>
                                   </div>
                                 </div>
@@ -679,45 +680,48 @@ export default function DashboardPage() {
                   ))}
 
                   {rootCanvases.length > 0 && (
-                    <div className="border border-[#E2E8F0] dark:border-[#475569] rounded-lg">
-                      <div className="p-4 bg-[#F8FAFC] dark:bg-[#1E293B]">
-                        <span className="font-medium text-[#1E293B] dark:text-[#F1F5F9]">
+                    <div className="border border-light-note-border/60 dark:border-dark-note-border/60 rounded-xl overflow-hidden">
+                      <div className="p-3 bg-light-canvas dark:bg-dark-canvas">
+                        <span className="font-medium text-sm text-light-text dark:text-dark-text">
                           Root (No Folder)
                         </span>
-                        <span className="text-sm text-[#64748B] ml-2">
-                          ({rootCanvases.length} canvases)
+                        <span className="text-xs text-light-text/50 dark:text-dark-text/50 ml-2">
+                          ({rootCanvases.length})
                         </span>
                       </div>
-                      <div className="p-4 space-y-2">
+                      <div className="px-3 pb-3 space-y-1">
                         {rootCanvases.map((canvas) => (
                           <div
                             key={canvas.id}
-                            className="flex items-center justify-between p-3 bg-white dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-[#475569] rounded"
+                            className="flex items-center justify-between p-2.5 rounded-lg hover:bg-light-primary/5 dark:hover:bg-dark-primary/5 transition-colors group"
                           >
                             <a
                               href={`/canvas/${canvas.id}`}
-                              className="text-[#3B82F6] hover:underline font-medium"
+                              className="text-sm text-light-primary dark:text-dark-primary hover:underline font-medium truncate"
                             >
                               {canvas.name}
                             </a>
-                            <div className="flex gap-1">
+                            <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                               <button
                                 onClick={() => openCanvasRenameModal(canvas)}
-                                className="px-2 py-1 text-xs border border-[#E2E8F0] dark:border-[#475569] rounded hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
+                                className="p-1.5 text-light-text/60 dark:text-dark-text/60 hover:text-light-primary dark:hover:text-dark-primary hover:bg-light-primary/10 dark:hover:bg-dark-primary/10 rounded-lg transition-all"
+                                title="Rename"
                               >
-                                Rename
+                                <Pencil className="w-3 h-3" />
                               </button>
                               <button
                                 onClick={() => openMoveModal(canvas, undefined)}
-                                className="px-2 py-1 text-xs border border-[#E2E8F0] dark:border-[#475569] rounded hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
+                                className="p-1.5 text-light-text/60 dark:text-dark-text/60 hover:text-light-primary dark:hover:text-dark-primary hover:bg-light-primary/10 dark:hover:bg-dark-primary/10 rounded-lg transition-all"
+                                title="Move"
                               >
-                                Move
+                                <ArrowRightLeft className="w-3 h-3" />
                               </button>
                               <button
                                 onClick={() => confirmDeleteCanvas(canvas)}
-                                className="px-2 py-1 text-xs border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                                className="p-1.5 text-light-text/60 dark:text-dark-text/60 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-500/10 dark:hover:bg-red-400/10 rounded-lg transition-all"
+                                title="Delete"
                               >
-                                Delete
+                                <Trash2 className="w-3 h-3" />
                               </button>
                             </div>
                           </div>
@@ -733,16 +737,16 @@ export default function DashboardPage() {
 
             {/* Main content area */}
             <div className="flex-1 p-6">
-              <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow p-6">
-                <h2 className="text-xl font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-4">
+              <div className="bg-white dark:bg-dark-bg rounded-xl shadow-sm border border-light-note-border/60 dark:border-dark-note-border/60 p-6">
+                <h2 className="text-xl font-semibold text-light-text dark:text-dark-text mb-4">
                   Welcome to Infinite Canvas
                 </h2>
-                <p className="text-[#64748B] mb-4">
+                <p className="text-light-text/60 dark:text-dark-text/60 mb-4">
                   Select a canvas from the sidebar to view and edit it, or create a new canvas to get started.
                 </p>
                 {folders.length === 0 && rootCanvases.length === 0 && (
                   <div className="text-center py-12">
-                    <p className="text-[#1E293B] dark:text-[#F1F5F9] mb-4">
+                    <p className="text-light-text dark:text-dark-text mb-4">
                       No canvases yet. Open the sidebar (click the menu button) and create your first canvas or folder to get started!
                     </p>
                   </div>
@@ -753,14 +757,14 @@ export default function DashboardPage() {
         </main>
 
       {showNewFolderModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-x-hidden">
-          <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-xl p-6 max-w-md w-full mx-4 overflow-hidden">
-            <h3 className="text-lg font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-dark-bg rounded-2xl shadow-xl p-6 max-w-md w-full animate-scale-in">
+            <h3 className="text-lg font-semibold text-light-text dark:text-dark-text mb-4">
               Create New Folder
             </h3>
             <form onSubmit={createFolder}>
               <div>
-                <label htmlFor="newFolderName" className="block text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9] mb-1">
+                <label htmlFor="newFolderName" className="block text-sm font-medium text-light-text dark:text-dark-text mb-1">
                   Folder Name
                 </label>
                 <input
@@ -770,7 +774,7 @@ export default function DashboardPage() {
                   value={newFolderName}
                   onChange={(e) => setNewFolderName(e.target.value)}
                   placeholder="Folder name"
-                  className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] mb-4 overflow-x-hidden focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none"
+                  className="w-full px-4 py-2 border border-light-note-border dark:border-dark-note-border rounded-xl bg-white dark:bg-dark-canvas text-light-text dark:text-dark-text mb-4 focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary focus:border-transparent outline-none"
                   autoFocus
                 />
               </div>
@@ -779,7 +783,7 @@ export default function DashboardPage() {
                   type="button"
                   onClick={() => setNewFolderName('')}
                   disabled={isCreatingFolder}
-                  className="px-4 py-2 border border-[#64748B] dark:border-[#64748B] text-[#64748B] dark:text-[#94A3B8] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 border border-light-text/30 dark:border-dark-text/30 text-light-text/60 dark:text-dark-text/60 rounded-xl hover:bg-light-canvas dark:hover:bg-dark-canvas transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Reset
                 </button>
@@ -787,23 +791,17 @@ export default function DashboardPage() {
                   type="button"
                   onClick={() => { setShowNewFolderModal(false); setNewFolderName(''); }}
                   disabled={isCreatingFolder}
-                  className="px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 border border-light-note-border dark:border-dark-note-border rounded-xl hover:bg-light-canvas dark:hover:bg-dark-canvas transition disabled:opacity-50 disabled:cursor-not-allowed text-light-text dark:text-dark-text"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isCreatingFolder}
-                  className="px-4 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-4 py-2 bg-light-primary dark:bg-dark-primary text-white rounded-xl hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {isCreatingFolder ? (
-                    <>
-                      <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Creating...
-                    </>
+                    <><LoadingSpinner size="sm" /> Creating...</>
                   ) : 'Create'}
                 </button>
               </div>
@@ -813,14 +811,14 @@ export default function DashboardPage() {
       )}
 
       {showDeleteModal && folderToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-x-hidden">
-          <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-xl p-6 max-w-md w-full mx-4 overflow-hidden">
-            <h3 id="delete-folder-heading" className="text-lg font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-dark-bg rounded-2xl shadow-xl p-6 max-w-md w-full animate-scale-in">
+            <h3 id="delete-folder-heading" className="text-lg font-semibold text-light-text dark:text-dark-text mb-4">
               Delete Folder
             </h3>
             {folderToDelete.canvases.length > 0 ? (
               <>
-                <p className="text-[#1E293B] dark:text-[#F1F5F9] mb-4">
+                <p className="text-light-text dark:text-dark-text mb-4">
                   This folder contains {folderToDelete.canvases.length} canvas(es). What would you like to do?
                 </p>
                 <div className="space-y-3 mb-4" role="radiogroup" aria-labelledby="delete-folder-heading">
@@ -833,7 +831,7 @@ export default function DashboardPage() {
                       onChange={() => setDeleteMoveToRoot(true)}
                       className="w-4 h-4"
                     />
-                    <span className="text-[#1E293B] dark:text-[#F1F5F9]">
+                    <span className="text-light-text dark:text-dark-text">
                       Move canvases to root (recommended)
                     </span>
                   </label>
@@ -846,38 +844,32 @@ export default function DashboardPage() {
                       onChange={() => setDeleteMoveToRoot(false)}
                       className="w-4 h-4"
                     />
-                    <span className="text-[#1E293B] dark:text-[#F1F5F9]">
+                    <span className="text-light-text dark:text-dark-text">
                       Delete folder and all canvases inside
                     </span>
                   </label>
                 </div>
               </>
             ) : (
-              <p className="text-[#1E293B] dark:text-[#F1F5F9] mb-4">
-                Are you sure you want to delete the folder "{folderToDelete.name}"?
+              <p className="text-light-text dark:text-dark-text mb-4">
+                Are you sure you want to delete the folder &ldquo;{folderToDelete.name}&rdquo;?
               </p>
             )}
             <div className="flex gap-2 justify-end">
               <button
                 onClick={() => { setShowDeleteModal(false); setFolderToDelete(null); }}
                 disabled={isDeletingFolder}
-                className="px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 border border-light-note-border dark:border-dark-note-border rounded-xl hover:bg-light-canvas dark:hover:bg-dark-canvas transition disabled:opacity-50 disabled:cursor-not-allowed text-light-text dark:text-dark-text"
               >
                 Cancel
               </button>
               <button
                 onClick={deleteFolder}
                 disabled={isDeletingFolder}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {isDeletingFolder ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Deleting...
-                  </>
+                  <><LoadingSpinner size="sm" /> Deleting...</>
                 ) : 'Delete'}
               </button>
             </div>
@@ -886,14 +878,14 @@ export default function DashboardPage() {
       )}
 
       {showRenameModal && folderToRename && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-x-hidden">
-          <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-xl p-6 max-w-md w-full mx-4 overflow-hidden">
-            <h3 className="text-lg font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-dark-bg rounded-2xl shadow-xl p-6 max-w-md w-full animate-scale-in">
+            <h3 className="text-lg font-semibold text-light-text dark:text-dark-text mb-4">
               Rename Folder
             </h3>
             <form onSubmit={renameFolder}>
               <div>
-                <label htmlFor="renameFolderName" className="block text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9] mb-1">
+                <label htmlFor="renameFolderName" className="block text-sm font-medium text-light-text dark:text-dark-text mb-1">
                   Folder Name
                 </label>
                 <input
@@ -903,7 +895,7 @@ export default function DashboardPage() {
                   value={renameName}
                   onChange={(e) => setRenameName(e.target.value)}
                   placeholder="Folder name"
-                  className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] mb-4 focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none"
+                  className="w-full px-4 py-2 border border-light-note-border dark:border-dark-note-border rounded-xl bg-white dark:bg-dark-canvas text-light-text dark:text-dark-text mb-4 focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary focus:border-transparent outline-none"
                   autoFocus
                 />
               </div>
@@ -916,7 +908,7 @@ export default function DashboardPage() {
                     }
                   }}
                   disabled={isRenamingFolder}
-                  className="px-4 py-2 border border-[#64748B] dark:border-[#64748B] text-[#64748B] dark:text-[#94A3B8] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 border border-light-text/30 dark:border-dark-text/30 text-light-text/60 dark:text-dark-text/60 rounded-xl hover:bg-light-canvas dark:hover:bg-dark-canvas transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Reset
                 </button>
@@ -924,23 +916,17 @@ export default function DashboardPage() {
                   type="button"
                   onClick={() => { setShowRenameModal(false); setFolderToRename(null); setRenameName(''); }}
                   disabled={isRenamingFolder}
-                  className="px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 border border-light-note-border dark:border-dark-note-border rounded-xl hover:bg-light-canvas dark:hover:bg-dark-canvas transition disabled:opacity-50 disabled:cursor-not-allowed text-light-text dark:text-dark-text"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isRenamingFolder}
-                  className="px-4 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-4 py-2 bg-light-primary dark:bg-dark-primary text-white rounded-xl hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {isRenamingFolder ? (
-                    <>
-                      <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Saving...
-                    </>
+                    <><LoadingSpinner size="sm" /> Saving...</>
                   ) : 'Save'}
                 </button>
               </div>
@@ -950,13 +936,13 @@ export default function DashboardPage() {
       )}
 
       {showMoveModal && canvasToMove && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-x-hidden">
-          <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-xl p-6 max-w-md w-full mx-4 overflow-hidden">
-            <h3 id="move-canvas-heading" className="text-lg font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-dark-bg rounded-2xl shadow-xl p-6 max-w-md w-full animate-scale-in">
+            <h3 id="move-canvas-heading" className="text-lg font-semibold text-light-text dark:text-dark-text mb-4">
               Move Canvas
             </h3>
-            <p className="text-[#1E293B] dark:text-[#F1F5F9] mb-4">
-              Select destination for "{canvasToMove.name}":
+            <p className="text-light-text dark:text-dark-text mb-4">
+              Select destination for &ldquo;{canvasToMove.name}&rdquo;:
             </p>
             <form onSubmit={moveCanvas}>
               <div className="space-y-2 mb-4" role="radiogroup" aria-labelledby="move-canvas-heading">
@@ -969,7 +955,7 @@ export default function DashboardPage() {
                     onChange={() => setMoveTargetFolderId(null)}
                     className="w-4 h-4"
                   />
-                  <span className="text-[#1E293B] dark:text-[#F1F5F9]">
+                  <span className="text-light-text dark:text-dark-text">
                     Root (No Folder)
                   </span>
                 </label>
@@ -983,7 +969,7 @@ export default function DashboardPage() {
                       onChange={() => setMoveTargetFolderId(folder.id)}
                       className="w-4 h-4"
                     />
-                    <span className="text-[#1E293B] dark:text-[#F1F5F9]">
+                    <span className="text-light-text dark:text-dark-text">
                       {folder.name}
                     </span>
                   </label>
@@ -994,23 +980,17 @@ export default function DashboardPage() {
                   type="button"
                   onClick={() => { setShowMoveModal(false); setCanvasToMove(null); setMoveTargetFolderId(null); }}
                   disabled={isMovingCanvas}
-                  className="px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 border border-light-note-border dark:border-dark-note-border rounded-xl hover:bg-light-canvas dark:hover:bg-dark-canvas transition disabled:opacity-50 disabled:cursor-not-allowed text-light-text dark:text-dark-text"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isMovingCanvas}
-                  className="px-4 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-4 py-2 bg-light-primary dark:bg-dark-primary text-white rounded-xl hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {isMovingCanvas ? (
-                    <>
-                      <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Moving...
-                    </>
+                    <><LoadingSpinner size="sm" /> Moving...</>
                   ) : 'Move'}
                 </button>
               </div>
@@ -1020,18 +1000,18 @@ export default function DashboardPage() {
       )}
 
       {showCanvasDeleteModal && canvasToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-x-hidden">
-          <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-xl p-6 max-w-md w-full mx-4 overflow-hidden">
-            <h3 className="text-lg font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-dark-bg rounded-2xl shadow-xl p-6 max-w-md w-full animate-scale-in">
+            <h3 className="text-lg font-semibold text-light-text dark:text-dark-text mb-4">
               Delete Canvas
             </h3>
             <div className="space-y-3 mb-4">
-              <p className="text-[#1E293B] dark:text-[#F1F5F9]">
-                Are you sure you want to delete the canvas <strong>"{canvasToDelete.canvas.name}"</strong>?
+              <p className="text-light-text dark:text-dark-text">
+                Are you sure you want to delete the canvas <strong>&ldquo;{canvasToDelete.canvas.name}&rdquo;</strong>?
               </p>
-              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3">
                 <p className="text-sm text-red-800 dark:text-red-200">
-                  ⚠️ <strong>Warning:</strong> This action will permanently delete the canvas and <strong>all notes within it</strong>. This cannot be undone.
+                  <strong>Warning:</strong> This action will permanently delete the canvas and <strong>all notes within it</strong>. This cannot be undone.
                 </p>
               </div>
             </div>
@@ -1039,23 +1019,17 @@ export default function DashboardPage() {
               <button
                 onClick={() => { setShowCanvasDeleteModal(false); setCanvasToDelete(null); }}
                 disabled={isDeletingCanvas}
-                className="px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 border border-light-note-border dark:border-dark-note-border rounded-xl hover:bg-light-canvas dark:hover:bg-dark-canvas transition disabled:opacity-50 disabled:cursor-not-allowed text-light-text dark:text-dark-text"
               >
                 Cancel
               </button>
               <button
                 onClick={deleteCanvasConfirmed}
                 disabled={isDeletingCanvas}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {isDeletingCanvas ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Deleting...
-                  </>
+                  <><LoadingSpinner size="sm" /> Deleting...</>
                 ) : 'Delete Canvas'}
               </button>
             </div>
@@ -1064,14 +1038,14 @@ export default function DashboardPage() {
       )}
 
       {showCanvasRenameModal && canvasToRename && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-x-hidden">
-          <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-xl p-6 max-w-md w-full mx-4 overflow-hidden">
-            <h3 className="text-lg font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-dark-bg rounded-2xl shadow-xl p-6 max-w-md w-full animate-scale-in">
+            <h3 className="text-lg font-semibold text-light-text dark:text-dark-text mb-4">
               Rename Canvas
             </h3>
             <form onSubmit={renameCanvas}>
               <div>
-                <label htmlFor="renameCanvasName" className="block text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9] mb-1">
+                <label htmlFor="renameCanvasName" className="block text-sm font-medium text-light-text dark:text-dark-text mb-1">
                   Canvas Name
                 </label>
                 <input
@@ -1081,7 +1055,7 @@ export default function DashboardPage() {
                   value={canvasRenameName}
                   onChange={(e) => setCanvasRenameName(e.target.value)}
                   placeholder="Canvas name"
-                  className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] mb-4 focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none"
+                  className="w-full px-4 py-2 border border-light-note-border dark:border-dark-note-border rounded-xl bg-white dark:bg-dark-canvas text-light-text dark:text-dark-text mb-4 focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary focus:border-transparent outline-none"
                   autoFocus
                 />
               </div>
@@ -1094,7 +1068,7 @@ export default function DashboardPage() {
                     }
                   }}
                   disabled={isRenamingCanvas}
-                  className="px-4 py-2 border border-[#64748B] dark:border-[#64748B] text-[#64748B] dark:text-[#94A3B8] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 border border-light-text/30 dark:border-dark-text/30 text-light-text/60 dark:text-dark-text/60 rounded-xl hover:bg-light-canvas dark:hover:bg-dark-canvas transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Reset
                 </button>
@@ -1102,23 +1076,17 @@ export default function DashboardPage() {
                   type="button"
                   onClick={() => { setShowCanvasRenameModal(false); setCanvasToRename(null); setCanvasRenameName(''); }}
                   disabled={isRenamingCanvas}
-                  className="px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 border border-light-note-border dark:border-dark-note-border rounded-xl hover:bg-light-canvas dark:hover:bg-dark-canvas transition disabled:opacity-50 disabled:cursor-not-allowed text-light-text dark:text-dark-text"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isRenamingCanvas}
-                  className="px-4 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-4 py-2 bg-light-primary dark:bg-dark-primary text-white rounded-xl hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {isRenamingCanvas ? (
-                    <>
-                      <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Saving...
-                    </>
+                    <><LoadingSpinner size="sm" /> Saving...</>
                   ) : 'Save'}
                 </button>
               </div>

@@ -143,18 +143,18 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#1E293B] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-light-canvas dark:bg-dark-canvas flex items-center justify-center p-4">
       <div className="max-w-md w-full">
-        <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-lg p-8">
-          <h1 className="text-3xl font-bold text-[#1E293B] dark:text-[#F1F5F9] mb-2 text-center">
+        <div className="bg-white dark:bg-dark-bg rounded-2xl shadow-sm border border-light-note-border/60 dark:border-dark-note-border/60 p-8">
+          <h1 className="text-3xl font-bold text-light-text dark:text-dark-text mb-2 text-center">
             Create Account
           </h1>
-          <p className="text-[#1E293B] dark:text-[#F1F5F9] text-center mb-8">
+          <p className="text-light-text/60 dark:text-dark-text/60 text-center mb-8">
             Join Infinite Canvas today
           </p>
 
           {errors.length > 0 && (
-            <div role="alert" aria-live="assertive" className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
+            <div role="alert" aria-live="assertive" className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
               {errors.map((error, index) => (
                 <p key={index} className="text-red-600 dark:text-red-400 text-sm">
                   {error}
@@ -165,7 +165,7 @@ export default function RegisterPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9] mb-1">
+              <label htmlFor="email" className="block text-sm font-medium text-light-text dark:text-dark-text mb-1">
                 Email
               </label>
               <input
@@ -181,10 +181,10 @@ export default function RegisterPage() {
                   }
                 }}
                 onBlur={() => handleFieldBlur('email')}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] ${
+                className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-dark-canvas text-light-text dark:text-dark-text ${
                   touched.has('email') && fieldErrors.email
                     ? 'border-red-500 focus:ring-red-500'
-                    : 'border-[#E2E8F0] dark:border-[#475569] focus:ring-[#3B82F6]'
+                    : 'border-light-note-border dark:border-dark-note-border focus:ring-light-primary dark:focus:ring-dark-primary'
                 }`}
                 placeholder="you@example.com"
               />
@@ -194,7 +194,7 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9] mb-1">
+              <label htmlFor="password" className="block text-sm font-medium text-light-text dark:text-dark-text mb-1">
                 Password
               </label>
               <input
@@ -210,14 +210,14 @@ export default function RegisterPage() {
                   }
                 }}
                 onBlur={() => handleFieldBlur('password')}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] ${
+                className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-dark-canvas text-light-text dark:text-dark-text ${
                   touched.has('password') && fieldErrors.password
                     ? 'border-red-500 focus:ring-red-500'
                     : passwordStrength === 'valid'
                     ? 'border-green-500 focus:ring-green-500'
                     : passwordStrength === 'invalid'
                     ? 'border-red-500 focus:ring-red-500'
-                    : 'border-[#E2E8F0] dark:border-[#475569] focus:ring-[#3B82F6]'
+                    : 'border-light-note-border dark:border-dark-note-border focus:ring-light-primary dark:focus:ring-dark-primary'
                 }`}
                 placeholder="Min 8 chars, uppercase, lowercase, number, special"
               />
@@ -239,7 +239,7 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9] mb-1">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-light-text dark:text-dark-text mb-1">
                 Confirm Password
               </label>
               <input
@@ -255,14 +255,14 @@ export default function RegisterPage() {
                   }
                 }}
                 onBlur={() => handleFieldBlur('confirmPassword')}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] ${
+                className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-dark-canvas text-light-text dark:text-dark-text ${
                   touched.has('confirmPassword') && fieldErrors.confirmPassword
                     ? 'border-red-500 focus:ring-red-500'
                     : formData.confirmPassword && formData.password === formData.confirmPassword
                     ? 'border-green-500 focus:ring-green-500'
                     : formData.confirmPassword && formData.password !== formData.confirmPassword
                     ? 'border-red-500 focus:ring-red-500'
-                    : 'border-[#E2E8F0] dark:border-[#475569] focus:ring-[#3B82F6]'
+                    : 'border-light-note-border dark:border-dark-note-border focus:ring-light-primary dark:focus:ring-dark-primary'
                 }`}
                 placeholder="Repeat your password"
               />
@@ -291,14 +291,14 @@ export default function RegisterPage() {
                   setErrors([]);
                 }}
                 disabled={loading}
-                className="flex-1 py-3 px-4 border border-[#E2E8F0] dark:border-[#475569] text-[#1E293B] dark:text-[#F1F5F9] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                className="flex-1 py-3 px-4 border border-light-note-border dark:border-dark-note-border text-light-text dark:text-dark-text rounded-xl hover:bg-light-canvas dark:hover:bg-dark-canvas transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
                 Reset
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 py-3 px-4 bg-[#3B82F6] text-white rounded-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
+                className="flex-1 py-3 px-4 bg-light-primary dark:bg-dark-primary text-white rounded-xl hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover transition disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>
@@ -310,9 +310,9 @@ export default function RegisterPage() {
             </div>
           </form>
 
-          <p className="mt-6 text-center text-sm text-[#1E293B] dark:text-[#F1F5F9]">
+          <p className="mt-6 text-center text-sm text-light-text/60 dark:text-dark-text/60">
             Already have an account?{' '}
-            <a href="/auth/login" className="text-[#3B82F6] hover:underline">
+            <a href="/auth/login" className="text-light-primary dark:text-dark-primary hover:underline">
               Login
             </a>
           </p>

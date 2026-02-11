@@ -291,28 +291,28 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#1E293B] flex items-center justify-center">
-        <div className="text-[#1E293B] dark:text-[#F1F5F9]">Loading...</div>
+      <div className="min-h-screen bg-light-canvas dark:bg-dark-canvas flex items-center justify-center">
+        <div className="text-light-text dark:text-dark-text">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#1E293B] p-4 md:p-8 overflow-x-hidden">
+    <div className="min-h-screen bg-light-canvas dark:bg-dark-canvas p-4 md:p-8 overflow-x-hidden">
       <div className="max-w-4xl mx-auto w-full">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-[#1E293B] dark:text-[#F1F5F9]">
+            <h1 className="text-3xl font-bold text-light-text dark:text-dark-text">
               Settings
             </h1>
-            <p className="text-[#1E293B] dark:text-[#F1F5F9] mt-1">
+            <p className="text-light-text/60 dark:text-dark-text/60 mt-1">
               Manage your account settings
             </p>
           </div>
           <button
             onClick={() => router.push('/dashboard')}
-            className="px-4 py-2 bg-[#3B82F6] text-white rounded-lg hover:opacity-90 transition"
+            className="px-4 py-2 bg-light-primary dark:bg-dark-primary text-white rounded-xl hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover transition"
           >
             Back to Dashboard
           </button>
@@ -320,7 +320,7 @@ export default function SettingsPage() {
 
         {/* Error and Success Messages */}
         {error && (
-          <div role="alert" aria-live="assertive" className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
+          <div role="alert" aria-live="assertive" className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
             {Array.isArray(error) ? (
               <ul className="text-red-600 dark:text-red-400 list-disc list-inside">
                 {error.map((err, index) => (
@@ -334,19 +334,19 @@ export default function SettingsPage() {
         )}
 
         {success && (
-          <div role="status" aria-live="polite" className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded">
+          <div role="status" aria-live="polite" className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
             <p className="text-green-600 dark:text-green-400">{success}</p>
           </div>
         )}
 
         {/* Profile Information Section */}
-        <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-lg p-6 mb-6 overflow-x-hidden w-full">
-          <h2 className="text-xl font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-4">
+        <div className="bg-white dark:bg-dark-bg rounded-xl shadow-sm border border-light-note-border/60 dark:border-dark-note-border/60 p-6 mb-6 overflow-x-hidden w-full">
+          <h2 className="text-xl font-semibold text-light-text dark:text-dark-text mb-4">
             Profile Information
           </h2>
           <form onSubmit={handleProfileUpdate} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9] mb-1">
+              <label htmlFor="email" className="block text-sm font-medium text-light-text dark:text-dark-text mb-1">
                 Email
               </label>
               <input
@@ -354,14 +354,14 @@ export default function SettingsPage() {
                 type="email"
                 value={user?.email || ''}
                 disabled
-                className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg bg-gray-100 dark:bg-gray-800 text-[#1E293B] dark:text-[#F1F5F9] cursor-not-allowed"
+                className="w-full px-4 py-2 border border-light-note-border dark:border-dark-note-border rounded-xl bg-gray-100 dark:bg-gray-800 text-light-text dark:text-dark-text cursor-not-allowed"
                 readOnly
               />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Email cannot be changed</p>
+              <p className="mt-1 text-xs text-light-text/50 dark:text-dark-text/50">Email cannot be changed</p>
             </div>
 
             <div>
-              <label htmlFor="displayName" className="block text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9] mb-1">
+              <label htmlFor="displayName" className="block text-sm font-medium text-light-text dark:text-dark-text mb-1">
                 Display Name
               </label>
               <input
@@ -371,23 +371,23 @@ export default function SettingsPage() {
                 onChange={(e) =>
                   setProfileForm({ ...profileForm, displayName: e.target.value })
                 }
-                className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9]"
+                className="w-full px-4 py-2 border border-light-note-border dark:border-dark-note-border rounded-xl focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary focus:border-transparent outline-none bg-white dark:bg-dark-canvas text-light-text dark:text-dark-text"
                 placeholder="Enter your display name"
               />
-              <p className="mt-1 text-xs text-[#1E293B] dark:text-[#F1F5F9]">
+              <p className="mt-1 text-xs text-light-text/60 dark:text-dark-text/60">
                 This name will be displayed in your profile and across the app
               </p>
             </div>
 
             {user?.createdAt && (
               <div>
-                <label className="block text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9] mb-1">
+                <label className="block text-sm font-medium text-light-text dark:text-dark-text mb-1">
                   Member Since
                 </label>
-                <p className="text-[#1E293B] dark:text-[#F1F5F9]" title={formatDateTime(user.createdAt)}>
+                <p className="text-light-text dark:text-dark-text" title={formatDateTime(user.createdAt)}>
                   {formatDateTime(user.createdAt)}
                 </p>
-                <p className="mt-1 text-xs text-[#64748B] dark:text-[#94A3B8]">
+                <p className="mt-1 text-xs text-light-text/60 dark:text-dark-text/60">
                   Your timezone: {getUserTimezone()}
                 </p>
               </div>
@@ -396,7 +396,7 @@ export default function SettingsPage() {
             <button
               type="submit"
               disabled={savingProfile}
-              className="w-full py-3 px-4 bg-[#3B82F6] text-white rounded-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
+              className="w-full py-3 px-4 bg-light-primary dark:bg-dark-primary text-white rounded-xl hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover transition disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
             >
               {savingProfile ? (
                 <>
@@ -409,13 +409,13 @@ export default function SettingsPage() {
         </div>
 
         {/* Change Password Section */}
-        <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-lg p-6 overflow-x-hidden w-full">
-          <h2 className="text-xl font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-4">
+        <div className="bg-white dark:bg-dark-bg rounded-xl shadow-sm border border-light-note-border/60 dark:border-dark-note-border/60 p-6 overflow-x-hidden w-full">
+          <h2 className="text-xl font-semibold text-light-text dark:text-dark-text mb-4">
             Change Password
           </h2>
           <form onSubmit={handlePasswordChange} className="space-y-4">
             <div>
-              <label htmlFor="currentPassword" className="block text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9] mb-1">
+              <label htmlFor="currentPassword" className="block text-sm font-medium text-light-text dark:text-dark-text mb-1">
                 Current Password
               </label>
               <input
@@ -425,16 +425,15 @@ export default function SettingsPage() {
                 value={passwordForm.currentPassword}
                 onChange={(e) => {
                   setPasswordForm({ ...passwordForm, currentPassword: e.target.value });
-                  // Clear error when user starts typing
                   if (passwordFieldErrors.currentPassword) {
                     setPasswordFieldErrors(prev => ({ ...prev, currentPassword: undefined }));
                   }
                 }}
                 onBlur={() => handlePasswordFieldBlur('currentPassword')}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] ${
+                className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-dark-canvas text-light-text dark:text-dark-text ${
                   passwordTouched.has('currentPassword') && passwordFieldErrors.currentPassword
                     ? 'border-red-500 focus:ring-red-500'
-                    : 'border-[#E2E8F0] dark:border-[#475569] focus:ring-[#3B82F6]'
+                    : 'border-light-note-border dark:border-dark-note-border focus:ring-light-primary dark:focus:ring-dark-primary'
                 }`}
                 placeholder="Enter your current password"
               />
@@ -444,7 +443,7 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <label htmlFor="newPassword" className="block text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9] mb-1">
+              <label htmlFor="newPassword" className="block text-sm font-medium text-light-text dark:text-dark-text mb-1">
                 New Password
               </label>
               <input
@@ -454,20 +453,19 @@ export default function SettingsPage() {
                 value={passwordForm.newPassword}
                 onChange={(e) => {
                   setPasswordForm({ ...passwordForm, newPassword: e.target.value });
-                  // Clear error when user starts typing
                   if (passwordFieldErrors.newPassword) {
                     setPasswordFieldErrors(prev => ({ ...prev, newPassword: undefined }));
                   }
                 }}
                 onBlur={() => handlePasswordFieldBlur('newPassword')}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] ${
+                className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-dark-canvas text-light-text dark:text-dark-text ${
                   passwordTouched.has('newPassword') && passwordFieldErrors.newPassword
                     ? 'border-red-500 focus:ring-red-500'
                     : passwordStrength === 'valid'
                     ? 'border-green-500 focus:ring-green-500'
                     : passwordStrength === 'invalid'
                     ? 'border-red-500 focus:ring-red-500'
-                    : 'border-[#E2E8F0] dark:border-[#475569] focus:ring-[#3B82F6]'
+                    : 'border-light-note-border dark:border-dark-note-border focus:ring-light-primary dark:focus:ring-dark-primary'
                 }`}
                 placeholder="Enter new password"
               />
@@ -487,14 +485,14 @@ export default function SettingsPage() {
                 </p>
               )}
               {!passwordForm.newPassword && (
-                <p className="mt-1 text-xs text-[#1E293B] dark:text-[#F1F5F9]">
+                <p className="mt-1 text-xs text-light-text/60 dark:text-dark-text/60">
                   Must be at least 8 characters with uppercase, lowercase, number, and special character
                 </p>
               )}
             </div>
 
             <div>
-              <label htmlFor="confirmNewPassword" className="block text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9] mb-1">
+              <label htmlFor="confirmNewPassword" className="block text-sm font-medium text-light-text dark:text-dark-text mb-1">
                 Confirm New Password
               </label>
               <input
@@ -504,20 +502,19 @@ export default function SettingsPage() {
                 value={passwordForm.confirmNewPassword}
                 onChange={(e) => {
                   setPasswordForm({ ...passwordForm, confirmNewPassword: e.target.value });
-                  // Clear error when user starts typing
                   if (passwordFieldErrors.confirmNewPassword) {
                     setPasswordFieldErrors(prev => ({ ...prev, confirmNewPassword: undefined }));
                   }
                 }}
                 onBlur={() => handlePasswordFieldBlur('confirmNewPassword')}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] ${
+                className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-dark-canvas text-light-text dark:text-dark-text ${
                   passwordTouched.has('confirmNewPassword') && passwordFieldErrors.confirmNewPassword
                     ? 'border-red-500 focus:ring-red-500'
                     : passwordForm.confirmNewPassword && passwordForm.newPassword === passwordForm.confirmNewPassword
                     ? 'border-green-500 focus:ring-green-500'
                     : passwordForm.confirmNewPassword && passwordForm.newPassword !== passwordForm.confirmNewPassword
                     ? 'border-red-500 focus:ring-red-500'
-                    : 'border-[#E2E8F0] dark:border-[#475569] focus:ring-[#3B82F6]'
+                    : 'border-light-note-border dark:border-dark-note-border focus:ring-light-primary dark:focus:ring-dark-primary'
                 }`}
                 placeholder="Confirm new password"
               />
@@ -549,14 +546,14 @@ export default function SettingsPage() {
                   setPasswordTouched(new Set());
                 }}
                 disabled={saving}
-                className="flex-1 py-3 px-4 border border-[#E2E8F0] dark:border-[#475569] text-[#1E293B] dark:text-[#F1F5F9] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                className="flex-1 py-3 px-4 border border-light-note-border dark:border-dark-note-border text-light-text dark:text-dark-text rounded-xl hover:bg-light-canvas dark:hover:bg-dark-canvas transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
                 Reset
               </button>
               <button
                 type="submit"
                 disabled={saving}
-                className="flex-1 py-3 px-4 bg-[#3B82F6] text-white rounded-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
+                className="flex-1 py-3 px-4 bg-light-primary dark:bg-dark-primary text-white rounded-xl hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover transition disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
               >
                 {saving ? (
                   <>
@@ -573,21 +570,21 @@ export default function SettingsPage() {
         <div className="mt-6 text-center">
           <button
             onClick={handleLogout}
-            className="px-6 py-2 border border-[#E2E8F0] dark:border-[#475569] text-[#1E293B] dark:text-[#F1F5F9] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
+            className="px-6 py-2 border border-light-note-border dark:border-dark-note-border text-light-text dark:text-dark-text rounded-xl hover:bg-light-canvas dark:hover:bg-dark-canvas transition"
           >
             Logout
           </button>
         </div>
 
         {/* Delete Account Section */}
-        <div className="mt-8 bg-white dark:bg-[#0F172A] rounded-lg shadow-lg p-6 overflow-x-hidden w-full border-2 border-red-200 dark:border-red-900">
+        <div className="mt-8 bg-white dark:bg-dark-bg rounded-xl shadow-sm border-2 border-red-200 dark:border-red-900 p-6 overflow-x-hidden w-full">
           <h2 className="text-xl font-semibold text-red-600 dark:text-red-400 mb-4">
             Danger Zone
           </h2>
-          <p className="text-[#1E293B] dark:text-[#F1F5F9] mb-4">
+          <p className="text-light-text dark:text-dark-text mb-4">
             Once you delete your account, there is no going back. Please be certain.
           </p>
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-4 mb-4">
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-4">
             <p className="text-sm text-red-600 dark:text-red-400">
               <strong>Warning:</strong> This will permanently delete your account and all associated data, including:
             </p>
@@ -606,20 +603,20 @@ export default function SettingsPage() {
           {!showDeleteConfirmation ? (
             <button
               onClick={handleInitiateDelete}
-              className="w-full py-3 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium"
+              className="w-full py-3 px-4 bg-red-600 text-white rounded-xl hover:bg-red-700 transition font-medium"
             >
               Delete My Account
             </button>
           ) : (
             <div className="space-y-4">
-              <p className="text-[#1E293B] dark:text-[#F1F5F9] font-medium">
+              <p className="text-light-text dark:text-dark-text font-medium">
                 {!showSecondConfirmation
                   ? 'Are you sure you want to delete your account?'
                   : 'This is your last chance - are you absolutely certain?'}
               </p>
 
               <div>
-                <label htmlFor="deletePassword" className="block text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9] mb-1">
+                <label htmlFor="deletePassword" className="block text-sm font-medium text-light-text dark:text-dark-text mb-1">
                   Enter your password to confirm
                 </label>
                 <input
@@ -630,7 +627,7 @@ export default function SettingsPage() {
                     setDeletePassword(e.target.value);
                     setDeleteError('');
                   }}
-                  className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9]"
+                  className="w-full px-4 py-2 border border-light-note-border dark:border-dark-note-border rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none bg-white dark:bg-dark-canvas text-light-text dark:text-dark-text"
                   placeholder="Enter your password"
                   disabled={deleting}
                 />
@@ -644,14 +641,14 @@ export default function SettingsPage() {
                 <button
                   onClick={handleCancelDelete}
                   disabled={deleting}
-                  className="flex-1 py-3 px-4 border border-[#E2E8F0] dark:border-[#475569] text-[#1E293B] dark:text-[#F1F5F9] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  className="flex-1 py-3 px-4 border border-light-note-border dark:border-dark-note-border text-light-text dark:text-dark-text rounded-xl hover:bg-light-canvas dark:hover:bg-dark-canvas transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleConfirmDelete}
                   disabled={deleting || !deletePassword}
-                  className="flex-1 py-3 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
+                  className="flex-1 py-3 px-4 bg-red-600 text-white rounded-xl hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
                 >
                   {deleting ? (
                     <>

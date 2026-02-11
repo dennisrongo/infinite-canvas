@@ -1,7 +1,7 @@
 'use client';
 
 import { useTheme } from '@/contexts/ThemeContext';
-import Icon from '@/components/ui/Icon';
+import { Upload, Download, Settings, Moon, Sun, LogOut } from 'lucide-react';
 import MobileMenu from './MobileMenu';
 
 interface UserActionsProps {
@@ -23,37 +23,62 @@ export default function UserActions({
 }: UserActionsProps) {
   const { theme, toggleTheme } = useTheme();
 
+  const iconBtnClass =
+    'min-w-[38px] min-h-[38px] flex items-center justify-center gap-2 px-2.5 py-2 text-sm font-medium rounded-xl transition-all duration-150 active:scale-95 text-light-text/80 dark:text-dark-text/80 hover:text-light-text dark:hover:text-dark-text hover:bg-light-primary/10 dark:hover:bg-dark-primary/10';
+
   return (
-    <div className="flex items-center gap-1 md:gap-4 flex-shrink-0">
-      {/* Export/Import buttons - only show on canvas page */}
+    <div className="flex items-center gap-1 md:gap-1.5 flex-shrink-0">
+      {/* Export/Import buttons - desktop only (mobile gets them via MobileMenu) */}
       {currentCanvasId && (
-        <>
+        <div className="hidden md:flex items-center gap-1 mr-1">
           <button
             onClick={onExportClick}
-            className="min-w-[44px] min-h-[44px] px-2 md:px-4 py-2 text-sm border border-light-note-border dark:border-dark-note-border rounded-lg hover:bg-light-hover dark:hover:bg-dark-hover transition text-light-text dark:text-dark-text flex items-center gap-1"
+            className={iconBtnClass}
             title="Export canvas"
+            aria-label="Export canvas"
           >
-            <Icon name="upload" size="sm" ariaLabel="Export canvas" />
-            <span className="hidden md:inline">Export</span>
+            <Upload className="w-[18px] h-[18px]" />
+            <span className="hidden lg:inline">Export</span>
           </button>
           <button
             onClick={onImportClick}
-            className="min-w-[44px] min-h-[44px] px-2 md:px-4 py-2 text-sm border border-light-note-border dark:border-dark-note-border rounded-lg hover:bg-light-hover dark:hover:bg-dark-hover transition text-light-text dark:text-dark-text flex items-center gap-1"
+            className={iconBtnClass}
             title="Import canvas"
+            aria-label="Import canvas"
           >
-            <Icon name="download" size="sm" ariaLabel="Import canvas" />
-            <span className="hidden md:inline">Import</span>
+            <Download className="w-[18px] h-[18px]" />
+            <span className="hidden lg:inline">Import</span>
           </button>
-        </>
+
+          {/* Subtle separator */}
+          <div className="w-px h-5 bg-light-note-border/60 dark:bg-dark-note-border/60 mx-1" />
+        </div>
       )}
 
       {/* Settings link - desktop only */}
       <a
         href="/settings"
-        className="hidden md:inline-flex min-w-[44px] min-h-[44px] items-center justify-center px-4 py-2 text-sm border border-light-note-border dark:border-dark-note-border rounded-lg hover:bg-light-hover dark:hover:bg-dark-hover transition text-light-text dark:text-dark-text"
+        className={`hidden md:flex ${iconBtnClass}`}
+        title="Settings"
+        aria-label="Settings"
       >
-        Settings
+        <Settings className="w-[18px] h-[18px]" />
+        <span className="hidden lg:inline">Settings</span>
       </a>
+
+      {/* Theme Toggle Button */}
+      <button
+        onClick={toggleTheme}
+        className={iconBtnClass}
+        aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+        title={theme === 'light' ? 'Dark mode' : 'Light mode'}
+      >
+        {theme === 'light' ? (
+          <Moon className="w-[18px] h-[18px]" />
+        ) : (
+          <Sun className="w-[18px] h-[18px]" />
+        )}
+      </button>
 
       {/* Mobile Menu - mobile only */}
       <MobileMenu
@@ -62,32 +87,19 @@ export default function UserActions({
         onImportClick={onImportClick}
       />
 
-      {/* Theme Toggle Button - icon only on mobile */}
-      <button
-        onClick={toggleTheme}
-        className="min-w-[44px] min-h-[44px] px-2 md:px-4 py-2 text-sm border border-light-note-border dark:border-dark-note-border rounded-lg hover:bg-light-hover dark:hover:bg-dark-hover transition text-light-text dark:text-dark-text flex items-center gap-1 md:gap-2"
-        aria-label="Toggle theme"
-      >
-        {theme === 'light' ? (
-          <>
-            <Icon name="moon" size="sm" ariaLabel="Switch to dark mode" />
-            <span className="hidden md:inline">Dark</span>
-          </>
-        ) : (
-          <>
-            <Icon name="sun" size="sm" ariaLabel="Switch to light mode" />
-            <span className="hidden md:inline">Light</span>
-          </>
-        )}
-      </button>
+      {/* Subtle separator - desktop only */}
+      <div className="hidden md:block w-px h-5 bg-light-note-border/60 dark:bg-dark-note-border/60 mx-0.5" />
 
       {/* Logout form */}
       <form action="/api/auth/logout" method="POST">
         <button
           type="submit"
-          className="min-w-[44px] min-h-[44px] px-2 md:px-4 py-2 text-sm border border-light-note-border dark:border-dark-note-border rounded-lg hover:bg-light-hover dark:hover:bg-dark-hover transition text-light-text dark:text-dark-text"
+          className="min-w-[38px] min-h-[38px] flex items-center justify-center gap-2 px-2.5 py-2 text-sm font-medium rounded-xl transition-all duration-150 active:scale-95 text-red-500/80 dark:text-red-400/80 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 dark:hover:bg-red-400/10"
+          title="Log out"
+          aria-label="Log out"
         >
-          Logout
+          <LogOut className="w-[18px] h-[18px]" />
+          <span className="hidden lg:inline">Logout</span>
         </button>
       </form>
     </div>

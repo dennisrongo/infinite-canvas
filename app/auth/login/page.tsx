@@ -106,25 +106,25 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#1E293B] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-light-canvas dark:bg-dark-canvas flex items-center justify-center p-4">
       <div className="max-w-md w-full">
-        <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-lg p-8">
-          <h1 className="text-3xl font-bold text-[#1E293B] dark:text-[#F1F5F9] mb-2 text-center">
+        <div className="bg-white dark:bg-dark-bg rounded-2xl shadow-sm border border-light-note-border/60 dark:border-dark-note-border/60 p-8">
+          <h1 className="text-3xl font-bold text-light-text dark:text-dark-text mb-2 text-center">
             Welcome Back
           </h1>
-          <p className="text-[#1E293B] dark:text-[#F1F5F9] text-center mb-8">
+          <p className="text-light-text/60 dark:text-dark-text/60 text-center mb-8">
             Login to your Infinite Canvas
           </p>
 
           {error && (
-            <div role="alert" className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
+            <div role="alert" className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
               <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9] mb-1">
+              <label htmlFor="email" className="block text-sm font-medium text-light-text dark:text-dark-text mb-1">
                 Email
               </label>
               <input
@@ -140,10 +140,10 @@ function LoginForm() {
                   }
                 }}
                 onBlur={() => handleFieldBlur('email')}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] ${
+                className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-dark-canvas text-light-text dark:text-dark-text ${
                   touched.has('email') && fieldErrors.email
                     ? 'border-red-500 focus:ring-red-500'
-                    : 'border-[#E2E8F0] dark:border-[#475569] focus:ring-[#3B82F6]'
+                    : 'border-light-note-border dark:border-dark-note-border focus:ring-light-primary dark:focus:ring-dark-primary'
                 }`}
                 placeholder="you@example.com"
               />
@@ -153,7 +153,7 @@ function LoginForm() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9] mb-1">
+              <label htmlFor="password" className="block text-sm font-medium text-light-text dark:text-dark-text mb-1">
                 Password
               </label>
               <input
@@ -169,10 +169,10 @@ function LoginForm() {
                   }
                 }}
                 onBlur={() => handleFieldBlur('password')}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] ${
+                className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-dark-canvas text-light-text dark:text-dark-text ${
                   touched.has('password') && fieldErrors.password
                     ? 'border-red-500 focus:ring-red-500'
-                    : 'border-[#E2E8F0] dark:border-[#475569] focus:ring-[#3B82F6]'
+                    : 'border-light-note-border dark:border-dark-note-border focus:ring-light-primary dark:focus:ring-dark-primary'
                 }`}
                 placeholder="Enter your password"
               />
@@ -180,7 +180,7 @@ function LoginForm() {
                 <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.password}</p>
               )}
               <div className="mt-1 text-right">
-                <a href="/auth/forgot-password" className="text-sm text-[#3B82F6] hover:underline">
+                <a href="/auth/forgot-password" className="text-sm text-light-primary dark:text-dark-primary hover:underline">
                   Forgot password?
                 </a>
               </div>
@@ -193,9 +193,9 @@ function LoginForm() {
                 type="checkbox"
                 checked={formData.rememberMe}
                 onChange={(e) => setFormData({ ...formData, rememberMe: e.target.checked })}
-                className="w-4 h-4 text-[#3B82F6] border-[#E2E8F0] dark:border-[#475569] rounded focus:ring-2 focus:ring-[#3B82F6]"
+                className="w-4 h-4 text-light-primary border-light-note-border dark:border-dark-note-border rounded focus:ring-2 focus:ring-light-primary"
               />
-              <label htmlFor="rememberMe" className="ml-2 text-sm text-[#1E293B] dark:text-[#F1F5F9]">
+              <label htmlFor="rememberMe" className="ml-2 text-sm text-light-text dark:text-dark-text">
                 Remember me
               </label>
             </div>
@@ -210,14 +210,14 @@ function LoginForm() {
                   setError('');
                 }}
                 disabled={loading}
-                className="flex-1 py-3 px-4 border border-[#E2E8F0] dark:border-[#475569] text-[#1E293B] dark:text-[#F1F5F9] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                className="flex-1 py-3 px-4 border border-light-note-border dark:border-dark-note-border text-light-text dark:text-dark-text rounded-xl hover:bg-light-canvas dark:hover:bg-dark-canvas transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
                 Reset
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 py-3 px-4 bg-[#3B82F6] text-white rounded-lg hover:bg-opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
+                className="flex-1 py-3 px-4 bg-light-primary dark:bg-dark-primary text-white rounded-xl hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover transition disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>
@@ -229,9 +229,9 @@ function LoginForm() {
             </div>
           </form>
 
-          <p className="mt-6 text-center text-sm text-[#1E293B] dark:text-[#F1F5F9]">
-            Don't have an account?{' '}
-            <a href="/auth/register" className="text-[#3B82F6] hover:underline">
+          <p className="mt-6 text-center text-sm text-light-text/60 dark:text-dark-text/60">
+            Don&apos;t have an account?{' '}
+            <a href="/auth/register" className="text-light-primary dark:text-dark-primary hover:underline">
               Register
             </a>
           </p>

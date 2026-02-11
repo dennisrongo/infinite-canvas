@@ -16,8 +16,8 @@ export default function GlobalError({
   return (
     <html>
       <body>
-        <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#1E293B] flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-white dark:bg-[#0F172A] rounded-lg shadow-lg p-8">
+        <div className="min-h-screen bg-light-canvas dark:bg-dark-canvas flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-white dark:bg-dark-bg rounded-2xl shadow-sm border border-light-note-border/60 dark:border-dark-note-border/60 p-8">
             <div className="text-center">
               {/* Error Icon */}
               <div className="mx-auto w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-4">
@@ -37,10 +37,10 @@ export default function GlobalError({
               </div>
 
               {/* Error Message */}
-              <h1 className="text-2xl font-bold text-[#1E293B] dark:text-[#F1F5F9] mb-2">
+              <h1 className="text-2xl font-bold text-light-text dark:text-dark-text mb-2">
                 A critical error occurred
               </h1>
-              <p className="text-[#64748B] dark:text-[#94A3B8] mb-6">
+              <p className="text-light-text/60 dark:text-dark-text/60 mb-6">
                 The application encountered an unexpected error. Please refresh the page.
               </p>
 
@@ -48,13 +48,13 @@ export default function GlobalError({
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <button
                   onClick={() => window.location.reload()}
-                  className="px-6 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] transition font-medium"
+                  className="px-6 py-2 bg-light-primary dark:bg-dark-primary text-white rounded-xl hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover transition font-medium"
                 >
                   Refresh Page
                 </button>
                 <button
                   onClick={() => (window.location.href = '/')}
-                  className="px-6 py-2 border border-[#E2E8F0] dark:border-[#475569] text-[#1E293B] dark:text-[#F1F5F9] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition font-medium"
+                  className="px-6 py-2 border border-light-note-border dark:border-dark-note-border text-light-text dark:text-dark-text rounded-xl hover:bg-light-canvas dark:hover:bg-dark-canvas transition font-medium"
                 >
                   Go to Home
                 </button>

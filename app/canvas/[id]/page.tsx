@@ -8,6 +8,7 @@ import ImportModal from '@/components/canvas/ImportModal';
 import { useToast } from '@/contexts/ToastContext';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useCancellableRequest } from '@/hooks/useCancellableRequest';
+import { ChevronDown, ChevronRight, Folder, LayoutDashboard } from 'lucide-react';
 
 // Dynamically import ReactFlowCanvas with SSR disabled
 const ReactFlowCanvas = dynamic(
@@ -16,7 +17,7 @@ const ReactFlowCanvas = dynamic(
     ssr: false,
     loading: () => (
       <div className="flex items-center justify-center h-full">
-        <div className="text-[#1E293B] dark:text-[#F1F5F9]">Loading canvas...</div>
+        <div className="text-light-text dark:text-dark-text">Loading canvas...</div>
       </div>
     )
   }
@@ -651,15 +652,15 @@ function CanvasPageContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#1E293B] flex items-center justify-center overflow-hidden">
-        <div className="text-[#1E293B] dark:text-[#F1F5F9]">Loading canvas...</div>
+      <div className="min-h-screen bg-light-canvas dark:bg-dark-canvas flex items-center justify-center overflow-hidden">
+        <div className="text-light-text dark:text-dark-text">Loading canvas...</div>
       </div>
     );
   }
 
   if (error || !canvas) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#1E293B] flex items-center justify-center overflow-x-hidden px-4">
+      <div className="min-h-screen bg-light-canvas dark:bg-dark-canvas flex items-center justify-center overflow-x-hidden px-4">
         <div className="text-center max-w-md">
           {/* Feature #174: Show appropriate icon and message for deleted canvas */}
           {canvasDeleted ? (
@@ -677,10 +678,10 @@ function CanvasPageContent() {
                   d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                 />
               </svg>
-              <h2 className="text-xl font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-2">
+              <h2 className="text-xl font-semibold text-light-text dark:text-dark-text mb-2">
                 Canvas No Longer Available
               </h2>
-              <p className="text-[#64748B] dark:text-[#94A3B8] mb-6">
+              <p className="text-light-text/60 dark:text-dark-text/60 mb-6">
                 This canvas was deleted in another browser session or by another user.
               </p>
             </>
@@ -699,17 +700,17 @@ function CanvasPageContent() {
                   d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
-              <h2 className="text-xl font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-2">
+              <h2 className="text-xl font-semibold text-light-text dark:text-dark-text mb-2">
                 Canvas Not Found
               </h2>
-              <p className="text-[#64748B] dark:text-[#94A3B8] mb-6">
+              <p className="text-light-text/60 dark:text-dark-text/60 mb-6">
                 {error || 'The canvas you are looking for does not exist.'}
               </p>
             </>
           )}
           <button
             onClick={() => router.push('/dashboard')}
-            className="px-6 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] transition"
+            className="px-6 py-2 bg-light-primary dark:bg-dark-primary text-white rounded-xl hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover transition"
           >
             Back to Dashboard
           </button>
@@ -719,54 +720,58 @@ function CanvasPageContent() {
   }
 
   return (
-    <div className="h-screen flex bg-[#F8FAFC] dark:bg-[#1E293B] overflow-hidden">
+    <div className="h-screen flex bg-light-canvas dark:bg-dark-canvas overflow-hidden">
       {/* Sidebar */}
-      <div className={`${sidebarCollapsed ? 'w-0' : 'w-64'} transition-all duration-300 border-r border-[#E2E8F0] dark:border-[#475569] bg-white dark:bg-[#0F172A] overflow-hidden flex-shrink-0 fixed lg:static inset-y-0 left-0 z-50 transform ${
+      <div className={`${sidebarCollapsed ? 'w-0' : 'w-64'} transition-all duration-300 border-r border-light-note-border/60 dark:border-dark-note-border/60 bg-white/95 dark:bg-dark-bg/95 backdrop-blur-xl overflow-hidden flex-shrink-0 fixed lg:static inset-y-0 left-0 z-50 transform ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       }`}>
         {!sidebarCollapsed && (
           <div className="p-4 h-screen overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-[#1E293B] dark:text-[#F1F5F9]">
+              <h2 className="text-lg font-semibold text-light-text dark:text-dark-text">
                 Canvases
               </h2>
               <button
                 onClick={() => router.push('/dashboard')}
-                className="text-xs text-[#3B82F6] hover:underline"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-light-primary dark:text-dark-primary hover:bg-light-primary/10 dark:hover:bg-dark-primary/10 rounded-lg transition-all"
               >
+                <LayoutDashboard className="w-3.5 h-3.5" />
                 Dashboard
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               {folders.map((folder) => (
                 <div key={folder.id}>
                   <div
-                    className="flex items-center gap-2 p-2 cursor-pointer hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] rounded"
+                    className="flex items-center gap-2 p-2 cursor-pointer hover:bg-light-primary/5 dark:hover:bg-dark-primary/5 rounded-lg transition-colors"
                     onClick={() => toggleFolder(folder.id)}
                   >
-                    <span className="text-xs text-[#64748B]">
-                      {expandedFolders.has(folder.id) ? '▼' : '▶'}
-                    </span>
-                    <span className="text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9]">
+                    {expandedFolders.has(folder.id) ? (
+                      <ChevronDown className="w-3.5 h-3.5 text-light-text/50 dark:text-dark-text/50 flex-shrink-0" />
+                    ) : (
+                      <ChevronRight className="w-3.5 h-3.5 text-light-text/50 dark:text-dark-text/50 flex-shrink-0" />
+                    )}
+                    <Folder className="w-3.5 h-3.5 text-light-primary dark:text-dark-primary flex-shrink-0" />
+                    <span className="text-sm font-medium text-light-text dark:text-dark-text truncate">
                       {folder.name}
                     </span>
-                    <span className="text-xs text-[#64748B]">
+                    <span className="text-xs text-light-text/50 dark:text-dark-text/50 flex-shrink-0">
                       ({folder.canvases.length})
                     </span>
                   </div>
 
                   {expandedFolders.has(folder.id) && (
-                    <div className="ml-4 mt-1 space-y-1">
+                    <div className="ml-4 mt-1 space-y-0.5">
                       {folder.canvases.map((c) => (
                         <a
                           key={c.id}
                           href={`/canvas/${c.id}`}
                           onClick={() => setSidebarOpen(false)}
-                          className={`block p-2 rounded text-sm transition ${
+                          className={`block p-2 rounded-lg text-sm transition-colors ${
                             c.id === canvasId
-                              ? 'bg-[#3B82F6] text-white font-medium'
-                              : 'text-[#64748B] hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] hover:text-[#1E293B] dark:hover:text-[#F1F5F9]'
+                              ? 'bg-light-primary dark:bg-dark-primary text-white font-medium'
+                              : 'text-light-text/60 dark:text-dark-text/60 hover:bg-light-primary/5 dark:hover:bg-dark-primary/5 hover:text-light-text dark:hover:text-dark-text'
                           }`}
                         >
                           {c.name}
@@ -780,23 +785,23 @@ function CanvasPageContent() {
               {rootCanvases.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 p-2">
-                    <span className="text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9]">
+                    <span className="text-sm font-medium text-light-text dark:text-dark-text">
                       Root
                     </span>
-                    <span className="text-xs text-[#64748B]">
+                    <span className="text-xs text-light-text/50 dark:text-dark-text/50">
                       ({rootCanvases.length})
                     </span>
                   </div>
-                  <div className="ml-4 mt-1 space-y-1">
+                  <div className="ml-4 mt-1 space-y-0.5">
                     {rootCanvases.map((c) => (
                       <a
                         key={c.id}
                         href={`/canvas/${c.id}`}
                         onClick={() => setSidebarOpen(false)}
-                        className={`block p-2 rounded text-sm transition ${
+                        className={`block p-2 rounded-lg text-sm transition-colors ${
                           c.id === canvasId
-                            ? 'bg-[#3B82F6] text-white font-medium'
-                            : 'text-[#64748B] hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] hover:text-[#1E293B] dark:hover:text-[#F1F5F9]'
+                            ? 'bg-light-primary dark:bg-dark-primary text-white font-medium'
+                            : 'text-light-text/60 dark:text-dark-text/60 hover:bg-light-primary/5 dark:hover:bg-dark-primary/5 hover:text-light-text dark:hover:text-dark-text'
                         }`}
                       >
                         {c.name}
@@ -813,7 +818,7 @@ function CanvasPageContent() {
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
           aria-hidden="true"
         />
@@ -835,7 +840,7 @@ function CanvasPageContent() {
         />
 
         {/* Canvas Area */}
-        <main className="flex-1 relative overflow-hidden bg-[#F8FAFC] dark:bg-[#1E293B]">
+        <main className="flex-1 relative overflow-hidden bg-light-canvas dark:bg-dark-canvas">
           <ReactFlowCanvas
             canvasId={canvasId}
             initialNotes={notes}
@@ -869,7 +874,7 @@ function CanvasPageContent() {
 export default function CanvasPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#1E293B] flex items-center justify-center">
+      <div className="min-h-screen bg-light-canvas dark:bg-dark-canvas flex items-center justify-center">
         <LoadingSpinner />
       </div>
     }>

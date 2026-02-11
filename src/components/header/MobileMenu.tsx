@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import Icon from '@/components/ui/Icon';
+import { MoreVertical, Settings, Upload, Download } from 'lucide-react';
 
 interface MobileMenuProps {
   /**
@@ -69,21 +69,21 @@ export default function MobileMenu({
 
   return (
     <div className="mobile-menu-container relative md:hidden" ref={menuRef}>
-      {/* Gear icon trigger button */}
+      {/* Three-dot trigger button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="min-w-[44px] min-h-[44px] p-2 rounded-lg hover:bg-light-hover dark:hover:bg-dark-hover transition text-light-text dark:text-dark-text"
+        className="min-w-[38px] min-h-[38px] flex items-center justify-center p-2 rounded-xl hover:bg-light-primary/10 dark:hover:bg-dark-primary/10 active:scale-95 transition-all duration-150 text-light-text/80 dark:text-dark-text/80 hover:text-light-text dark:hover:text-dark-text"
         aria-label="Open menu"
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
-        <Icon name="settings" size="md" ariaLabel="Settings menu" />
+        <MoreVertical className="w-[18px] h-[18px]" />
       </button>
 
       {/* Dropdown menu */}
       {isOpen && (
         <div
-          className="absolute right-0 mt-2 w-48 bg-white dark:bg-dark-bg border border-light-note-border dark:border-dark-note-border rounded-lg shadow-lg z-50 animate-slide-down"
+          className="absolute right-0 mt-2 w-52 bg-white/95 dark:bg-dark-bg/95 backdrop-blur-xl border border-light-note-border/60 dark:border-dark-note-border/60 rounded-2xl shadow-xl z-50 animate-scale-in overflow-hidden"
           role="menu"
           aria-label="Mobile menu"
         >
@@ -91,40 +91,47 @@ export default function MobileMenu({
           <a
             href="/settings"
             onClick={() => setIsOpen(false)}
-            className="block px-4 py-3 text-light-text dark:text-dark-text hover:bg-light-hover dark:hover:bg-dark-hover transition first:rounded-t-lg"
+            className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-light-text dark:text-dark-text hover:bg-light-primary/8 dark:hover:bg-dark-primary/8 transition-colors"
             role="menuitem"
           >
+            <Settings className="w-4 h-4 text-light-text/60 dark:text-dark-text/60" />
             Settings
           </a>
 
-          {/* Export - only show on canvas page */}
-          {currentCanvasId && onExportClick && (
-            <button
-              onClick={() => {
-                onExportClick();
-                setIsOpen(false);
-              }}
-              className="w-full text-left px-4 py-3 text-light-text dark:text-dark-text hover:bg-light-hover dark:hover:bg-dark-hover transition flex items-center gap-2"
-              role="menuitem"
-            >
-              <Icon name="upload" size="sm" />
-              Export Canvas
-            </button>
-          )}
+          {/* Export/Import section - only show on canvas page */}
+          {currentCanvasId && (onExportClick || onImportClick) && (
+            <>
+              {/* Divider */}
+              <div className="mx-3 border-t border-light-note-border/40 dark:border-dark-note-border/40" />
 
-          {/* Import - only show on canvas page */}
-          {currentCanvasId && onImportClick && (
-            <button
-              onClick={() => {
-                onImportClick();
-                setIsOpen(false);
-              }}
-              className="w-full text-left px-4 py-3 text-light-text dark:text-dark-text hover:bg-light-hover dark:hover:bg-dark-hover transition flex items-center gap-2 last:rounded-b-lg"
-              role="menuitem"
-            >
-              <Icon name="download" size="sm" />
-              Import Canvas
-            </button>
+              {onExportClick && (
+                <button
+                  onClick={() => {
+                    onExportClick();
+                    setIsOpen(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-light-text dark:text-dark-text hover:bg-light-primary/8 dark:hover:bg-dark-primary/8 transition-colors"
+                  role="menuitem"
+                >
+                  <Upload className="w-4 h-4 text-light-text/60 dark:text-dark-text/60" />
+                  Export Canvas
+                </button>
+              )}
+
+              {onImportClick && (
+                <button
+                  onClick={() => {
+                    onImportClick();
+                    setIsOpen(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-light-text dark:text-dark-text hover:bg-light-primary/8 dark:hover:bg-dark-primary/8 transition-colors"
+                  role="menuitem"
+                >
+                  <Download className="w-4 h-4 text-light-text/60 dark:text-dark-text/60" />
+                  Import Canvas
+                </button>
+              )}
+            </>
           )}
         </div>
       )}

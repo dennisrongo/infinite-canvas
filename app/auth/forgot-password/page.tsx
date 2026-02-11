@@ -65,35 +65,35 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#1E293B] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-light-canvas dark:bg-dark-canvas flex items-center justify-center p-4">
       <div className="max-w-md w-full">
-        <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-lg p-8">
-          <h1 className="text-3xl font-bold text-[#1E293B] dark:text-[#F1F5F9] mb-2 text-center">
+        <div className="bg-white dark:bg-dark-bg rounded-2xl shadow-sm border border-light-note-border/60 dark:border-dark-note-border/60 p-8">
+          <h1 className="text-3xl font-bold text-light-text dark:text-dark-text mb-2 text-center">
             Forgot Password
           </h1>
-          <p className="text-[#1E293B] dark:text-[#F1F5F9] text-center mb-8">
+          <p className="text-light-text/60 dark:text-dark-text/60 text-center mb-8">
             Enter your email to receive a password reset link
           </p>
 
           {error && (
-            <div role="alert" aria-live="assertive" className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
+            <div role="alert" aria-live="assertive" className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
               <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
             </div>
           )}
 
           {success ? (
             <div className="text-center">
-              <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded">
+              <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
                 <p className="text-green-600 dark:text-green-400 text-sm">
                   If an account exists with that email, a password reset link has been sent.
                 </p>
               </div>
-              <p className="text-sm text-[#1E293B] dark:text-[#F1F5F9] mb-4">
+              <p className="text-sm text-light-text dark:text-dark-text mb-4">
                 Check your email inbox and spam folder for the reset link.
               </p>
               <button
                 onClick={() => router.push('/auth/login')}
-                className="w-full py-3 px-4 bg-[#3B82F6] text-white rounded-lg hover:opacity-90 transition font-medium"
+                className="w-full py-3 px-4 bg-light-primary dark:bg-dark-primary text-white rounded-xl hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover transition font-medium"
               >
                 Back to Login
               </button>
@@ -101,7 +101,7 @@ export default function ForgotPasswordPage() {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9] mb-1">
+                <label htmlFor="email" className="block text-sm font-medium text-light-text dark:text-dark-text mb-1">
                   Email
                 </label>
                 <input
@@ -117,10 +117,10 @@ export default function ForgotPasswordPage() {
                     }
                   }}
                   onBlur={handleFieldBlur}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] ${
+                  className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-dark-canvas text-light-text dark:text-dark-text ${
                     touched && fieldError
                       ? 'border-red-500 focus:ring-red-500'
-                      : 'border-[#E2E8F0] dark:border-[#475569] focus:ring-[#3B82F6]'
+                      : 'border-light-note-border dark:border-dark-note-border focus:ring-light-primary dark:focus:ring-dark-primary'
                   }`}
                   placeholder="you@example.com"
                 />
@@ -139,14 +139,14 @@ export default function ForgotPasswordPage() {
                     setError('');
                   }}
                   disabled={loading}
-                  className="flex-1 py-3 px-4 border border-[#E2E8F0] dark:border-[#475569] text-[#1E293B] dark:text-[#F1F5F9] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  className="flex-1 py-3 px-4 border border-light-note-border dark:border-dark-note-border text-light-text dark:text-dark-text rounded-xl hover:bg-light-canvas dark:hover:bg-dark-canvas transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                 >
                   Reset
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex-1 py-3 px-4 bg-[#3B82F6] text-white rounded-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
+                  className="flex-1 py-3 px-4 bg-light-primary dark:bg-dark-primary text-white rounded-xl hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover transition disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
                 >
                   {loading ? (
                     <>
@@ -160,9 +160,9 @@ export default function ForgotPasswordPage() {
           )}
 
           {!success && (
-            <p className="mt-6 text-center text-sm text-[#1E293B] dark:text-[#F1F5F9]">
+            <p className="mt-6 text-center text-sm text-light-text/60 dark:text-dark-text/60">
               Remember your password?{' '}
-              <a href="/auth/login" className="text-[#3B82F6] hover:underline">
+              <a href="/auth/login" className="text-light-primary dark:text-dark-primary hover:underline">
                 Login
               </a>
             </p>
