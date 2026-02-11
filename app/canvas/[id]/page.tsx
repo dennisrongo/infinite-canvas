@@ -831,34 +831,22 @@ function CanvasPageContent() {
 
         {/* Canvas Area */}
         <main className="flex-1 relative overflow-hidden bg-[#F8FAFC] dark:bg-[#1E293B]">
-          {canvas.notes.length === 0 && notes.length === 0 ? (
-            <div className="h-full flex items-center justify-center">
-              <div className="text-center">
-                <p className="text-[#1E293B] dark:text-[#F1F5F9] text-lg mb-2">
-                  No notes yet
-                </p>
-                <p className="text-[#64748B] mb-4">
-                  Double-click anywhere to create your first note
-                </p>
-              </div>
-            </div>
-          ) : (
-            <ReactFlowCanvas
-              canvasId={canvasId}
-              initialNotes={notes}
-              initialConnections={connections}
-              initialViewport={viewport || undefined}
-              selectedNoteId={selectedNoteId || undefined}
-              onNoteCreate={handleNoteCreate}
-              onNoteUpdate={handleNoteUpdate}
-              onNoteDelete={handleNoteDelete}
-              onNoteDuplicate={handleNoteDuplicate}
-              onViewportChange={handleViewportChange}
-              onNoteRestore={handleNoteRestore}
-              onConnectionCreate={handleConnectionCreate}
-              onConnectionDelete={handleConnectionDelete}
-            />
-          )}
+          <ReactFlowCanvas
+            canvasId={canvasId}
+            initialNotes={notes}
+            initialConnections={connections}
+            initialViewport={viewport || undefined}
+            selectedNoteId={selectedNoteId || undefined}
+            onNoteCreate={handleNoteCreate}
+            onNoteUpdate={handleNoteUpdate}
+            onNoteDelete={handleNoteDelete}
+            onNoteDuplicate={handleNoteDuplicate}
+            onViewportChange={handleViewportChange}
+            onNoteRestore={handleNoteRestore}
+            onConnectionCreate={handleConnectionCreate}
+            onConnectionDelete={handleConnectionDelete}
+            showEmptyState={notes.length === 0}
+          />
         </main>
       </div>
 

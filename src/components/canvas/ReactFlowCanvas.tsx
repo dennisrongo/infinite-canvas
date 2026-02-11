@@ -66,6 +66,7 @@ interface ReactFlowCanvasProps {
   onConnectionDelete?: (connectionId: string) => void;
   onNoteDuplicate?: (noteId: string) => void;
   onNavigateToNote?: (noteTitle: string) => void;
+  showEmptyState?: boolean;
 }
 
 const nodeTypes = {
@@ -87,11 +88,13 @@ function ReactFlowCanvasInner({
   onConnectionDelete,
   onNoteDuplicate,
   onNavigateToNote,
+  showEmptyState,
 }: ReactFlowCanvasProps) {
   const { theme } = useTheme();
   const { screenToFlowPosition, setViewport, getViewport, fitView } = useReactFlow();
   const lastClickTime = useRef(0);
   const lastClickPosition = useRef({ x: 0, y: 0 });
+  const prevInitialNotes = useRef<Note[]>(initialNotes);
   const [undoStack, setUndoStack] = React.useState<UndoAction[]>([]);
   const [redoStack, setRedoStack] = React.useState<RedoAction[]>([]);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
@@ -142,6 +145,8 @@ function ReactFlowCanvasInner({
       title: note.title || 'Untitled Note',
       content: note.content || '',
       onDuplicate: handleNoteDuplicate,
+      fontFamily: note.fontFamily,
+      fontSize: note.fontSize,
     },
     style: {
       width: note.width || 300,
@@ -250,18 +255,28 @@ function ReactFlowCanvasInner({
         Math.pow(position.y - lastClickPosition.current.y, 2)
       );
 
+      // Debug logging
+      console.log('[onPaneClick]', { clientX: event.clientX, clientY: event.clientY, timeDiff, distance });
+
       // Check if this is a double-click (within 300ms and close in position)
       if (timeDiff < 300 && distance < 10) {
+        console.log('[onPaneClick] Double-click detected!');
         if (onNoteCreate) {
           try {
+            console.log('[onPaneClick] Calling screenToFlowPosition...');
             const flowPosition = screenToFlowPosition({
               x: event.clientX,
               y: event.clientY,
             });
+            console.log('[onPaneClick] Flow position:', flowPosition);
+            console.log('[onPaneClick] Calling onNoteCreate...');
             onNoteCreate(flowPosition);
+            console.log('[onPaneClick] onNoteCreate called successfully');
           } catch (error) {
-            console.error('Error creating note:', error);
+            console.error('[onPaneClick] Error creating note:', error);
           }
+        } else {
+          console.error('[onPaneClick] onNoteCreate is not defined!');
         }
       }
 
@@ -285,14 +300,43 @@ function ReactFlowCanvasInner({
   const onNodeDoubleClick = useCallback(
     (event: React.MouseEvent, node: Node) => {
       event.stopPropagation();
-      // Find the note in initialNotes
-      const note = initialNotes.find(n => n.id === node.id);
+      console.log('[onNodeDoubleClick] Opening node:', node.id, node.data);
+
+      // CRITICAL FIX: Search current nodes state FIRST (which has most up-to-date data)
+      // Then fall back to initialNotes for additional metadata like createdAt, updatedAt
+      let note = nodes.find(n => n.id === node.id);
+
+      // If found in current nodes, use it directly (it has fontFamily and fontSize now)
+      if (!note) {
+        // Not in current nodes, try initialNotes for metadata
+        note = initialNotes.find(n => n.id === node.id);
+      }
+
+      // If not found in initialNotes (e.g., newly created note), construct from node data
+      if (!note) {
+        console.log('[onNodeDoubleClick] Note not found in initialNotes, using current node data');
+        note = {
+          id: node.id,
+          title: (node.data as any).title || 'Untitled Note',
+          content: (node.data as any).content || '',
+          positionX: node.position.x,
+          positionY: node.position.y,
+          width: typeof node.style?.width === 'number' ? node.style.width : 300,
+          height: typeof node.style?.height === 'number' ? node.style.height : 200,
+          fontFamily: (node.data as any).fontFamily,
+          fontSize: (node.data as any).fontSize,
+        };
+      }
+
       if (note) {
+        console.log('[onNodeDoubleClick] Setting editing note:', note);
         setEditingNote(note);
         setIsEditorOpen(true);
+      } else {
+        console.error('[onNodeDoubleClick] Could not find note data for node:', node.id);
       }
     },
-    [initialNotes]
+    [nodes, initialNotes]  // Updated dependency to include nodes
   );
 
   // Handle saving note content from editor
@@ -329,25 +373,38 @@ function ReactFlowCanvasInner({
 
   // Handle navigating to a linked note (Feature #74)
   const handleNavigateToNote = useCallback((noteTitle: string) => {
+    console.log('[handleNavigateToNote] Looking for note:', noteTitle);
+
     // Find the note by title in the current nodes
-    const targetNote = nodes.find(node => {
+    const targetNode = nodes.find(node => {
       const title = node.data.title;
       if (typeof title !== 'string') return false;
       return title === noteTitle || title.toLowerCase() === noteTitle.toLowerCase();
     });
 
-    if (targetNote) {
-      // Found the note - open it for editing
-      const noteData = {
-        id: targetNote.id,
-        title: String(targetNote.data.title || ''),
-        content: String(targetNote.data.content || ''),
-        positionX: targetNote.position.x,
-        positionY: targetNote.position.y,
-        width: Number(targetNote.style?.width || 300),
-        height: Number(targetNote.style?.height || 200),
-      };
+    if (targetNode) {
+      console.log('[handleNavigateToNote] Found note node:', targetNode.id);
 
+      // First try to find full note data in initialNotes
+      let noteData = initialNotes.find(n => n.id === targetNode.id);
+
+      // If not found in initialNotes (e.g., newly created note), construct from node data
+      if (!noteData) {
+        console.log('[handleNavigateToNote] Note not in initialNotes, using current node data');
+        noteData = {
+          id: targetNode.id,
+          title: String(targetNode.data.title || ''),
+          content: String(targetNode.data.content || ''),
+          positionX: targetNode.position.x,
+          positionY: targetNode.position.y,
+          width: Number(targetNode.style?.width || 300),
+          height: Number(targetNode.style?.height || 200),
+          fontFamily: (targetNode.data as any).fontFamily,
+          fontSize: (targetNode.data as any).fontSize,
+        };
+      }
+
+      console.log('[handleNavigateToNote] Setting editing note:', noteData);
       setEditingNote(noteData);
       setIsEditorOpen(true);
 
@@ -373,7 +430,7 @@ function ReactFlowCanvasInner({
       // Note not found - could offer to create it
       console.warn(`Note "${noteTitle}" not found in current canvas`);
     }
-  }, [nodes, getViewport, setViewport, onViewportChange]);
+  }, [nodes, initialNotes, getViewport, setViewport, onViewportChange]);
 
   // Handle connections - create new connection
   const onConnect = useCallback(
@@ -411,24 +468,61 @@ function ReactFlowCanvasInner({
     [onEdgesChange, onConnectionDelete]
   );
 
-  // Update nodes when initialNotes change
+  // Update nodes when initialNotes change - SMART SYNC (don't replace entire state)
   useEffect(() => {
-    const newNodes: Node[] = initialNotes.map((note) => ({
-      id: note.id,
-      type: 'noteNode',
-      position: { x: note.positionX, y: note.positionY },
-      data: {
-        title: note.title || 'Untitled Note',
-        content: note.content || '',
-      },
-      style: {
-        width: note.width || 300,
-        height: note.height || 200,
-      },
-    }));
+    // Only update if initialNotes reference has actually changed (by reference)
+    const previousNotes = prevInitialNotes.current;
+    const addedNotes = initialNotes.filter(note =>
+      !previousNotes?.some(pn => pn.id === note.id)
+    );
 
-    setNodes(newNodes);
-  }, [initialNotes, setNodes]);
+    // Find notes that were removed (exist in prev but not in current)
+    const removedNoteIds = new Set(
+      previousNotes
+        ?.filter(pn => !initialNotes.some(cn => cn.id === pn.id))
+        ?.map(pn => pn.id)
+    );
+
+    // Merge new changes with existing nodes state
+    setNodes((currentNodes) => {
+      // Start with existing current nodes
+      let updatedNodes = currentNodes;
+
+      // Add new notes
+      for (const note of addedNotes) {
+        const nodeData = {
+          id: note.id,
+          type: 'noteNode',
+          position: { x: note.positionX, y: note.positionY },
+          data: {
+            title: note.title || 'Untitled Note',
+            content: note.content || '',
+            onDuplicate: handleNoteDuplicate,
+            fontFamily: note.fontFamily,
+            fontSize: note.fontSize,
+          },
+          style: {
+            width: note.width || 300,
+            height: note.height || 200,
+          },
+        };
+        updatedNodes.push(nodeData);
+      }
+
+      // Remove deleted notes (in reverse order to maintain indices)
+      for (const noteId of removedNoteIds) {
+        const index = updatedNodes.findIndex(n => n.id === noteId);
+        if (index !== -1) {
+          updatedNodes.splice(index, 1);
+        }
+      }
+
+      return updatedNodes;
+    });
+
+    // Update ref for next comparison
+    prevInitialNotes.current = initialNotes;
+  }, [initialNotes, setNodes, handleNoteDuplicate]);
 
   // Update edges when initialConnections change
   useEffect(() => {
@@ -580,6 +674,7 @@ function ReactFlowCanvasInner({
       // Check for 'N' key to create a new note (Feature #54)
       // Only trigger if no modifier keys are pressed and not in an input field
       if (event.key === 'n' || event.key === 'N') {
+        console.log('[KeyDown] N key pressed');
         if (
           !event.ctrlKey &&
           !event.metaKey &&
@@ -589,19 +684,25 @@ function ReactFlowCanvasInner({
           (event.target as HTMLElement).tagName !== 'TEXTAREA' &&
           !(event.target as HTMLElement).isContentEditable
         ) {
+          console.log('[KeyDown] N key conditions met, creating note');
           event.preventDefault();
           if (onNoteCreate) {
             try {
               // Get current viewport to center the new note
               const viewport = getViewport();
+              console.log('[KeyDown] Viewport:', viewport);
               // Calculate center position in flow coordinates
               const centerX = -viewport.x + (window.innerWidth / 2) / viewport.zoom;
               const centerY = -viewport.y + (window.innerHeight / 2) / viewport.zoom;
+              console.log('[KeyDown] Creating note at center:', { centerX, centerY });
 
               onNoteCreate({ x: centerX, y: centerY });
+              console.log('[KeyDown] onNoteCreate called successfully');
             } catch (error) {
-              console.error('Error creating note with N key:', error);
+              console.error('[KeyDown] Error creating note with N key:', error);
             }
+          } else {
+            console.error('[KeyDown] onNoteCreate is not defined!');
           }
         }
       }
@@ -752,6 +853,20 @@ function ReactFlowCanvasInner({
           <ResetZoomControl />
         </Controls>
       </ReactFlow>
+
+      {/* Empty State Overlay - shows when there are no notes */}
+      {showEmptyState && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="text-center bg-white dark:bg-[#1E293B] p-6 rounded-lg shadow-lg">
+            <p className="text-[#1E293B] dark:text-[#F1F5F9] text-lg mb-2">
+              No notes yet
+            </p>
+            <p className="text-[#64748B] dark:text-[#94A3B8]">
+              Double-click anywhere or press <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">N</kbd> to create your first note
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Note Editor Modal */}
       <NoteEditor

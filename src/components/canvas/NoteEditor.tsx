@@ -53,6 +53,10 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
   const [imageUploadProgress, setImageUploadProgress] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // FIX: Track initialization to prevent autosave from wiping data
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [initialValues, setInitialValues] = useState<{title: string; content: string}>({ title: '', content: '' });
+
   // Link autocomplete state
   const [showLinkAutocomplete, setShowLinkAutocomplete] = useState(false);
   const [linkSearchQuery, setLinkSearchQuery] = useState('');
@@ -127,6 +131,9 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
 
   useEffect(() => {
     if (note) {
+      // CRITICAL FIX: Set initialization flag IMMEDIATELY to block autosave
+      setIsInitializing(true);
+
       // Feature #139: Check for draft restoration
       const draftKey = `${DRAFT_STORAGE_PREFIX}${note.id}`;
       const savedDraft = localStorage.getItem(draftKey);
@@ -138,8 +145,13 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
           const draftAge = Date.now() - draft.timestamp;
           const oneHour = 60 * 60 * 1000;
 
-          if (draftAge < oneHour) {
-            // Restore from draft
+          // Feature #139 fix: Compare draft timestamp with note's updatedAt
+          // Only restore draft if it's newer than the server version
+          const noteUpdatedAt = note.updatedAt ? new Date(note.updatedAt).getTime() : 0;
+          const draftTimestamp = draft.timestamp || 0;
+
+          if (draftAge < oneHour && draftTimestamp > noteUpdatedAt) {
+            // Draft is newer than server version, restore from draft
             setTitle(draft.title);
             setContent(draft.content);
             setFontFamily(draft.fontFamily || 'Inter');
@@ -151,7 +163,7 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
               setShowDraftRestoredBanner(false);
             }, 5000);
           } else {
-            // Draft too old, use server data and clear draft
+            // Draft is old or older than server version, use server data and clear draft
             localStorage.removeItem(draftKey);
             setTitle(note.title || '');
             setContent(note.content || '');
@@ -184,21 +196,31 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
 
   useEffect(() => {
     // Auto-save with debouncing
-    if (isOpen && note) {
+    // FIX: Skip autosave during initialization to prevent wiping data
+    if (isOpen && note && !isInitializing) {
       const timer = setTimeout(() => {
+        // FIX: Also check for empty values before saving
         if (
           title !== note.title ||
           content !== note.content ||
           fontFamily !== (note.fontFamily || 'Inter') ||
           fontSize !== (note.fontSize || 14)
         ) {
-          handleSave();
+          // FIX: Don't save if values match initial empty values (during initialization)
+          if (
+            title !== initialValues.title ||
+            content !== initialValues.content ||
+            fontFamily !== (note.fontFamily || 'Inter') ||
+            fontSize !== (note.fontSize || 14)
+          ) {
+            handleSave();
+          }
         }
       }, 2000); // 2 second debounce
 
       return () => clearTimeout(timer);
     }
-  }, [title, content, fontFamily, fontSize, isOpen, note]);
+  }, [title, content, fontFamily, fontSize, isOpen, note, isInitializing, initialValues]);
 
   const handleSave = async () => {
     if (!note) return;
