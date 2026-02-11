@@ -83,27 +83,30 @@ export async function POST(request: NextRequest) {
     const validSortOrders = ['asc', 'desc'];
     const sortDirection = validSortOrders.includes(sortOrder) ? sortOrder : 'desc';
 
-    // For SQLite, use raw SQL query for better performance with large datasets
+    // Use raw SQL query for better performance with large datasets
     // This avoids fetching all notes and filtering in JavaScript
     const startTime = Date.now();
-    const searchTermLower = `%${searchTerms.toLowerCase()}%`;
+    const searchPattern = `%${searchTerms}%`;
 
-    // Build the query conditionally based on parameters
-    let whereSQL = 'WHERE c.user_id = ?';
+    // Build the query conditionally based on parameters (PostgreSQL $N placeholders)
     const params: any[] = [session.userId];
+    let whereSQL = 'WHERE c.user_id = $1';
 
     if (canvasId) {
-      whereSQL += ' AND n.canvas_id = ?';
       params.push(canvasId);
+      whereSQL += ' AND n.canvas_id = $' + params.length;
     }
 
-    whereSQL += ' AND (LOWER(n.title) LIKE LOWER(?) OR LOWER(n.content) LIKE LOWER(?))';
-    params.push(searchTermLower, searchTermLower);
+    const titleIdx = params.length + 1;
+    const contentIdx = params.length + 2;
+    whereSQL += ` AND (n.title ILIKE $${titleIdx} OR n.content ILIKE $${contentIdx})`;
+    params.push(searchPattern, searchPattern);
 
     if (dateFilter) {
-      const dateCondition = getDateFilterCondition(dateFilter);
-      if (dateCondition) {
-        whereSQL += ` AND ${dateCondition}`;
+      const dateThreshold = getDateFilterThreshold(dateFilter);
+      if (dateThreshold) {
+        params.push(dateThreshold.toISOString());
+        whereSQL += ' AND n.updated_at >= $' + params.length + '::timestamp';
       }
     }
 
@@ -178,20 +181,20 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Helper function to get date filter SQL condition
-function getDateFilterCondition(dateFilter: string): string {
+// Helper function to get date filter threshold
+function getDateFilterThreshold(dateFilter: string): Date | null {
   const now = new Date();
   switch (dateFilter) {
     case 'today':
-      return `datetime(n.updated_at) >= datetime('${new Date(now.setHours(0, 0, 0, 0)).toISOString()}')`;
+      return new Date(now.setHours(0, 0, 0, 0));
     case 'week':
-      return `datetime(n.updated_at) >= datetime('${new Date(now.setDate(now.getDate() - 7)).toISOString()}')`;
+      return new Date(now.setDate(now.getDate() - 7));
     case 'month':
-      return `datetime(n.updated_at) >= datetime('${new Date(now.setMonth(now.getMonth() - 1)).toISOString()}')`;
+      return new Date(now.setMonth(now.getMonth() - 1));
     case 'year':
-      return `datetime(n.updated_at) >= datetime('${new Date(now.setFullYear(now.getFullYear() - 1)).toISOString()}')`;
+      return new Date(now.setFullYear(now.getFullYear() - 1));
     default:
-      return '';
+      return null;
   }
 }
 
