@@ -94,8 +94,6 @@ function ReactFlowCanvasInner({
 }: ReactFlowCanvasProps) {
   const { theme } = useTheme();
   const { screenToFlowPosition, setViewport, getViewport, fitView } = useReactFlow();
-  const lastClickTime = useRef(0);
-  const lastClickPosition = useRef({ x: 0, y: 0 });
   const prevInitialNotes = useRef<Note[]>(initialNotes);
   const [undoStack, setUndoStack] = React.useState<UndoAction[]>([]);
   const [redoStack, setRedoStack] = React.useState<RedoAction[]>([]);
@@ -246,7 +244,11 @@ function ReactFlowCanvasInner({
     setDeleteConfirmation({ isOpen: false, noteId: null, noteTitle: '' });
   }, []);
 
-  // Handle click on canvas to detect double-click
+  // Refs for double-click detection
+  const lastClickTime = useRef(0);
+  const lastClickPosition = useRef({ x: 0, y: 0 });
+
+  // Handle click on canvas and detect double-click
   const onPaneClick = useCallback(
     (event: React.MouseEvent) => {
       const now = Date.now();
@@ -262,23 +264,19 @@ function ReactFlowCanvasInner({
 
       // Check if this is a double-click (within 300ms and close in position)
       if (timeDiff < 300 && distance < 10) {
-        console.log('[onPaneClick] Double-click detected!');
+        console.log('[onPaneClick] Double-click detected! Creating note...');
         if (onNoteCreate) {
           try {
-            console.log('[onPaneClick] Calling screenToFlowPosition...');
             const flowPosition = screenToFlowPosition({
               x: event.clientX,
               y: event.clientY,
             });
             console.log('[onPaneClick] Flow position:', flowPosition);
-            console.log('[onPaneClick] Calling onNoteCreate...');
             onNoteCreate(flowPosition);
-            console.log('[onPaneClick] onNoteCreate called successfully');
+            console.log('[onPaneClick] Note created successfully');
           } catch (error) {
             console.error('[onPaneClick] Error creating note:', error);
           }
-        } else {
-          console.error('[onPaneClick] onNoteCreate is not defined!');
         }
       }
 
@@ -474,6 +472,13 @@ function ReactFlowCanvasInner({
       !previousNotes?.some(pn => pn.id === note.id)
     );
 
+    console.log('[Sync Effect] initialNotes changed:', {
+      prevCount: previousNotes?.length || 0,
+      currentCount: initialNotes.length,
+      addedCount: addedNotes.length,
+      addedNotes: addedNotes.map(n => n.id)
+    });
+
     // Find notes that were removed (exist in prev but not in current)
     const removedNoteIds = new Set(
       previousNotes
@@ -481,10 +486,12 @@ function ReactFlowCanvasInner({
         ?.map(pn => pn.id)
     );
 
+    console.log('[Sync Effect] removedNoteIds:', Array.from(removedNoteIds));
+
     // Merge new changes with existing nodes state
     setNodes((currentNodes) => {
       // Start with existing current nodes
-      let updatedNodes = currentNodes;
+      const updatedNodes = [...currentNodes];
 
       // Add new notes
       for (const note of addedNotes) {
@@ -515,6 +522,7 @@ function ReactFlowCanvasInner({
         }
       }
 
+      console.log('[Sync Effect] Final nodes count:', updatedNodes.length);
       return updatedNodes;
     });
 
@@ -837,6 +845,7 @@ function ReactFlowCanvasInner({
         selectionKeyCode={null}
         multiSelectionKeyCode="Shift"
         panOnScroll
+        zoomOnDoubleClick={false}
         selectionOnDrag
         className="bg-[#F8FAFC] dark:bg-[#1E293B]"
       >

@@ -290,8 +290,13 @@ function CanvasPageContent() {
 
       if (res.ok) {
         const data = await res.json();
+        console.log('[handleNoteCreate] Note created from API:', data.note);
         // Add new note to state
-        setNotes(prev => [...prev, data.note]);
+        setNotes(prev => {
+          const newNotes = [...prev, data.note];
+          console.log('[handleNoteCreate] Updating notes state, new count:', newNotes.length);
+          return newNotes;
+        });
         showToast('Note created successfully', 'success');
       } else {
         // Feature #174: Handle canvas deleted case
