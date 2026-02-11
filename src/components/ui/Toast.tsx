@@ -43,15 +43,15 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
   const baseClasses = "p-4 rounded-lg shadow-lg flex items-start gap-3 min-w-[300px] max-w-md transition-all duration-300 transform";
 
   const typeClasses = {
-    success: "bg-white dark:bg-[#1E293B] border-l-4 border-green-500",
-    error: "bg-white dark:bg-[#1E293B] border-l-4 border-red-500",
-    info: "bg-white dark:bg-[#1E293B] border-l-4 border-blue-500"
+    success: "bg-white dark:bg-dark-note border-l-4 border-semantic-success",
+    error: "bg-white dark:bg-dark-note border-l-4 border-semantic-error",
+    info: "bg-white dark:bg-dark-note border-l-4 border-semantic-info"
   };
 
   const iconClasses = {
-    success: "text-green-500",
-    error: "text-red-500",
-    info: "text-blue-500"
+    success: "text-semantic-success",
+    error: "text-semantic-error",
+    info: "text-semantic-info"
   };
 
   const icons = {
@@ -83,7 +83,7 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
 
       {/* Message */}
       <div className="flex-1">
-        <p className="text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9]">
+        <p className="text-sm font-medium text-light-text dark:text-dark-text">
           {toast.message}
         </p>
       </div>
@@ -91,7 +91,7 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
       {/* Close button */}
       <button
         onClick={onRemove}
-        className="flex-shrink-0 text-[#64748B] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F1F5F9] transition-colors"
+        className="flex-shrink-0 text-light-text-secondary dark:text-dark-text-secondary hover:text-light-text dark:hover:text-dark-text transition-colors"
         aria-label="Close notification"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

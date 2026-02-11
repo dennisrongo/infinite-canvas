@@ -108,20 +108,20 @@ export default function NoteNode({ data, selected, id }: NoteNodeProps) {
   return (
     <div
       ref={nodeRef}
-      className={`group px-4 py-3 bg-white dark:bg-[#1E293B] border-2 rounded-lg shadow-md transition-all relative ${
+      className={`group px-4 py-3 bg-white dark:bg-dark-note border-2 rounded-lg shadow-md transition-all relative ${
         selected
-          ? 'border-[#3B82F6] ring-2 ring-[#3B82F6] ring-opacity-50'
-          : 'border-[#E2E8F0] dark:border-[#475569] hover:border-[#3B82F6]'
+          ? 'border-light-primary dark:border-dark-primary ring-2 ring-light-primary dark:ring-dark-primary ring-opacity-50'
+          : 'border-light-note-border dark:border-dark-note-border hover:border-light-primary dark:hover:border-dark-primary'
       }`}
       style={{ width: `${size.width}px`, minHeight: `${size.height}px` }}
     >
       {/* Connection handles */}
-      <Handle type="target" position={Position.Top} className="!bg-[#3B82F6]" />
-      <Handle type="source" position={Position.Bottom} className="!bg-[#3B82F6]" />
+      <Handle type="target" position={Position.Top} className="!bg-light-primary dark:!bg-dark-primary" />
+      <Handle type="source" position={Position.Bottom} className="!bg-light-primary dark:!bg-dark-primary" />
 
       {/* Selected indicator - visible badge with icon for accessibility */}
       {selected && (
-        <div className="absolute -top-3 -right-3 w-6 h-6 bg-[#3B82F6] rounded-full flex items-center justify-center shadow-md" aria-label="Selected note">
+        <div className="absolute -top-3 -right-3 w-6 h-6 bg-light-primary dark:bg-dark-primary rounded-full flex items-center justify-center shadow-md" aria-label="Selected note">
           <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
           </svg>
@@ -129,37 +129,37 @@ export default function NoteNode({ data, selected, id }: NoteNodeProps) {
       )}
 
       {/* Title */}
-      <div className="font-semibold text-[#1E293B] dark:text-[#F1F5F9] mb-2 truncate pr-6">
+      <div className="font-semibold text-light-text dark:text-dark-text mb-2 truncate pr-6">
         {data.title || 'Untitled Note'}
       </div>
 
       {/* Content preview */}
       {contentPreview ? (
-        <div className="text-sm text-[#64748B] dark:text-[#94A3B8] leading-relaxed">
+        <div className="text-sm text-light-text-secondary dark:text-dark-text-secondary leading-relaxed">
           {contentPreview}
         </div>
       ) : (
-        <div className="text-sm text-[#94A3B8] dark:text-[#64748B] italic">
+        <div className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary italic">
           No content yet
         </div>
       )}
 
       {/* Edit hint */}
-      <div className="mt-2 text-xs text-[#94A3B8] dark:text-[#64748B] italic flex items-center gap-1">
+      <div className="mt-2 text-xs text-light-text-tertiary dark:text-dark-text-tertiary italic flex items-center gap-1">
         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
         </svg>
         Double-click to edit
       </div>
 
-      {/* Duplicate button - visible on hover */}
+      {/* Duplicate button - visible on hover, with touch-friendly sizing */}
       {data.onDuplicate && (
         <button
           onClick={(e) => {
             e.stopPropagation();
             data.onDuplicate?.(id);
           }}
-          className="absolute top-2 right-2 p-1.5 bg-[#3B82F6] hover:bg-[#2563EB] text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+          className="absolute top-2 right-2 min-w-[44px] min-h-[44px] p-3 bg-light-primary dark:bg-dark-primary hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover text-white rounded-md opacity-0 group-hover:opacity-100 transition-all shadow-sm flex items-center justify-center"
           title="Duplicate note"
           style={{ opacity: selected ? 1 : 0 }}
           onMouseEnter={(e) => {
@@ -192,28 +192,28 @@ export default function NoteNode({ data, selected, id }: NoteNodeProps) {
       {selected && (
         <>
           <div
-            className="absolute bottom-0 right-0 w-3 h-3 cursor-se-resize"
+            className="absolute bottom-0 right-0 w-3 h-3 cursor-se-resize touch:touch touch:touch-lg"
             style={{
               background: 'linear-gradient(135deg, transparent 50%, #3B82F6 50%)',
             }}
             onMouseDown={(e) => handleResizeStart(e, 'se')}
           />
           <div
-            className="absolute bottom-0 left-0 w-3 h-3 cursor-sw-resize"
+            className="absolute bottom-0 left-0 w-3 h-3 cursor-sw-resize touch:touch touch:touch-lg"
             style={{
               background: 'linear-gradient(225deg, transparent 50%, #3B82F6 50%)',
             }}
             onMouseDown={(e) => handleResizeStart(e, 'sw')}
           />
           <div
-            className="absolute top-0 right-0 w-3 h-3 cursor-ne-resize"
+            className="absolute top-0 right-0 w-3 h-3 cursor-ne-resize touch:touch touch:touch-lg"
             style={{
               background: 'linear-gradient(45deg, transparent 50%, #3B82F6 50%)',
             }}
             onMouseDown={(e) => handleResizeStart(e, 'ne')}
           />
           <div
-            className="absolute top-0 left-0 w-3 h-3 cursor-nw-resize"
+            className="absolute top-0 left-0 w-3 h-3 cursor-nw-resize touch:touch touch:touch-lg"
             style={{
               background: 'linear-gradient(-45deg, transparent 50%, #3B82F6 50%)',
             }}

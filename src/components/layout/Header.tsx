@@ -72,7 +72,8 @@ export default function Header({
 
     terms.forEach(term => {
       const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-      highlightedText = highlightedText.replace(regex, '<mark style="background-color: #FEF08A; color: #1E293B; padding: 1px 2px; border-radius: 2px;">$1</mark>');
+      // Use CSS variable for highlight color instead of hardcoded value
+      highlightedText = highlightedText.replace(regex, '<mark class="search-highlight">$1</mark>');
     });
 
     return highlightedText;
@@ -187,7 +188,7 @@ export default function Header({
   }, []);
 
   return (
-    <header className="bg-white dark:bg-[#0F172A] border-b border-[#E2E8F0] dark:border-[#475569] px-4 md:px-6 py-4 sticky top-0 z-40 transition-colors duration-300 overflow-x-hidden">
+    <header className="bg-white dark:bg-dark-bg border-b border-light-note-border dark:border-dark-note-border px-4 md:px-6 py-4 sticky top-0 z-40 transition-colors duration-300 overflow-x-hidden">
       <div className="flex items-center justify-between gap-2 overflow-x-hidden">
         <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0 overflow-x-hidden">
           {/* Hamburger menu button - visible on mobile */}

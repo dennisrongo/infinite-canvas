@@ -62,7 +62,6 @@ export default function GlobalError({
             </div>
           </div>
         </div>
-      </div>
       </body>
     </html>
   );

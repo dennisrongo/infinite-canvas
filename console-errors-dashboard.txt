@@ -1,9 +1,0 @@
-Total messages: 13 (Errors: 6, Warnings: 1)
-Returning 6 messages for level "error"
-
-[ERROR] Error fetching data: Error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
-[ERROR] Error fetching data: Error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
-[ERROR] Error fetching data: Error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
-[ERROR] Error fetching data: Error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
-[ERROR] Error fetching data: Error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
-[ERROR] Error fetching data: Error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56

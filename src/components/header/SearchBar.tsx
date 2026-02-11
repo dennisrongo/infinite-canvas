@@ -1,0 +1,373 @@
+'use client';
+
+import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+
+interface SearchBarProps {
+  currentCanvasId?: string;
+}
+
+// Custom hook for debouncing values
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
+/**
+ * SearchBar - Global search component with filters
+ *
+ * Features:
+ * - Keyboard shortcut (Ctrl+K / Cmd+K)
+ * - Search scope selector (all canvases or current)
+ * - Sort and filter options
+ * - Highlighted search results
+ * - Debounced search queries
+ */
+export default function SearchBar({ currentCanvasId }: SearchBarProps) {
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [showResults, setShowResults] = useState(false);
+  const [searchScope, setSearchScope] = useState<'all' | 'current'>('all');
+  const [searching, setSearching] = useState(false);
+  const [sortBy, setSortBy] = useState<'createdAt' | 'updatedAt' | 'title'>('updatedAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month' | 'year'>('all');
+  const [showFilters, setShowFilters] = useState(false);
+  const [searchWarning, setSearchWarning] = useState<string | null>(null);
+
+  // Debounce search query with 400ms delay
+  const debouncedSearchQuery = useDebounce(searchQuery, 400);
+
+  // Helper function to highlight search terms in text
+  const highlightTerms = (text: string, query: string) => {
+    if (!query.trim() || !text) return text;
+
+    const terms = query.trim().split(/\s+/).filter(term => term.length > 0);
+    let highlightedText = text;
+
+    terms.forEach(term => {
+      const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+      // Use CSS class for highlight color instead of inline style
+      highlightedText = highlightedText.replace(regex, '<mark class="search-highlight">$1</mark>');
+    });
+
+    return highlightedText;
+  };
+
+  // Memoize highlighted results
+  const highlightedResults = useMemo(() => {
+    return searchResults.map(result => ({
+      ...result,
+      highlightedTitle: highlightTerms(result.title, searchQuery),
+      highlightedContent: highlightTerms(result.contentPreview || '', searchQuery)
+    }));
+  }, [searchResults, searchQuery]);
+
+  // Close search results when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.search-container')) {
+        setShowResults(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Perform search when debounced query changes or filters change
+  useEffect(() => {
+    const performSearch = async () => {
+      if (!debouncedSearchQuery.trim()) {
+        setSearchResults([]);
+        setShowResults(false);
+        setSearchWarning(null);
+        return;
+      }
+
+      setSearching(true);
+
+      try {
+        const scopeParam = searchScope === 'current' && currentCanvasId
+          ? `?canvasId=${currentCanvasId}`
+          : '';
+
+        const res = await fetch(`/api/search${scopeParam}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: debouncedSearchQuery.trim(),
+            sortBy,
+            sortOrder,
+            dateFilter: dateFilter === 'all' ? undefined : dateFilter,
+          }),
+        });
+
+        if (!res.ok) throw new Error('Search failed');
+
+        const data = await res.json();
+        setSearchResults(data.results || []);
+        setSearchWarning(data.warning || null);
+        setShowResults(true);
+      } catch (error) {
+        console.error('Search error:', error);
+        setSearchResults([]);
+        setSearchWarning(null);
+      } finally {
+        setSearching(false);
+      }
+    };
+
+    performSearch();
+  }, [debouncedSearchQuery, searchScope, currentCanvasId, sortBy, sortOrder, dateFilter]);
+
+  // Handle keyboard shortcut (Ctrl+K / Cmd+K)
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        document.getElementById('global-search-input')?.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
+  }, []);
+
+  // Handle clicking a search result
+  const handleResultClick = (result: any) => {
+    setShowResults(false);
+    setSearchQuery('');
+    setSearchResults([]);
+    setSearchWarning(null);
+    router.push(`/canvas/${result.canvasId}`);
+  };
+
+  // Format date for display
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString();
+  };
+
+  const formatRelativeTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  return (
+    <div className="search-container relative flex-1 max-w-2xl ml-2 md:ml-8 min-w-0">
+      <div className="relative">
+        {/* Search Icon */}
+        <svg
+          className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-light-text-secondary dark:text-dark-text-secondary"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
+        </svg>
+
+        {/* Search Input */}
+        <input
+          id="global-search-input"
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search notes... (Ctrl+K)"
+          className="w-full pl-10 pr-24 py-2 border border-light-note-border dark:border-dark-note-border rounded-lg bg-white dark:bg-dark-input text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary"
+        />
+
+        {/* Scope Selector and Filter Button */}
+        <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+          {currentCanvasId && (
+            <select
+              value={searchScope}
+              onChange={(e) => setSearchScope(e.target.value as 'all' | 'current')}
+              className="px-2 py-1 text-xs border border-light-note-border dark:border-dark-note-border rounded bg-white dark:bg-dark-bg text-light-text-secondary dark:text-dark-text-tertiary focus:outline-none"
+            >
+              <option value="all">All Canvases</option>
+              <option value="current">This Canvas</option>
+            </select>
+          )}
+
+          {/* Filter Toggle Button */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="px-2 py-1 text-xs border border-light-note-border dark:border-dark-note-border rounded bg-white dark:bg-dark-bg text-light-text-secondary dark:text-dark-text-tertiary hover:bg-light-hover dark:hover:bg-dark-hover transition focus:outline-none"
+            title="Filter and sort options"
+          >
+            ⚙️ Filters
+          </button>
+        </div>
+      </div>
+
+      {/* Filter Panel */}
+      {showFilters && (
+        <div className="absolute mt-2 w-full bg-white dark:bg-dark-bg border border-light-note-border dark:border-dark-note-border rounded-lg shadow-lg p-4 z-50">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Sort By */}
+            <div>
+              <label className="block text-xs font-medium text-light-text-secondary dark:text-dark-text-tertiary mb-1">
+                Sort By
+              </label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'createdAt' | 'updatedAt' | 'title')}
+                className="w-full px-3 py-2 text-sm border border-light-note-border dark:border-dark-note-border rounded bg-white dark:bg-dark-input text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary"
+              >
+                <option value="updatedAt">Last Modified</option>
+                <option value="createdAt">Date Created</option>
+                <option value="title">Title (A-Z)</option>
+              </select>
+            </div>
+
+            {/* Sort Order */}
+            <div>
+              <label className="block text-xs font-medium text-light-text-secondary dark:text-dark-text-tertiary mb-1">
+                Order
+              </label>
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                className="w-full px-3 py-2 text-sm border border-light-note-border dark:border-dark-note-border rounded bg-white dark:bg-dark-input text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary"
+              >
+                <option value="desc">Newest First</option>
+                <option value="asc">Oldest First</option>
+              </select>
+            </div>
+
+            {/* Date Filter */}
+            <div>
+              <label className="block text-xs font-medium text-light-text-secondary dark:text-dark-text-tertiary mb-1">
+                Date Range
+              </label>
+              <select
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value as 'all' | 'today' | 'week' | 'month' | 'year')}
+                className="w-full px-3 py-2 text-sm border border-light-note-border dark:border-dark-note-border rounded bg-white dark:bg-dark-input text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary"
+              >
+                <option value="all">All Time</option>
+                <option value="today">Today</option>
+                <option value="week">Last 7 Days</option>
+                <option value="month">Last 30 Days</option>
+                <option value="year">Last 365 Days</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Active Filters Display */}
+          {(dateFilter !== 'all' || sortBy !== 'updatedAt' || sortOrder !== 'desc') && (
+            <div className="mt-3 pt-3 border-t border-light-note-border dark:border-dark-note-border flex items-center justify-between">
+              <div className="text-xs text-light-text-secondary dark:text-dark-text-tertiary">
+                Active filters:{' '}
+                {dateFilter !== 'all' && (
+                  <span className="inline-flex items-center gap-1 ml-1 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded">
+                    📅 {dateFilter === 'today' ? 'Today' : dateFilter === 'week' ? 'Last 7 days' : dateFilter === 'month' ? 'Last 30 days' : 'Last 365 days'}
+                  </span>
+                )}
+                {sortBy !== 'updatedAt' && (
+                  <span className="inline-flex items-center gap-1 ml-1 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded">
+                    📊 {sortBy === 'createdAt' ? 'Created' : 'Title'}
+                  </span>
+                )}
+                {sortOrder !== 'desc' && (
+                  <span className="inline-flex items-center gap-1 ml-1 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded">
+                    ⬆️ Ascending
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  setSortBy('updatedAt');
+                  setSortOrder('desc');
+                  setDateFilter('all');
+                }}
+                className="text-xs text-light-primary dark:text-dark-primary hover:text-light-primary-hover dark:hover:text-dark-primary-hover transition"
+              >
+                Clear all filters
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Search Results Dropdown */}
+      {showResults && searchQuery.trim() && (
+        <div className="absolute mt-2 w-full bg-white dark:bg-dark-bg border border-light-note-border dark:border-dark-note-border rounded-lg shadow-lg max-h-96 overflow-y-auto z-50">
+          {searchWarning && (
+            <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-sm">
+              ⚠️ {searchWarning}
+            </div>
+          )}
+          {searching ? (
+            <div className="p-4 text-center text-light-text-secondary dark:text-dark-text-tertiary">
+              Searching...
+            </div>
+          ) : searchResults.length === 0 ? (
+            <div className="p-4 text-center text-light-text-secondary dark:text-dark-text-tertiary">
+              No results found for "{searchQuery}"
+            </div>
+          ) : (
+            <div className="divide-y divide-light-note-border dark:divide-dark-note-border">
+              {highlightedResults.map((result) => (
+                <button
+                  key={result.id}
+                  onClick={() => handleResultClick(result)}
+                  className="w-full text-left p-4 hover:bg-light-canvas dark:hover:bg-dark-canvas transition min-h-[44px] flex items-start"
+                >
+                  <div className="flex items-start justify-between gap-3 w-full">
+                    <div className="flex-1 min-w-0">
+                      <div
+                        className="font-medium text-light-text dark:text-dark-text truncate"
+                        dangerouslySetInnerHTML={{ __html: result.highlightedTitle }}
+                      />
+                      <div
+                        className="text-sm text-light-text-secondary dark:text-dark-text-tertiary mt-1 line-clamp-2"
+                        dangerouslySetInnerHTML={{ __html: result.highlightedContent }}
+                      />
+                      <div className="flex items-center gap-2 mt-1 text-xs text-light-text-tertiary dark:text-dark-text-secondary">
+                        <span>in {result.canvasName}</span>
+                        <span>•</span>
+                        <span title={formatDateTime(result[sortBy === 'createdAt' ? 'createdAt' : 'updatedAt'])}>
+                          {sortBy === 'createdAt' ? 'Created' : 'Updated'}: {formatRelativeTime(result[sortBy === 'createdAt' ? 'createdAt' : 'updatedAt'])}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
