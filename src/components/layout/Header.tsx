@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import SearchBar from '@/components/header/SearchBar';
 import UserActions from '@/components/header/UserActions';
 import { Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
@@ -76,11 +77,11 @@ export default function Header({
               {title}
             </h1>
           ) : (
-            <a href="/dashboard" className="flex items-center gap-1.5 flex-shrink-0 group">
+            <Link href="/dashboard" className="flex items-center gap-1.5 flex-shrink-0 group">
               <h1 className="text-base md:text-xl font-semibold text-light-text dark:text-dark-text group-hover:text-light-primary dark:group-hover:text-dark-primary transition-colors">
                 Infinite Canvas
               </h1>
-            </a>
+            </Link>
           )}
 
           {/* Search Bar */}

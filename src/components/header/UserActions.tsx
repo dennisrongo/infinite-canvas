@@ -1,5 +1,7 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Upload, Download, Settings, Moon, Sun, LogOut } from 'lucide-react';
 import MobileMenu from './MobileMenu';
@@ -21,6 +23,7 @@ export default function UserActions({
   onExportClick,
   onImportClick,
 }: UserActionsProps) {
+  const router = useRouter();
   const { theme, toggleTheme } = useTheme();
 
   const iconBtnClass =
@@ -56,7 +59,7 @@ export default function UserActions({
       )}
 
       {/* Settings link - desktop only */}
-      <a
+      <Link
         href="/settings"
         className={`hidden md:flex ${iconBtnClass}`}
         title="Settings"
@@ -64,7 +67,7 @@ export default function UserActions({
       >
         <Settings className="w-[18px] h-[18px]" />
         <span className="hidden lg:inline">Settings</span>
-      </a>
+      </Link>
 
       {/* Theme Toggle Button */}
       <button
@@ -90,18 +93,19 @@ export default function UserActions({
       {/* Subtle separator - desktop only */}
       <div className="hidden md:block w-px h-5 bg-light-note-border/60 dark:bg-dark-note-border/60 mx-0.5" />
 
-      {/* Logout form */}
-      <form action="/api/auth/logout" method="POST">
-        <button
-          type="submit"
-          className="min-w-[38px] min-h-[38px] flex items-center justify-center gap-2 px-2.5 py-2 text-sm font-medium rounded-xl transition-all duration-150 active:scale-95 text-red-500/80 dark:text-red-400/80 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 dark:hover:bg-red-400/10"
-          title="Log out"
-          aria-label="Log out"
-        >
-          <LogOut className="w-[18px] h-[18px]" />
-          <span className="hidden lg:inline">Logout</span>
-        </button>
-      </form>
+      {/* Logout button */}
+      <button
+        onClick={async () => {
+          await fetch('/api/auth/logout', { method: 'POST' });
+          router.push('/auth/login');
+        }}
+        className="min-w-[38px] min-h-[38px] flex items-center justify-center gap-2 px-2.5 py-2 text-sm font-medium rounded-xl transition-all duration-150 active:scale-95 text-red-500/80 dark:text-red-400/80 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 dark:hover:bg-red-400/10"
+        title="Log out"
+        aria-label="Log out"
+      >
+        <LogOut className="w-[18px] h-[18px]" />
+        <span className="hidden lg:inline">Logout</span>
+      </button>
     </div>
   );
 }

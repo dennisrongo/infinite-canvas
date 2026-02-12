@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useSearch } from '@/hooks/api/useSearch';
 import { Search, SlidersHorizontal } from 'lucide-react';
 
 interface SearchBarProps {
@@ -22,19 +23,39 @@ interface SearchBarProps {
 export default function SearchBar({ currentCanvasId }: SearchBarProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showResults, setShowResults] = useState(false);
   const [searchScope, setSearchScope] = useState<'all' | 'current'>('all');
-  const [searching, setSearching] = useState(false);
   const [sortBy, setSortBy] = useState<'createdAt' | 'updatedAt' | 'title'>('updatedAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month' | 'year'>('all');
   const [showFilters, setShowFilters] = useState(false);
-  const [searchWarning, setSearchWarning] = useState<string | null>(null);
   const [focusedIndex, setFocusedIndex] = useState(-1);
 
   // Debounce search query with 400ms delay
   const debouncedSearchQuery = useDebounce(searchQuery, 400);
+
+  // Use TanStack Query for search
+  const searchFilters = useMemo(() => ({
+    canvasId: searchScope === 'current' && currentCanvasId ? currentCanvasId : undefined,
+    sortBy,
+    sortOrder,
+    dateFilter: dateFilter === 'all' ? undefined : dateFilter,
+  }), [searchScope, currentCanvasId, sortBy, sortOrder, dateFilter]);
+
+  const { data: searchData, isFetching: searching } = useSearch(debouncedSearchQuery, searchFilters);
+  const searchResults: any[] = searchData?.results || [];
+  const searchWarning: string | null = searchData?.warning || null;
+
+  // Show results when data arrives
+  useEffect(() => {
+    if (searchResults.length > 0 || (debouncedSearchQuery.trim() && !searching)) {
+      setShowResults(true);
+      setFocusedIndex(-1);
+    }
+    if (!debouncedSearchQuery.trim()) {
+      setShowResults(false);
+    }
+  }, [searchResults, debouncedSearchQuery, searching]);
 
   // Helper function to highlight search terms in text
   const highlightTerms = (text: string, query: string) => {
@@ -74,50 +95,6 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Perform search when debounced query changes or filters change
-  useEffect(() => {
-    const performSearch = async () => {
-      if (!debouncedSearchQuery.trim()) {
-        setSearchResults([]);
-        setShowResults(false);
-        setSearchWarning(null);
-        return;
-      }
-
-      setSearching(true);
-
-      try {
-        const res = await fetch('/api/search', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: debouncedSearchQuery.trim(),
-            canvasId: searchScope === 'current' && currentCanvasId ? currentCanvasId : undefined,
-            sortBy,
-            sortOrder,
-            dateFilter: dateFilter === 'all' ? undefined : dateFilter,
-          }),
-        });
-
-        if (!res.ok) throw new Error('Search failed');
-
-        const data = await res.json();
-        setSearchResults(data.results || []);
-        setSearchWarning(data.warning || null);
-        setShowResults(true);
-        setFocusedIndex(-1);
-      } catch (error) {
-        console.error('Search error:', error);
-        setSearchResults([]);
-        setSearchWarning(null);
-      } finally {
-        setSearching(false);
-      }
-    };
-
-    performSearch();
-  }, [debouncedSearchQuery, searchScope, currentCanvasId, sortBy, sortOrder, dateFilter]);
-
   // Handle keyboard shortcut (Ctrl+K / Cmd+K)
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -135,8 +112,6 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
   const handleResultClick = useCallback((result: any) => {
     setShowResults(false);
     setSearchQuery('');
-    setSearchResults([]);
-    setSearchWarning(null);
     setFocusedIndex(-1);
     // Include note ID query parameter to auto-open editor
     router.push(`/canvas/${result.canvasId}?note=${result.id}`);

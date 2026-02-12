@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { useCanvasNotes } from '@/hooks/api/useNotes';
 
 interface Note {
   id: string;
@@ -23,25 +24,11 @@ export default function LinkAutocomplete({
   searchQuery: externalSearchQuery,
 }: LinkAutocompleteProps) {
   const [position, setPosition] = useState({ top: 0, left: 0 });
-  const [notes, setNotes] = useState<Note[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const fetchNotes = async () => {
-      try {
-        const res = await fetch(`/api/canvases/${canvasId}/notes`);
-        if (!res.ok) throw new Error('Failed to fetch notes');
-        const data = await res.json();
-        setNotes(data.notes || []);
-      } catch (error) {
-        console.error('Error fetching notes:', error);
-        setNotes([]);
-      }
-    };
-
-    fetchNotes();
-  }, [canvasId]);
+  const { data: notesData } = useCanvasNotes(canvasId);
+  const notes: Note[] = notesData?.notes || [];
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

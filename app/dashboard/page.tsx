@@ -1,10 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import ImportModal from '@/components/canvas/ImportModal';
 import { useToast } from '@/contexts/ToastContext';
+import { useFolders, useCreateFolder, useDeleteFolder, useRenameFolder } from '@/hooks/api/useFolders';
+import { useCanvases, useCreateCanvas, useDeleteCanvas, useRenameCanvas, useMoveCanvas, useImportCanvas } from '@/hooks/api/useCanvases';
+import { useCsrfToken } from '@/hooks/api/useAuth';
+import { useUpdateSettings } from '@/hooks/api/useUser';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { DashboardSkeleton } from '@/components/ui/SkeletonLoader';
 import { FolderPlus, FilePlus, Download, ChevronDown, ChevronRight, Pencil, Trash2, ArrowRightLeft, Folder } from 'lucide-react';
@@ -29,9 +34,57 @@ interface CanvasesResponse {
 export default function DashboardPage() {
   const router = useRouter();
   const { showToast } = useToast();
-  const [folders, setFolders] = useState<Folder[]>([]);
-  const [rootCanvases, setRootCanvases] = useState<Canvas[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  // TanStack Query hooks for data fetching
+  const { data: foldersData, isLoading: foldersLoading } = useFolders();
+  const { data: canvasesData, isLoading: canvasesLoading } = useCanvases();
+  const { data: csrfData } = useCsrfToken();
+  const csrfToken = csrfData?.csrfToken || null;
+
+  // Derive folders and root canvases from query data
+  const folders: Folder[] = foldersData?.folders || [];
+  const rootCanvases: Canvas[] = useMemo(() => {
+    const allCanvases: Canvas[] = canvasesData?.canvases || [];
+    const folderCanvasIds = new Set(
+      folders.flatMap((f: Folder) => f.canvases.map((c: Canvas) => c.id))
+    );
+    return allCanvases.filter((c: Canvas) => !folderCanvasIds.has(c.id));
+  }, [canvasesData, folders]);
+
+  const loading = foldersLoading || canvasesLoading;
+
+  // Sort order from API response
+  const [sortOrder, setSortOrder] = useState<'updated' | 'alphabetical' | 'created'>('updated');
+
+  // Sync sort order from folders API response
+  useEffect(() => {
+    if (foldersData?.sortOrder) {
+      setSortOrder(foldersData.sortOrder);
+    }
+  }, [foldersData]);
+
+  // Mutation hooks
+  const createFolderMutation = useCreateFolder();
+  const deleteFolderMutation = useDeleteFolder();
+  const renameFolderMutation = useRenameFolder();
+  const createCanvasMutation = useCreateCanvas();
+  const deleteCanvasMutation = useDeleteCanvas();
+  const renameCanvasMutation = useRenameCanvas();
+  const moveCanvasMutation = useMoveCanvas();
+  const importCanvasMutation = useImportCanvas();
+  const updateSettingsMutation = useUpdateSettings();
+
+  // Derive loading states from mutations
+  const isCreatingFolder = createFolderMutation.isPending;
+  const isDeletingFolder = deleteFolderMutation.isPending;
+  const isRenamingFolder = renameFolderMutation.isPending;
+  const isCreatingCanvas = createCanvasMutation.isPending;
+  const isDeletingCanvas = deleteCanvasMutation.isPending;
+  const isRenamingCanvas = renameCanvasMutation.isPending;
+  const isMovingCanvas = moveCanvasMutation.isPending;
+  const isUpdatingSortOrder = updateSettingsMutation.isPending;
+
+  // UI state
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -50,16 +103,6 @@ export default function DashboardPage() {
   const [canvasToRename, setCanvasToRename] = useState<{ canvas: Canvas; folderId?: string } | null>(null);
   const [canvasRenameName, setCanvasRenameName] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sortOrder, setSortOrder] = useState<'updated' | 'alphabetical' | 'created'>('updated');
-  const [csrfToken, setCsrfToken] = useState<string | null>(null);
-  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
-  const [isDeletingFolder, setIsDeletingFolder] = useState(false);
-  const [isRenamingFolder, setIsRenamingFolder] = useState(false);
-  const [isCreatingCanvas, setIsCreatingCanvas] = useState(false);
-  const [isDeletingCanvas, setIsDeletingCanvas] = useState(false);
-  const [isRenamingCanvas, setIsRenamingCanvas] = useState(false);
-  const [isMovingCanvas, setIsMovingCanvas] = useState(false);
-  const [isUpdatingSortOrder, setIsUpdatingSortOrder] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showNewCanvasModal, setShowNewCanvasModal] = useState(false);
   const [newCanvasName, setNewCanvasName] = useState('');
@@ -75,12 +118,6 @@ export default function DashboardPage() {
         console.error('Error loading expanded folders:', e);
       }
     }
-    // Fetch CSRF token for state-changing operations
-    fetch('/api/auth/csrf')
-      .then(res => res.json())
-      .then(data => setCsrfToken(data.csrfToken))
-      .catch(e => console.error('Failed to fetch CSRF token:', e));
-    fetchFolders();
   }, []);
 
   // Save expanded folders to localStorage whenever they change
@@ -90,110 +127,41 @@ export default function DashboardPage() {
     }
   }, [expandedFolders]);
 
-  const fetchFolders = async () => {
-    try {
-      const res = await fetch('/api/folders');
-      if (!res.ok) throw new Error('Failed to fetch folders');
-      const data = await res.json();
-      setFolders(data.folders || []);
-
-      // Update sort order from API response
-      if (data.sortOrder) {
-        setSortOrder(data.sortOrder);
-      }
-
-      const canvasesRes = await fetch('/api/canvases');
-      if (!canvasesRes.ok) throw new Error('Failed to fetch canvases');
-      const canvasesData: CanvasesResponse = await canvasesRes.json();
-      setRootCanvases((canvasesData.canvases || []).filter((c: Canvas) => {
-        return !data.folders?.some((f: Folder) => f.canvases.some((fc: Canvas) => fc.id === c.id));
-      }));
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      showToast('Failed to load folders and canvases', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const updateSortOrder = async (newSortOrder: 'updated' | 'alphabetical' | 'created') => {
-    if (isUpdatingSortOrder) return; // Prevent double-click
-    setIsUpdatingSortOrder(true);
-
+    if (isUpdatingSortOrder) return;
     try {
-      const res = await fetch('/api/user/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ canvasSortOrder: newSortOrder }),
-      });
-
-      if (!res.ok) {
-        throw new Error('Failed to update sort order');
-      }
-
+      await updateSettingsMutation.mutateAsync({ canvasSortOrder: newSortOrder });
       setSortOrder(newSortOrder);
-      await fetchFolders(); // Refresh the canvas list with new sort order
       showToast(`Sort order changed to ${newSortOrder}`, 'success');
     } catch (error) {
       console.error('Error updating sort order:', error);
       showToast('Failed to update sort order', 'error');
-    } finally {
-      setIsUpdatingSortOrder(false);
     }
   };
 
   const handleImport = async (importData: any, folderId?: string) => {
     try {
-      const res = await fetch('/api/canvases/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ importData, folderId }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        showToast('Canvas imported successfully', 'success');
-        setShowImportModal(false);
-        await fetchFolders(); // Refresh the canvas list
-        // Navigate to the imported canvas
-        router.push(`/canvas/${data.canvas.id}`);
-      } else {
-        const errorData = await res.json();
-        showToast(errorData.error || 'Failed to import canvas', 'error');
-      }
-    } catch (error) {
+      const data = await importCanvasMutation.mutateAsync({ importData, folderId });
+      showToast('Canvas imported successfully', 'success');
+      setShowImportModal(false);
+      router.push(`/canvas/${data.canvas.id}`);
+    } catch (error: any) {
       console.error('Error importing canvas:', error);
-      showToast('Failed to import canvas', 'error');
+      showToast(error?.message || 'Failed to import canvas', 'error');
     }
   };
 
   const createFolder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newFolderName.trim() || isCreatingFolder) return; // Prevent double-click
-
-    setIsCreatingFolder(true);
+    if (!newFolderName.trim() || isCreatingFolder) return;
     try {
-      const res = await fetch('/api/folders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newFolderName.trim() }),
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to create folder');
-      }
-
-      const data = await res.json();
-      setFolders([...folders, data.folder]);
+      const data = await createFolderMutation.mutateAsync({ name: newFolderName.trim() });
       setNewFolderName('');
       setShowNewFolderModal(false);
       showToast(`Folder "${data.folder.name}" created successfully`, 'success');
     } catch (error: any) {
       console.error('Error creating folder:', error);
-      showToast(error.message || 'Failed to create folder', 'error');
-    } finally {
-      setIsCreatingFolder(false);
+      showToast(error?.message || 'Failed to create folder', 'error');
     }
   };
 
@@ -204,32 +172,15 @@ export default function DashboardPage() {
   };
 
   const deleteFolder = async () => {
-    if (!folderToDelete || isDeletingFolder) return; // Prevent double-click
-
-    setIsDeletingFolder(true);
+    if (!folderToDelete || isDeletingFolder) return;
     try {
-      const url = `/api/folders/${folderToDelete.id}?moveCanvasesToRoot=${deleteMoveToRoot}`;
-      const res = await fetch(url, { method: 'DELETE' });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to delete folder');
-      }
-
-      setFolders(folders.filter(f => f.id !== folderToDelete.id));
-
-      if (deleteMoveToRoot && folderToDelete.canvases.length > 0) {
-        setRootCanvases([...rootCanvases, ...folderToDelete.canvases]);
-      }
-
+      await deleteFolderMutation.mutateAsync({ id: folderToDelete.id, moveCanvasesToRoot: deleteMoveToRoot });
       setShowDeleteModal(false);
       setFolderToDelete(null);
       showToast('Folder deleted successfully', 'success');
     } catch (error: any) {
       console.error('Error deleting folder:', error);
-      showToast(error.message || 'Failed to delete folder', 'error');
-    } finally {
-      setIsDeletingFolder(false);
+      showToast(error?.message || 'Failed to delete folder', 'error');
     }
   };
 
@@ -241,32 +192,16 @@ export default function DashboardPage() {
 
   const renameFolder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!folderToRename || !renameName.trim() || isRenamingFolder) return; // Prevent double-click
-
-    setIsRenamingFolder(true);
+    if (!folderToRename || !renameName.trim() || isRenamingFolder) return;
     try {
-      const res = await fetch(`/api/folders/${folderToRename.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: renameName.trim() }),
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to rename folder');
-      }
-
-      const data = await res.json();
-      setFolders(folders.map(f => f.id === folderToRename.id ? data.folder : f));
+      await renameFolderMutation.mutateAsync({ id: folderToRename.id, name: renameName.trim() });
       setShowRenameModal(false);
       setFolderToRename(null);
       setRenameName('');
       showToast('Folder renamed successfully', 'success');
     } catch (error: any) {
       console.error('Error renaming folder:', error);
-      showToast(error.message || 'Failed to rename folder', 'error');
-    } finally {
-      setIsRenamingFolder(false);
+      showToast(error?.message || 'Failed to rename folder', 'error');
     }
   };
 
@@ -281,7 +216,7 @@ export default function DashboardPage() {
   };
 
   const createCanvas = (folderId?: string) => {
-    if (isCreatingCanvas) return; // Prevent double-click
+    if (isCreatingCanvas) return;
     setNewCanvasFolderId(folderId);
     setNewCanvasName('');
     setShowNewCanvasModal(true);
@@ -290,37 +225,12 @@ export default function DashboardPage() {
   const submitCreateCanvas = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCanvasName.trim() || isCreatingCanvas) return;
-
-    setIsCreatingCanvas(true);
     try {
-      const body: any = { name: newCanvasName.trim() };
-      if (newCanvasFolderId) body.folderId = newCanvasFolderId;
-
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (csrfToken) {
-        headers['x-csrf-token'] = csrfToken;
-      }
-
-      const res = await fetch('/api/canvases', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body),
+      const data = await createCanvasMutation.mutateAsync({
+        name: newCanvasName.trim(),
+        folderId: newCanvasFolderId,
+        csrfToken: csrfToken || undefined,
       });
-
-      if (!res.ok) throw new Error('Failed to create canvas');
-
-      const data = await res.json();
-      if (newCanvasFolderId) {
-        setFolders(folders.map(f => {
-          if (f.id === newCanvasFolderId) {
-            return { ...f, canvases: [...f.canvases, data.canvas] };
-          }
-          return f;
-        }));
-      } else {
-        setRootCanvases([...rootCanvases, data.canvas]);
-      }
-
       setShowNewCanvasModal(false);
       setNewCanvasName('');
       setNewCanvasFolderId(undefined);
@@ -328,8 +238,6 @@ export default function DashboardPage() {
     } catch (error) {
       console.error('Error creating canvas:', error);
       showToast('Failed to create canvas', 'error');
-    } finally {
-      setIsCreatingCanvas(false);
     }
   };
 
@@ -339,32 +247,15 @@ export default function DashboardPage() {
   };
 
   const deleteCanvasConfirmed = async () => {
-    if (!canvasToDelete || isDeletingCanvas) return; // Prevent double-click
-
-    setIsDeletingCanvas(true);
+    if (!canvasToDelete || isDeletingCanvas) return;
     try {
-      const res = await fetch(`/api/canvases/${canvasToDelete.canvas.id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete canvas');
-
-      if (canvasToDelete.folderId) {
-        setFolders(folders.map(f => {
-          if (f.id === canvasToDelete.folderId) {
-            return { ...f, canvases: f.canvases.filter(c => c.id !== canvasToDelete.canvas.id) };
-          }
-          return f;
-        }));
-      } else {
-        setRootCanvases(rootCanvases.filter(c => c.id !== canvasToDelete.canvas.id));
-      }
-
+      await deleteCanvasMutation.mutateAsync(canvasToDelete.canvas.id);
       setShowCanvasDeleteModal(false);
       setCanvasToDelete(null);
       showToast('Canvas deleted successfully', 'success');
     } catch (error) {
       console.error('Error deleting canvas:', error);
       showToast('Failed to delete canvas', 'error');
-    } finally {
-      setIsDeletingCanvas(false);
     }
   };
 
@@ -376,48 +267,16 @@ export default function DashboardPage() {
 
   const renameCanvas = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canvasToRename || !canvasRenameName.trim() || isRenamingCanvas) return; // Prevent double-click
-
-    setIsRenamingCanvas(true);
+    if (!canvasToRename || !canvasRenameName.trim() || isRenamingCanvas) return;
     try {
-      const res = await fetch(`/api/canvases/${canvasToRename.canvas.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: canvasRenameName.trim() }),
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to rename canvas');
-      }
-
-      const data = await res.json();
-      const updatedCanvas = data.canvas;
-
-      // Update the canvas in the appropriate list
-      if (canvasToRename.folderId) {
-        setFolders(folders.map(f => {
-          if (f.id === canvasToRename.folderId) {
-            return {
-              ...f,
-              canvases: f.canvases.map(c => c.id === updatedCanvas.id ? updatedCanvas : c)
-            };
-          }
-          return f;
-        }));
-      } else {
-        setRootCanvases(rootCanvases.map(c => c.id === updatedCanvas.id ? updatedCanvas : c));
-      }
-
+      await renameCanvasMutation.mutateAsync({ id: canvasToRename.canvas.id, name: canvasRenameName.trim() });
       setShowCanvasRenameModal(false);
       setCanvasToRename(null);
       setCanvasRenameName('');
       showToast('Canvas renamed successfully', 'success');
     } catch (error: any) {
       console.error('Error renaming canvas:', error);
-      showToast(error.message || 'Failed to rename canvas', 'error');
-    } finally {
-      setIsRenamingCanvas(false);
+      showToast(error?.message || 'Failed to rename canvas', 'error');
     }
   };
 
@@ -429,62 +288,19 @@ export default function DashboardPage() {
 
   const moveCanvas = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canvasToMove || isMovingCanvas) return; // Prevent double-click
-
-    setIsMovingCanvas(true);
+    if (!canvasToMove || isMovingCanvas) return;
     try {
-      const body: any = { folderId: moveTargetFolderId };
-      const res = await fetch(`/api/canvases/${canvasToMove.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to move canvas');
-      }
-
-      const data = await res.json();
-      const canvas = data.canvas;
-
-      // Remove canvas from its current location
-      if (canvasToMove.currentFolderId) {
-        setFolders(folders.map(f => {
-          if (f.id === canvasToMove.currentFolderId) {
-            return { ...f, canvases: f.canvases.filter(c => c.id !== canvas.id) };
-          }
-          return f;
-        }));
-      } else {
-        setRootCanvases(rootCanvases.filter(c => c.id !== canvas.id));
-      }
-
-      // Add canvas to new location
-      if (moveTargetFolderId) {
-        setFolders(folders.map(f => {
-          if (f.id === moveTargetFolderId) {
-            return { ...f, canvases: [...f.canvases, canvas] };
-          }
-          return f;
-        }));
-      } else {
-        setRootCanvases([...rootCanvases, canvas]);
-      }
-
+      await moveCanvasMutation.mutateAsync({ id: canvasToMove.id, folderId: moveTargetFolderId });
       setShowMoveModal(false);
       setCanvasToMove(null);
-      setMoveTargetFolderId(null);
-
       const targetName = moveTargetFolderId
         ? folders.find(f => f.id === moveTargetFolderId)?.name || 'folder'
         : 'root';
+      setMoveTargetFolderId(null);
       showToast(`Canvas moved to ${targetName}`, 'success');
     } catch (error: any) {
       console.error('Error moving canvas:', error);
-      showToast(error.message || 'Failed to move canvas', 'error');
-    } finally {
-      setIsMovingCanvas(false);
+      showToast(error?.message || 'Failed to move canvas', 'error');
     }
   };
 
@@ -649,12 +465,12 @@ export default function DashboardPage() {
                                   key={canvas.id}
                                   className="flex items-center justify-between p-2.5 pl-7 rounded-lg hover:bg-light-primary/5 dark:hover:bg-dark-primary/5 transition-colors group"
                                 >
-                                  <a
+                                  <Link
                                     href={`/canvas/${canvas.id}`}
                                     className="text-sm text-light-primary dark:text-dark-primary hover:underline font-medium truncate"
                                   >
                                     {canvas.name}
-                                  </a>
+                                  </Link>
                                   <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                                     <button
                                       onClick={() => openCanvasRenameModal(canvas, folder.id)}
@@ -703,12 +519,12 @@ export default function DashboardPage() {
                             key={canvas.id}
                             className="flex items-center justify-between p-2.5 rounded-lg hover:bg-light-primary/5 dark:hover:bg-dark-primary/5 transition-colors group"
                           >
-                            <a
+                            <Link
                               href={`/canvas/${canvas.id}`}
                               className="text-sm text-light-primary dark:text-dark-primary hover:underline font-medium truncate"
                             >
                               {canvas.name}
-                            </a>
+                            </Link>
                             <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                               <button
                                 onClick={() => openCanvasRenameModal(canvas)}

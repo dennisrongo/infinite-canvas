@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { useCurrentUser, useLogout } from '@/hooks/api/useAuth';
+import { useUpdateProfile, useChangePassword, useDeleteAccount } from '@/hooks/api/useUser';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { SettingsSkeleton } from '@/components/ui/SkeletonLoader';
 import { formatDateTime, getUserTimezone } from '@/lib/date';
@@ -41,10 +43,14 @@ interface PasswordValidationErrors {
 
 export default function SettingsPage() {
   const router = useRouter();
-  const [user, setUser] = useState<{ email: string; displayName?: string; createdAt?: string } | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [savingProfile, setSavingProfile] = useState(false);
+  const { data: userData, isLoading: loading, isError: userError } = useCurrentUser();
+  const user = userData?.user as { email: string; displayName?: string; createdAt?: string } | null;
+  const updateProfileMutation = useUpdateProfile();
+  const changePasswordMutation = useChangePassword();
+  const logoutMutation = useLogout();
+  const deleteAccountMutation = useDeleteAccount();
+  const savingProfile = updateProfileMutation.isPending;
+  const saving = changePasswordMutation.isPending;
   const [error, setError] = useState<string | string[]>('');
   const [success, setSuccess] = useState('');
 
@@ -79,26 +85,19 @@ export default function SettingsPage() {
     newPasswordErrors.length === 0 ? 'valid' : 'invalid'
   ) : '';
 
+  // Redirect to login if user fetch fails (unauthorized)
   useEffect(() => {
-    fetchUser();
-  }, []);
-
-  const fetchUser = async () => {
-    try {
-      const response = await fetch('/api/auth/me');
-      if (!response.ok) {
-        router.push('/auth/login');
-        return;
-      }
-      const data = await response.json();
-      setUser(data.user);
-      setProfileForm({ displayName: data.user.displayName || '' });
-      setLoading(false);
-    } catch (error) {
-      setError('Failed to load user data');
-      setLoading(false);
+    if (userError) {
+      router.push('/auth/login');
     }
-  };
+  }, [userError, router]);
+
+  // Sync profile form with user data
+  useEffect(() => {
+    if (user) {
+      setProfileForm({ displayName: user.displayName || '' });
+    }
+  }, [user]);
 
   const validatePasswordField = (name: string, value: string): string | undefined => {
     if (!value || value.trim() === '') {
@@ -148,32 +147,15 @@ export default function SettingsPage() {
     e.preventDefault();
     setError('');
     setSuccess('');
-    setSavingProfile(true);
 
     try {
-      const response = await fetch('/api/user/update-profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(profileForm),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || 'Failed to update profile');
-        setSavingProfile(false);
-        return;
-      }
-
+      await updateProfileMutation.mutateAsync(profileForm);
       setSuccess('Profile updated successfully!');
-      setUser({ ...user!, displayName: profileForm.displayName });
-      setSavingProfile(false);
 
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(''), 3000);
-    } catch (error) {
-      setError('Network error. Please try again.');
-      setSavingProfile(false);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to update profile');
     }
   };
 
@@ -190,24 +172,8 @@ export default function SettingsPage() {
       return;
     }
 
-    setSaving(true);
-
     try {
-      const response = await fetch('/api/user/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(passwordForm),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        // Handle both single error string and array of errors
-        setError(data.error || 'Failed to change password');
-        setSaving(false);
-        return;
-      }
-
+      await changePasswordMutation.mutateAsync(passwordForm);
       setSuccess('Password changed successfully!');
       setPasswordForm({
         currentPassword: '',
@@ -216,21 +182,19 @@ export default function SettingsPage() {
       });
       setPasswordFieldErrors({});
       setPasswordTouched(new Set());
-      setSaving(false);
 
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(''), 3000);
-    } catch (error) {
-      setError('Network error. Please try again.');
-      setSaving(false);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to change password');
     }
   };
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await logoutMutation.mutateAsync();
       router.push('/auth/login');
-    } catch (error) {
+    } catch (err: any) {
       setError('Failed to logout');
     }
   };
@@ -267,25 +231,13 @@ export default function SettingsPage() {
     setDeleteError('');
 
     try {
-      const response = await fetch('/api/user/delete-account', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: deletePassword }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setDeleteError(data.error || 'Failed to delete account');
-        setDeleting(false);
-        return;
-      }
+      await deleteAccountMutation.mutateAsync({ password: deletePassword });
 
       // Account deleted successfully - logout and redirect to login
-      await fetch('/api/auth/logout', { method: 'POST' });
+      try { await logoutMutation.mutateAsync(); } catch (_) {}
       router.push('/auth/login?deleted=true');
-    } catch (error) {
-      setDeleteError('Network error. Please try again.');
+    } catch (err: any) {
+      setDeleteError(err?.message || 'Failed to delete account');
       setDeleting(false);
     }
   };

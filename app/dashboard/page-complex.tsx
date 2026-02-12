@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { getSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 
@@ -17,12 +18,12 @@ export default async function DashboardPage() {
           </h1>
           <div className="flex items-center gap-4">
             <span className="text-sm text-[#1E293B] dark:text-[#F1F5F9]">{session.email}</span>
-            <a
+            <Link
               href="/settings"
               className="px-4 py-2 text-sm border border-[#E2E8F0] dark:border-[#475569] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
             >
               Settings
-            </a>
+            </Link>
             <form action="/api/auth/logout" method="POST">
               <button
                 type="submit"

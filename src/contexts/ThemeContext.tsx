@@ -14,42 +14,26 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>('light');
   const [mounted, setMounted] = useState(false);
+  // Track whether a theme change was triggered by the user (not initialization)
+  const userToggledRef = React.useRef(false);
 
-  // Initialize theme from database, localStorage, or system preference on mount
+  // Initialize theme from localStorage (instant) or system preference on mount
   useEffect(() => {
-    const initializeTheme = async () => {
-      setMounted(true);
+    setMounted(true);
 
-      // Try to fetch from database first
-      try {
-        const response = await fetch('/api/user/settings');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.settings?.theme) {
-            setTheme(data.settings.theme);
-            localStorage.setItem('theme', data.settings.theme);
-            return;
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch theme from database:', error);
-      }
-
-      // Fallback to localStorage
-      const storedTheme = localStorage.getItem('theme') as Theme | null;
-      if (storedTheme) {
-        setTheme(storedTheme);
-      } else {
-        // Check system preference
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        setTheme(prefersDark ? 'dark' : 'light');
-      }
-    };
-
-    initializeTheme();
+    const storedTheme = localStorage.getItem('theme') as Theme | null;
+    if (storedTheme) {
+      setTheme(storedTheme);
+    } else {
+      // Check system preference
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const systemTheme = prefersDark ? 'dark' : 'light';
+      setTheme(systemTheme);
+      localStorage.setItem('theme', systemTheme);
+    }
   }, []);
 
-  // Apply theme to HTML element and save to database
+  // Apply theme to HTML element
   useEffect(() => {
     if (!mounted) return;
 
@@ -63,25 +47,28 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     // Save to localStorage (immediate)
     localStorage.setItem('theme', theme);
 
-    // Save to database (async, best effort)
-    const saveThemeToDatabase = async () => {
-      try {
-        await fetch('/api/user/settings', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ theme }),
-        });
-      } catch (error) {
-        console.error('Failed to save theme to database:', error);
-      }
-    };
-
-    saveThemeToDatabase();
+    // Only save to database when the user explicitly toggled the theme
+    if (userToggledRef.current) {
+      userToggledRef.current = false;
+      const saveThemeToDatabase = async () => {
+        try {
+          await fetch('/api/user/settings', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ theme }),
+          });
+        } catch (error) {
+          console.error('Failed to save theme to database:', error);
+        }
+      };
+      saveThemeToDatabase();
+    }
   }, [theme, mounted]);
 
   const toggleTheme = () => {
+    userToggledRef.current = true;
     setTheme(prev => prev === 'light' ? 'dark' : 'light');
   };
 

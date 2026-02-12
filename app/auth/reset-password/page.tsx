@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useResetPassword } from '@/hooks/api/useAuth';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { AuthFormSkeleton } from '@/components/ui/SkeletonLoader';
 
@@ -17,9 +18,10 @@ function ResetPasswordForm() {
     password: '',
     confirmPassword: '',
   });
+  const resetPasswordMutation = useResetPassword();
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const loading = resetPasswordMutation.isPending;
   const [tokenValid, setTokenValid] = useState(true);
   const [fieldErrors, setFieldErrors] = useState<ValidationErrors>({});
   const [touched, setTouched] = useState<Set<string>>(new Set());
@@ -87,36 +89,20 @@ function ResetPasswordForm() {
       return;
     }
 
-    setLoading(true);
-
     try {
-      const response = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token,
-          ...formData,
-        }),
+      await resetPasswordMutation.mutateAsync({
+        token,
+        ...formData,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || 'Failed to reset password');
-        setLoading(false);
-        return;
-      }
-
       setSuccess(true);
-      setLoading(false);
 
       // Redirect to login after 2 seconds
       setTimeout(() => {
         router.push('/auth/login');
       }, 2000);
-    } catch (error) {
-      setError('Network error. Please try again.');
-      setLoading(false);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to reset password');
     }
   };
 

@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Use src directory
+  reactStrictMode: false,
   experimental: {
     serverActions: {
       bodySizeLimit: '2mb',

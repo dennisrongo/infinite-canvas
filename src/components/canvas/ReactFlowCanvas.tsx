@@ -104,6 +104,7 @@ function ReactFlowCanvasInner({
   const { theme } = useTheme();
   const { screenToFlowPosition, setViewport, getViewport, fitView } = useReactFlow();
   const prevInitialNotes = useRef<Note[]>(initialNotes);
+  const isRestoringViewportRef = useRef(false);
   const [undoStack, setUndoStack] = React.useState<UndoAction[]>([]);
   const [redoStack, setRedoStack] = React.useState<RedoAction[]>([]);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
@@ -119,6 +120,11 @@ function ReactFlowCanvasInner({
     noteId: null,
     noteTitle: '',
   });
+
+  // Reset opened note tracking when canvas changes
+  useEffect(() => {
+    openedNoteRef.current = null;
+  }, [canvasId]);
 
   // Handle deep linking - scroll to and select the specified note
   useEffect(() => {
@@ -584,8 +590,15 @@ function ReactFlowCanvasInner({
   // Restore viewport state when initialViewport changes or center canvas on load (Feature #53)
   useEffect(() => {
     if (initialViewport) {
-      // Restore saved viewport state
+      // Restore saved viewport state — flag to skip the onMoveEnd save
+      isRestoringViewportRef.current = true;
       setViewport(initialViewport);
+      // Clear the flag after ReactFlow's onMoveEnd has had time to fire.
+      // onMoveEnd is debounced/async, so requestAnimationFrame is too early.
+      const timer = setTimeout(() => {
+        isRestoringViewportRef.current = false;
+      }, 500);
+      return () => clearTimeout(timer);
     } else if (nodes.length > 0) {
       // Auto-center on notes when loading a canvas with notes
       // Small delay to ensure ReactFlow has initialized
@@ -598,6 +611,8 @@ function ReactFlowCanvasInner({
   // Handle viewport changes (pan and zoom)
   const onMoveEnd = useCallback(
     (event: React.MouseEvent | MouseEvent | TouchEvent | null, viewport: { x: number; y: number; zoom: number }) => {
+      // Skip saving when we're just restoring the initial viewport from the server
+      if (isRestoringViewportRef.current) return;
       if (onViewportChange) {
         onViewportChange({
           x: viewport.x,

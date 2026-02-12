@@ -1,27 +1,46 @@
 /**
  * Custom render function with providers for testing
- * Wraps components with ThemeProvider and ToastProvider
+ * Wraps components with ThemeProvider, ToastProvider, and QueryClientProvider
  */
 
 import { ReactElement } from 'react'
 import { render, RenderOptions } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { ToastProvider } from '@/contexts/ToastContext'
+
+// Create a fresh QueryClient for each test to avoid shared state
+export function createTestQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+        gcTime: 0,
+      },
+      mutations: {
+        retry: false,
+      },
+    },
+  })
+}
 
 // Mock theme for consistent testing
 interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   theme?: 'light' | 'dark'
   withToastProvider?: boolean
+  queryClient?: QueryClient
 }
 
 function AllTheProviders({
   children,
   theme = 'light',
   withToastProvider = true,
+  queryClient,
 }: {
   children: React.ReactNode
   theme?: 'light' | 'dark'
   withToastProvider?: boolean
+  queryClient?: QueryClient
 }) {
   // Mock localStorage for theme
   const mockGetItem = vi.fn()
@@ -42,7 +61,13 @@ function AllTheProviders({
   // Return default theme from mock
   mockGetItem.mockReturnValue(theme)
 
-  const content = <ThemeProvider>{children}</ThemeProvider>
+  const client = queryClient || createTestQueryClient()
+
+  const content = (
+    <QueryClientProvider client={client}>
+      <ThemeProvider>{children}</ThemeProvider>
+    </QueryClientProvider>
+  )
 
   if (withToastProvider) {
     return <ToastProvider>{content}</ToastProvider>
@@ -56,11 +81,12 @@ export function renderWithProviders(
   {
     theme = 'light',
     withToastProvider = true,
+    queryClient,
     ...renderOptions
   }: CustomRenderOptions = {}
 ) {
   function Wrapper({ children }: { children: React.ReactNode }) {
-    return <AllTheProviders theme={theme}>{children}</AllTheProviders>
+    return <AllTheProviders theme={theme} queryClient={queryClient}>{children}</AllTheProviders>
   }
 
   return {

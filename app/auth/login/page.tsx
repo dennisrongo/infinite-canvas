@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useLogin } from '@/hooks/api/useAuth';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { AuthFormSkeleton } from '@/components/ui/SkeletonLoader';
 
@@ -18,8 +20,8 @@ function LoginForm() {
     password: '',
     rememberMe: true, // Default to true per spec
   });
+  const loginMutation = useLogin();
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const [returnUrl, setReturnUrl] = useState('/dashboard');
   const [fieldErrors, setFieldErrors] = useState<ValidationErrors>({});
   const [touched, setTouched] = useState<Set<string>>(new Set());
@@ -69,6 +71,8 @@ function LoginForm() {
     setFieldErrors(prev => ({ ...prev, [fieldName]: error }));
   };
 
+  const loading = loginMutation.isPending;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -81,28 +85,12 @@ function LoginForm() {
       return;
     }
 
-    setLoading(true);
-
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || 'Login failed');
-        setLoading(false);
-        return;
-      }
-
+      await loginMutation.mutateAsync(formData);
       // Redirect to the return URL or dashboard
       router.push(returnUrl);
-    } catch (error) {
-      setError('Network error. Please try again.');
-      setLoading(false);
+    } catch (err: any) {
+      setError(err?.message || 'Login failed');
     }
   };
 
@@ -181,9 +169,9 @@ function LoginForm() {
                 <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.password}</p>
               )}
               <div className="mt-1 text-right">
-                <a href="/auth/forgot-password" className="text-sm text-light-primary dark:text-dark-primary hover:underline">
+                <Link href="/auth/forgot-password" className="text-sm text-light-primary dark:text-dark-primary hover:underline">
                   Forgot password?
-                </a>
+                </Link>
               </div>
             </div>
 
@@ -232,9 +220,9 @@ function LoginForm() {
 
           <p className="mt-6 text-center text-sm text-light-text/60 dark:text-dark-text/60">
             Don&apos;t have an account?{' '}
-            <a href="/auth/register" className="text-light-primary dark:text-dark-primary hover:underline">
+            <Link href="/auth/register" className="text-light-primary dark:text-dark-primary hover:underline">
               Register
-            </a>
+            </Link>
           </p>
         </div>
       </div>

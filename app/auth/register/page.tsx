@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useRegister } from '@/hooks/api/useAuth';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 // Client-side password validation matching the server-side validation
@@ -44,10 +46,11 @@ export default function RegisterPage() {
     password: '',
     confirmPassword: '',
   });
+  const registerMutation = useRegister();
   const [errors, setErrors] = useState<string[]>([]);
   const [fieldErrors, setFieldErrors] = useState<ValidationErrors>({});
   const [touched, setTouched] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(false);
+  const loading = registerMutation.isPending;
 
   // Client-side password validation for real-time feedback
   const passwordErrors = useMemo(() => {
@@ -116,29 +119,13 @@ export default function RegisterPage() {
       return;
     }
 
-    setLoading(true);
-
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        // Handle both single error string and array of errors
-        const errorList = Array.isArray(data.error) ? data.error : [data.error || 'Registration failed'];
-        setErrors(errorList);
-        setLoading(false);
-        return;
-      }
-
+      await registerMutation.mutateAsync(formData);
       router.push('/dashboard');
-    } catch (error) {
-      setErrors(['Network error. Please try again.']);
-      setLoading(false);
+    } catch (err: any) {
+      const msg = err?.message || 'Registration failed';
+      const errorList = Array.isArray(msg) ? msg : [msg];
+      setErrors(errorList);
     }
   };
 
@@ -312,9 +299,9 @@ export default function RegisterPage() {
 
           <p className="mt-6 text-center text-sm text-light-text/60 dark:text-dark-text/60">
             Already have an account?{' '}
-            <a href="/auth/login" className="text-light-primary dark:text-dark-primary hover:underline">
+            <Link href="/auth/login" className="text-light-primary dark:text-dark-primary hover:underline">
               Login
-            </a>
+            </Link>
           </p>
         </div>
       </div>

@@ -1,17 +1,20 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useForgotPassword } from '@/hooks/api/useAuth';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
+  const forgotPasswordMutation = useForgotPassword();
   const [error, setError] = useState('');
   const [fieldError, setFieldError] = useState('');
   const [touched, setTouched] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const loading = forgotPasswordMutation.isPending;
 
   const validateEmail = (value: string): string | undefined => {
     if (!value || value.trim() === '') {
@@ -39,28 +42,12 @@ export default function ForgotPasswordPage() {
     }
 
     setFieldError('');
-    setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/reset-password-request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || 'Failed to send reset email');
-        setLoading(false);
-        return;
-      }
-
+      await forgotPasswordMutation.mutateAsync({ email });
       setSuccess(true);
-      setLoading(false);
-    } catch (error) {
-      setError('Network error. Please try again.');
-      setLoading(false);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to send reset email');
     }
   };
 
@@ -162,9 +149,9 @@ export default function ForgotPasswordPage() {
           {!success && (
             <p className="mt-6 text-center text-sm text-light-text/60 dark:text-dark-text/60">
               Remember your password?{' '}
-              <a href="/auth/login" className="text-light-primary dark:text-dark-primary hover:underline">
+              <Link href="/auth/login" className="text-light-primary dark:text-dark-primary hover:underline">
                 Login
-              </a>
+              </Link>
             </p>
           )}
         </div>

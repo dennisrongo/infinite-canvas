@@ -20,7 +20,7 @@ function TestCancellableRequestComponent() {
     <div>
       <button
         data-testid="fetch-btn"
-        onClick={() => cancellableFetch('test-key', 'https://example.com/api/test')}
+        onClick={() => cancellableFetch('test-key', 'https://example.com/api/test').catch(() => {})}
       >
         Fetch
       </button>

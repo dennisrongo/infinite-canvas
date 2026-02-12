@@ -9,6 +9,11 @@ import { useToast } from '@/contexts/ToastContext';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { CanvasSkeleton } from '@/components/ui/SkeletonLoader';
 import { useCancellableRequest } from '@/hooks/useCancellableRequest';
+import { useQueryClient } from '@tanstack/react-query';
+import { useCanvas, useCanvases, useConnections } from '@/hooks/api/useCanvases';
+import { canvasKeys } from '@/lib/queryKeys';
+import { useFolders } from '@/hooks/api/useFolders';
+import Link from 'next/link';
 import { ChevronDown, ChevronRight, Folder, LayoutDashboard } from 'lucide-react';
 
 // Dynamically import ReactFlowCanvas with SSR disabled
@@ -63,21 +68,37 @@ function CanvasPageContent() {
   const searchParams = useSearchParams();
   const { showToast } = useToast();
   const canvasId = params.id as string;
-  const [canvas, setCanvas] = useState<Canvas | null>(null);
-  const [folders, setFolders] = useState<Folder[]>([]);
-  const [rootCanvases, setRootCanvases] = useState<Canvas[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const queryClient = useQueryClient();
+
+  // ── TanStack Query hooks for cached data fetching ──
+  const { data: canvasData, isLoading: canvasLoading, isError: canvasIsError, error: canvasQueryError, refetch: refetchCanvas } = useCanvas(canvasId);
+  const { data: connectionsData } = useConnections(canvasId);
+  const { data: foldersData } = useFolders();
+  const { data: canvasesData } = useCanvases();
+
+  // Derive sidebar data from cached queries
+  const folders: Folder[] = foldersData?.folders || [];
+  const allCanvases: Canvas[] = canvasesData?.canvases || [];
+  const folderCanvasIds = new Set(
+    folders.flatMap((f: Folder) => f.canvases.map((c: Canvas) => c.id))
+  );
+  const rootCanvases: Canvas[] = allCanvases.filter((c: Canvas) => !folderCanvasIds.has(c.id));
+
+  // ── Local state for mutable data (notes, connections, viewport) ──
   const [notes, setNotes] = useState<Note[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
   const [viewport, setViewport] = useState<{ x: number; y: number; zoom: number } | null>(null);
-  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
+  const [canvas, setCanvas] = useState<Canvas | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [canvasDeleted, setCanvasDeleted] = useState(false);
+  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  // Track whether we've seeded local state from query data for this canvasId
+  const [seededCanvasId, setSeededCanvasId] = useState<string | null>(null);
 
   // Feature #175: Hook for cancellable requests to handle late API responses
   const { cancellableFetch, abortRequest, abortAllRequests, isMounted, cleanup } = useCancellableRequest();
@@ -93,6 +114,52 @@ function CanvasPageContent() {
     };
   }, [abortAllRequests]);
 
+  // Seed local state from TanStack Query canvas data
+  useEffect(() => {
+    if (canvasData?.canvas && seededCanvasId !== canvasId) {
+      const c = canvasData.canvas;
+      setCanvas(c);
+      setNotes(c.notes || []);
+      setCanvasDeleted(false);
+      setError(null);
+      if (c.viewportX !== null && c.viewportY !== null && c.zoom !== null) {
+        setViewport({ x: c.viewportX, y: c.viewportY, zoom: c.zoom });
+      }
+      setSeededCanvasId(canvasId);
+    }
+  }, [canvasData, canvasId, seededCanvasId]);
+
+  // Seed connections from TanStack Query data
+  useEffect(() => {
+    if (connectionsData?.connections) {
+      setConnections(connectionsData.connections);
+    }
+  }, [connectionsData]);
+
+  // Handle query errors (404, 403, etc.)
+  useEffect(() => {
+    if (canvasIsError && canvasQueryError) {
+      const err = canvasQueryError as any;
+      if (err.status === 404) {
+        setError('This canvas no longer exists');
+        setCanvasDeleted(true);
+      } else if (err.status === 403) {
+        setError('You do not have access to this canvas');
+      } else {
+        setError('Failed to load canvas');
+      }
+    }
+  }, [canvasIsError, canvasQueryError]);
+
+  // Reset state when navigating to a new canvas
+  useEffect(() => {
+    if (seededCanvasId !== canvasId) {
+      setError(null);
+      setCanvasDeleted(false);
+      setSelectedNoteId(null);
+    }
+  }, [canvasId, seededCanvasId]);
+
   useEffect(() => {
     // Load expanded folders from localStorage
     const saved = localStorage.getItem('expandedFolders');
@@ -103,9 +170,7 @@ function CanvasPageContent() {
         console.error('Error loading expanded folders:', e);
       }
     }
-    fetchCanvas();
-    fetchFoldersAndCanvases();
-  }, [canvasId]);
+  }, []);
 
   // Handle deep linking to specific note
   useEffect(() => {
@@ -116,10 +181,11 @@ function CanvasPageContent() {
         showToast(`Opened note: ${targetNote.title}`, 'success');
       } else {
         showToast('Note not found', 'error');
-        // Remove the invalid note parameter from URL
-        const newUrl = window.location.pathname;
-        window.history.replaceState({}, '', newUrl);
       }
+      // Clear the ?note= param from URL after handling so re-clicking
+      // the same search result will trigger the deep link again
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
     }
   }, [noteIdParam, notes, showToast]);
 
@@ -135,117 +201,14 @@ function CanvasPageContent() {
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden && canvas && !canvasDeleted) {
-        // Page became visible again, check if canvas still exists
-        fetchCanvas(true);
+        // Page became visible again, refetch via TanStack Query
+        refetchCanvas();
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [canvas, canvasDeleted]);
-
-  const fetchCanvas = async (showErrorToast = false) => {
-    const requestKey = `fetchCanvas-${canvasId}`;
-    try {
-      // Feature #175: Use cancellable fetch for late response handling
-      const res = await cancellableFetch(requestKey, `/api/canvases/${canvasId}`);
-
-      // Check if component is still mounted
-      if (!isMounted()) return;
-
-      if (!res.ok) {
-        if (res.status === 404) {
-          setError('This canvas no longer exists');
-          setCanvasDeleted(true);
-          if (showErrorToast) {
-            showToast('This canvas was deleted in another session', 'error');
-          }
-        } else if (res.status === 403) {
-          setError('You do not have access to this canvas');
-        } else {
-          throw new Error('Failed to fetch canvas');
-        }
-        return;
-      }
-      const data = await res.json();
-
-      // Feature #175: Check if component is still mounted before state update
-      if (!isMounted()) return;
-
-      setCanvas(data.canvas);
-      setNotes(data.canvas.notes || []);
-      setCanvasDeleted(false);
-
-      // Fetch connections for this canvas
-      fetchConnections(canvasId);
-
-      // Load viewport state
-      if (data.canvas.viewportX !== null && data.canvas.viewportY !== null && data.canvas.zoom !== null) {
-        setViewport({
-          x: data.canvas.viewportX,
-          y: data.canvas.viewportY,
-          zoom: data.canvas.zoom,
-        });
-      }
-    } catch (err) {
-      // Feature #175: Handle cancelled requests silently
-      if (err instanceof Error && err.message === 'Request cancelled') {
-        console.log('Canvas fetch cancelled (user navigated away)');
-        return;
-      }
-      console.error('Error fetching canvas:', err);
-      if (isMounted()) {
-        setError('Failed to load canvas');
-      }
-    } finally {
-      if (isMounted()) {
-        setLoading(false);
-      }
-    }
-  };
-
-  const fetchFoldersAndCanvases = async () => {
-    try {
-      const foldersRes = await fetch('/api/folders');
-      if (foldersRes.ok) {
-        const foldersData = await foldersRes.json();
-        setFolders(foldersData.folders || []);
-      }
-
-      const canvasesRes = await fetch('/api/canvases');
-      if (canvasesRes.ok) {
-        const canvasesData: CanvasesResponse = await canvasesRes.json();
-        setRootCanvases((canvasesData.canvases || []).filter((c: Canvas) => {
-          return !folders.some((f: Folder) => f.canvases.some((fc: Canvas) => fc.id === c.id));
-        }));
-      }
-    } catch (err) {
-      console.error('Error fetching folders and canvases:', err);
-    }
-  };
-
-  const fetchConnections = async (id: string) => {
-    const requestKey = `fetchConnections-${id}`;
-    try {
-      // Feature #175: Use cancellable fetch
-      const res = await cancellableFetch(requestKey, `/api/canvases/${id}/connections`);
-
-      // Feature #175: Check if component is still mounted
-      if (!isMounted()) return;
-
-      if (res.ok) {
-        const data = await res.json();
-        setConnections(data.connections || []);
-      }
-    } catch (err) {
-      // Feature #175: Handle cancelled requests silently
-      if (err instanceof Error && err.message === 'Request cancelled') {
-        console.log('Connections fetch cancelled (user navigated away)');
-        return;
-      }
-      console.error('Error fetching connections:', err);
-    }
-  };
+  }, [canvas, canvasDeleted, refetchCanvas]);
 
   const toggleFolder = (folderId: string) => {
     const newExpanded = new Set(expandedFolders);
@@ -293,6 +256,7 @@ function CanvasPageContent() {
           console.log('[handleNoteCreate] Updating notes state, new count:', newNotes.length);
           return newNotes;
         });
+        queryClient.invalidateQueries({ queryKey: canvasKeys.detail(canvasId) });
         showToast('Note created successfully', 'success');
       } else {
         // Feature #174: Handle canvas deleted case
@@ -368,7 +332,7 @@ function CanvasPageContent() {
         if (response.status === 404) {
           showToast('This note or canvas was deleted in another session', 'error');
           // Refresh canvas to get updated state
-          fetchCanvas(true);
+          refetchCanvas();
           return;
         }
         const errorData = await response.json();
@@ -395,6 +359,7 @@ function CanvasPageContent() {
             }
           : note
       ));
+      queryClient.invalidateQueries({ queryKey: canvasKeys.detail(canvasId) });
     } catch (error) {
       // Feature #175: Handle cancelled requests silently
       if (error instanceof Error && error.message === 'Request cancelled') {
@@ -403,7 +368,7 @@ function CanvasPageContent() {
       }
       console.error('Error updating note:', error);
     }
-  }, [showToast, cancellableFetch, cleanup, fetchCanvas]);
+  }, [showToast, cancellableFetch, cleanup, refetchCanvas]);
 
   const handleViewportChange = useCallback(async (newViewport: { x: number; y: number; zoom: number }) => {
     const requestKey = `updateViewport-${canvasId}`;
@@ -420,7 +385,7 @@ function CanvasPageContent() {
       });
       // Feature #174: Handle canvas deleted case - silently fail for viewport updates
       if (res && !res.ok && res.status === 404) {
-        // Canvas was deleted, will be caught by next fetchCanvas call
+        // Canvas was deleted, will be caught by next refetchCanvas call
         console.warn('Canvas was deleted while updating viewport');
       }
     } catch (error) {
@@ -447,11 +412,13 @@ function CanvasPageContent() {
       if (res.ok) {
         // Remove note from state
         setNotes(prev => prev.filter(note => note.id !== noteId));
+        queryClient.invalidateQueries({ queryKey: canvasKeys.detail(canvasId) });
       } else if (res.status === 404) {
         // Feature #174: Note was already deleted in another session
         showToast('This note was already deleted', 'info');
         // Remove from local state anyway
         setNotes(prev => prev.filter(note => note.id !== noteId));
+        queryClient.invalidateQueries({ queryKey: canvasKeys.detail(canvasId) });
       }
     } catch (error) {
       // Feature #175: Handle cancelled requests silently
@@ -478,10 +445,11 @@ function CanvasPageContent() {
         const data = await res.json();
         // Add duplicated note to state
         setNotes(prev => [...prev, data.note]);
+        queryClient.invalidateQueries({ queryKey: canvasKeys.detail(canvasId) });
       } else if (res.status === 404) {
         // Feature #174: Note or canvas was deleted in another session
         showToast('This note or canvas was deleted in another session', 'error');
-        fetchCanvas(true);
+        refetchCanvas();
       }
     } catch (error) {
       // Feature #175: Handle cancelled requests silently
@@ -491,7 +459,7 @@ function CanvasPageContent() {
       }
       console.error('Error duplicating note:', error);
     }
-  }, [showToast, cancellableFetch, cleanup, fetchCanvas]);
+  }, [showToast, cancellableFetch, cleanup, refetchCanvas]);
 
   const handleNoteRestore = useCallback(async (note: Note) => {
     const requestKey = `restoreNote-${note.id}`;
@@ -517,6 +485,7 @@ function CanvasPageContent() {
       if (res.ok) {
         // Add restored note to state
         setNotes(prev => [...prev, note]);
+        queryClient.invalidateQueries({ queryKey: canvasKeys.detail(canvasId) });
       } else if (res.status === 404) {
         // Feature #174: Canvas was deleted
         showToast('This canvas was deleted in another session', 'error');
@@ -550,10 +519,11 @@ function CanvasPageContent() {
         const data = await res.json();
         // Add new connection to state
         setConnections(prev => [...prev, data.connection]);
+        queryClient.invalidateQueries({ queryKey: canvasKeys.connections(canvasId) });
       } else if (res.status === 404) {
         // Feature #174: Canvas or note was deleted in another session
         showToast('This canvas or note was deleted in another session', 'error');
-        fetchCanvas(true);
+        refetchCanvas();
       }
     } catch (error) {
       // Feature #175: Handle cancelled requests silently
@@ -563,7 +533,7 @@ function CanvasPageContent() {
       }
       console.error('Error creating connection:', error);
     }
-  }, [canvasId, showToast, cancellableFetch, cleanup, fetchCanvas]);
+  }, [canvasId, showToast, cancellableFetch, cleanup, refetchCanvas]);
 
   const handleConnectionDelete = useCallback(async (connectionId: string) => {
     const requestKey = `deleteConnection-${connectionId}`;
@@ -579,10 +549,12 @@ function CanvasPageContent() {
       if (res.ok) {
         // Remove connection from state
         setConnections(prev => prev.filter(conn => conn.id !== connectionId));
+        queryClient.invalidateQueries({ queryKey: canvasKeys.connections(canvasId) });
       } else if (res.status === 404) {
         // Feature #174: Connection was already deleted in another session
         // Just remove from local state
         setConnections(prev => prev.filter(conn => conn.id !== connectionId));
+        queryClient.invalidateQueries({ queryKey: canvasKeys.connections(canvasId) });
       }
     } catch (error) {
       // Feature #175: Handle cancelled requests silently
@@ -631,8 +603,7 @@ function CanvasPageContent() {
       if (res.ok) {
         const data = await res.json();
         showToast('Canvas imported successfully', 'success');
-        // Refresh the folders and canvases list
-        fetchFoldersAndCanvases();
+        queryClient.invalidateQueries({ queryKey: canvasKeys.all });
         // Navigate to the imported canvas
         router.push(`/canvas/${data.canvas.id}`);
       } else {
@@ -645,7 +616,7 @@ function CanvasPageContent() {
     }
   }, [router, showToast]);
 
-  if (loading || (!canvas && !error)) {
+  if (canvasLoading || (!canvas && !error)) {
     return <CanvasSkeleton />;
   }
 
@@ -755,7 +726,7 @@ function CanvasPageContent() {
                   {expandedFolders.has(folder.id) && (
                     <div className="ml-4 mt-1 space-y-0.5">
                       {folder.canvases.map((c) => (
-                        <a
+                        <Link
                           key={c.id}
                           href={`/canvas/${c.id}`}
                           onClick={() => setSidebarOpen(false)}
@@ -766,7 +737,7 @@ function CanvasPageContent() {
                           }`}
                         >
                           {c.name}
-                        </a>
+                        </Link>
                       ))}
                     </div>
                   )}
@@ -785,7 +756,7 @@ function CanvasPageContent() {
                   </div>
                   <div className="ml-4 mt-1 space-y-0.5">
                     {rootCanvases.map((c) => (
-                      <a
+                      <Link
                         key={c.id}
                         href={`/canvas/${c.id}`}
                         onClick={() => setSidebarOpen(false)}
@@ -796,7 +767,7 @@ function CanvasPageContent() {
                         }`}
                       >
                         {c.name}
-                      </a>
+                      </Link>
                     ))}
                   </div>
                 </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { MoreVertical, Settings, Upload, Download } from 'lucide-react';
 
 interface MobileMenuProps {
@@ -88,7 +89,7 @@ export default function MobileMenu({
           aria-label="Mobile menu"
         >
           {/* Settings link */}
-          <a
+          <Link
             href="/settings"
             onClick={() => setIsOpen(false)}
             className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-light-text dark:text-dark-text hover:bg-light-primary/8 dark:hover:bg-dark-primary/8 transition-colors"
@@ -96,7 +97,7 @@ export default function MobileMenu({
           >
             <Settings className="w-4 h-4 text-light-text/60 dark:text-dark-text/60" />
             Settings
-          </a>
+          </Link>
 
           {/* Export/Import section - only show on canvas page */}
           {currentCanvasId && (onExportClick || onImportClick) && (

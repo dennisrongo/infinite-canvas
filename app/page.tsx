@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function Home() {
   return (
     <main className="min-h-screen bg-light-canvas dark:bg-dark-canvas">
@@ -10,18 +12,18 @@ export default function Home() {
             Create, organize, and connect notes on an unlimited canvas
           </p>
           <div className="space-x-4">
-            <a
+            <Link
               href="/auth/register"
               className="px-6 py-3 bg-light-primary dark:bg-dark-primary text-white rounded-lg hover:opacity-90 transition"
             >
               Register
-            </a>
-            <a
+            </Link>
+            <Link
               href="/auth/login"
               className="px-6 py-3 border border-light-primary dark:border-dark-primary text-light-primary dark:text-dark-primary rounded-lg hover:opacity-90 transition"
             >
               Login
-            </a>
+            </Link>
           </div>
         </div>
       </div>
