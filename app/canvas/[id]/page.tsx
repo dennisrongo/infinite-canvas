@@ -838,6 +838,7 @@ function CanvasPageContent() {
             initialConnections={connections}
             initialViewport={viewport || undefined}
             selectedNoteId={selectedNoteId || undefined}
+            openEditorOnLoad={!!noteIdParam}
             onNoteCreate={handleNoteCreate}
             onNoteUpdate={handleNoteUpdate}
             onNoteDelete={handleNoteDelete}

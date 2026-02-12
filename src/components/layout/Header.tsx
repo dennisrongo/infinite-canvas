@@ -40,9 +40,9 @@ export default function Header({
   onImportClick,
 }: HeaderProps) {
   return (
-    <header className="bg-white/80 dark:bg-dark-bg/80 backdrop-blur-xl border-b border-light-note-border/60 dark:border-dark-note-border/60 px-3 md:px-5 py-2.5 sticky top-0 z-40 transition-all duration-300 overflow-x-hidden shadow-sm">
-      <div className="flex items-center justify-between gap-2 overflow-x-hidden">
-        <div className="flex items-center gap-1.5 md:gap-3 flex-1 min-w-0 overflow-x-hidden">
+    <header className="bg-white/80 dark:bg-dark-bg/80 backdrop-blur-xl border-b border-light-note-border/60 dark:border-dark-note-border/60 px-3 md:px-5 py-2.5 sticky top-0 z-40 transition-all duration-300 shadow-sm">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 md:gap-3 flex-1">
           {/* Hamburger menu button - visible on mobile */}
           {showMenuButton && onMenuClick && (
             <button

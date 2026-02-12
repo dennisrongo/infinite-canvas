@@ -9,6 +9,7 @@ import {
   useEdgesState,
   addEdge,
   Connection,
+  ConnectionMode,
   Edge,
   Node,
   BackgroundVariant,
@@ -17,6 +18,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import NoteNode from './NoteNode';
+import FloatingEdge from './FloatingEdge';
 import NoteEditor from './NoteEditor';
 import { useTheme } from '@/contexts/ThemeContext';
 import DeleteConfirmationModal from './DeleteConfirmationModal';
@@ -59,6 +61,7 @@ interface ReactFlowCanvasProps {
   initialConnections?: NoteConnection[];
   initialViewport?: { x: number; y: number; zoom: number };
   selectedNoteId?: string; // For deep linking to specific notes
+  openEditorOnLoad?: boolean; // Auto-open editor when note is selected via deep link
   onNoteCreate?: (position: { x: number; y: number }) => void;
   onNoteUpdate?: (noteId: string, position: { x: number; y: number }, size?: { width: number; height: number }, title?: string, content?: string, fontFamily?: string, fontSize?: number) => void;
   onNoteDelete?: (noteId: string) => void;
@@ -75,12 +78,17 @@ const nodeTypes = {
   noteNode: NoteNode,
 };
 
+const edgeTypes = {
+  floating: FloatingEdge,
+};
+
 function ReactFlowCanvasInner({
   canvasId,
   initialNotes,
   initialConnections,
   initialViewport,
   selectedNoteId,
+  openEditorOnLoad,
   onNoteCreate,
   onNoteUpdate,
   onNoteDelete,
@@ -99,6 +107,8 @@ function ReactFlowCanvasInner({
   const [redoStack, setRedoStack] = React.useState<RedoAction[]>([]);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  // Track if we've already opened the editor for a specific note to prevent duplicates
+  const openedNoteRef = useRef<string | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     isOpen: boolean;
     noteId: string | null;
@@ -128,6 +138,31 @@ function ReactFlowCanvasInner({
       }
     }
   }, [selectedNoteId, initialNotes, setViewport]);
+
+  // Auto-open editor when openEditorOnLoad is true
+  useEffect(() => {
+    if (openEditorOnLoad && selectedNoteId && initialNotes.length > 0) {
+      // Skip if we've already opened this note (prevents duplicate opens on same canvas)
+      if (openedNoteRef.current === selectedNoteId) {
+        return;
+      }
+
+      const targetNote = initialNotes.find(n => n.id === selectedNoteId);
+      if (targetNote) {
+        // Mark as opened to prevent duplicates
+        openedNoteRef.current = selectedNoteId;
+        // Open editor quickly with minimal delay for viewport animation
+        setTimeout(() => {
+          setEditingNote(targetNote);
+          setIsEditorOpen(true);
+        }, 300); // Reduced delay - viewport animates for 500ms but we can start opening earlier
+      }
+    }
+    // Reset opened note ref when selectedNoteId changes (for navigating to different notes)
+    if (!selectedNoteId) {
+      openedNoteRef.current = null;
+    }
+  }, [openEditorOnLoad, selectedNoteId, initialNotes]);
 
   // Handler for duplicating a note
   const handleNoteDuplicate = useCallback((noteId: string) => {
@@ -163,7 +198,7 @@ function ReactFlowCanvasInner({
     id: conn.id,
     source: conn.sourceNoteId,
     target: conn.targetNoteId,
-    type: 'smoothstep',
+    type: 'floating',
     animated: false,
     selectable: true, // Feature #49 - Allow edge selection
     deletable: true, // Feature #49 - Allow edge deletion
@@ -430,20 +465,20 @@ function ReactFlowCanvasInner({
 
   // Handle connections - create new connection
   const onConnect = useCallback(
-    async (connection: Connection) => {
-      if (onConnectionCreate) {
-        // Call the API to create the connection
-        await onConnectionCreate(connection.source, connection.target);
-      }
-
-      // Add edge to local state
+    (connection: Connection) => {
+      // Add edge to local state immediately (optimistic update)
       setEdges((eds) => addEdge({
         ...connection,
-        type: 'smoothstep',
+        type: 'floating',
         animated: false,
-        selectable: true, // Feature #49 - Allow edge selection
-        deletable: true, // Feature #49 - Allow edge deletion
+        selectable: true,
+        deletable: true,
       }, eds));
+
+      // Persist to API in the background
+      if (onConnectionCreate) {
+        onConnectionCreate(connection.source, connection.target);
+      }
     },
     [setEdges, onConnectionCreate]
   );
@@ -536,7 +571,7 @@ function ReactFlowCanvasInner({
       id: conn.id,
       source: conn.sourceNoteId,
       target: conn.targetNoteId,
-      type: 'smoothstep',
+      type: 'floating',
       animated: false,
       selectable: true, // Feature #49 - Allow edge selection
       deletable: true, // Feature #49 - Allow edge deletion
@@ -841,9 +876,11 @@ function ReactFlowCanvasInner({
         onPaneClick={onPaneClick}
         onMoveEnd={onMoveEnd}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         deleteKeyCode={['Delete', 'Backspace']}
         selectionKeyCode={null}
         multiSelectionKeyCode="Shift"
+        connectionMode={ConnectionMode.Loose}
         panOnScroll
         zoomOnDoubleClick={false}
         selectionOnDrag

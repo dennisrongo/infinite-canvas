@@ -141,7 +141,8 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
     setSearchResults([]);
     setSearchWarning(null);
     setFocusedIndex(-1);
-    router.push(`/canvas/${result.canvasId}`);
+    // Include note ID query parameter to auto-open editor
+    router.push(`/canvas/${result.canvasId}?note=${result.id}`);
   }, [router]);
 
   // Format date for display
@@ -192,7 +193,7 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
   }, [showResults, searchResults, focusedIndex, handleResultClick]);
 
   return (
-    <div className="search-container relative flex-1 max-w-2xl ml-2 md:ml-8 min-w-0">
+    <div className="search-container relative flex-1 max-w-2xl ml-2 md:ml-8">
       <div className="relative">
         {/* Search Icon */}
         <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-light-text-secondary dark:text-dark-text-secondary">
@@ -329,7 +330,7 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
         <div
           role="listbox"
           aria-label="Search results"
-          className="absolute mt-2 w-full bg-white dark:bg-dark-bg border border-light-note-border dark:border-dark-note-border rounded-lg shadow-lg max-h-96 overflow-y-auto z-50"
+          className="absolute mt-2 w-full bg-white dark:bg-dark-bg border border-light-note-border dark:border-dark-note-border rounded-lg shadow-lg max-h-96 overflow-y-auto z-[70]"
         >
           {searchWarning && (
             <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-sm">
@@ -353,8 +354,8 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
                   aria-selected={focusedIndex === index}
                   aria-label={`Go to ${result.title} in ${result.canvasName}`}
                   onClick={() => handleResultClick(result)}
-                  className={`w-full text-left p-4 hover:bg-light-canvas dark:hover:bg-dark-canvas transition min-h-[44px] flex items-start${
-                    focusedIndex === index ? ' bg-light-hover dark:bg-dark-hover' : ''
+                  className={`w-full text-left p-4 hover:bg-light-canvas dark:hover:bg-dark-canvas transition min-h-[44px] flex items-start ${
+                    focusedIndex === index ? 'bg-light-hover dark:bg-dark-hover' : ''
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3 w-full">
