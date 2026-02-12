@@ -1,3 +1,0 @@
-Total messages: 1 (Errors: 1, Warnings: 0)
-
-[ERROR] Failed to fetch RSC payload for http://localhost:3457/auth/login. Falling back to browser navigation. Error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56

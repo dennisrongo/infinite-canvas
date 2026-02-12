@@ -8,8 +8,11 @@
     "build": "next build",
     "start": "next start",
     "start:3015": "next start -p 3015",
-    "lint": "next lint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "test:run": "vitest run"
   },
   "dependencies": {
     "@prisma/client": "^6.1.0",
@@ -21,7 +24,7 @@
     "highlight.js": "^11.11.1",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.469.0",
-    "next": "^15.1.3",
+    "next": "16.1.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
@@ -31,16 +34,25 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.5",
+    "@testing-library/react": "^16.2.0",
+    "@testing-library/user-event": "^14.5.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^8",
-    "eslint-config-next": "^15.1.3",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9",
+    "eslint-config-next": "^16.0.0",
+    "jsdom": "^26.0.3",
+    "msw": "^2.7.3",
     "postcss": "^8",
     "prisma": "^6.1.0",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.0.7",
+    "@vitest/ui": "^3.0.7"
   }
 }

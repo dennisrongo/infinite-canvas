@@ -1,4 +1,0 @@
-Total messages: 7 (Errors: 1, Warnings: 0)
-Returning 1 messages for level "error"
-
-[ERROR] Error creating canvas: Error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
