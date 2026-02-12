@@ -227,6 +227,37 @@ mark {
 }
 
 /* ========================================
+   React Flow Connection Styles
+   ======================================== */
+
+/* Connection handles - ensure proper sizing and transitions */
+.react-flow__handle {
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+/* Connection line while dragging */
+.react-flow__connection-line {
+  stroke: var(--color-primary);
+  stroke-width: 2;
+}
+
+/* Edge paths */
+.react-flow__edge-path {
+  stroke: var(--color-primary);
+  stroke-width: 2;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: var(--color-primary);
+  stroke-width: 3;
+}
+
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: var(--color-primary-hover);
+  stroke-width: 2.5;
+}
+
+/* ========================================
    Animation Classes
    ======================================== */
 .animate-fade-in {

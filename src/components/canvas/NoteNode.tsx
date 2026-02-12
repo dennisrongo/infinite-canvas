@@ -115,9 +115,61 @@ export default function NoteNode({ data, selected, id }: NoteNodeProps) {
       }`}
       style={{ width: `${size.width}px`, minHeight: `${size.height}px` }}
     >
-      {/* Connection handles */}
-      <Handle type="target" position={Position.Top} className="!bg-light-primary dark:!bg-dark-primary" />
-      <Handle type="source" position={Position.Bottom} className="!bg-light-primary dark:!bg-dark-primary" />
+      {/* Connection handles - each side has a visible source handle (drag from) and
+          an invisible target handle (drop onto). Using Strict mode so RF correctly
+          resolves source→target on the exact side you drag to. */}
+      {/* Top */}
+      <Handle
+        type="source"
+        position={Position.Top}
+        id="top-src"
+        className="!w-3 !h-3 !bg-light-primary dark:!bg-dark-primary !border-2 !border-white dark:!border-gray-800 !opacity-0 group-hover:!opacity-100 !transition-opacity !duration-200 hover:!scale-150 !cursor-crosshair"
+      />
+      <Handle
+        type="target"
+        position={Position.Top}
+        id="top-tgt"
+        className="!w-3 !h-3 !bg-light-primary dark:!bg-dark-primary !border-2 !border-white dark:!border-gray-800 !opacity-0 group-hover:!opacity-100 !transition-opacity !duration-200 hover:!scale-150 !cursor-crosshair"
+      />
+      {/* Bottom */}
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="bottom-src"
+        className="!w-3 !h-3 !bg-light-primary dark:!bg-dark-primary !border-2 !border-white dark:!border-gray-800 !opacity-0 group-hover:!opacity-100 !transition-opacity !duration-200 hover:!scale-150 !cursor-crosshair"
+      />
+      <Handle
+        type="target"
+        position={Position.Bottom}
+        id="bottom-tgt"
+        className="!w-3 !h-3 !bg-light-primary dark:!bg-dark-primary !border-2 !border-white dark:!border-gray-800 !opacity-0 group-hover:!opacity-100 !transition-opacity !duration-200 hover:!scale-150 !cursor-crosshair"
+      />
+      {/* Right */}
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="right-src"
+        className="!w-3 !h-3 !bg-light-primary dark:!bg-dark-primary !border-2 !border-white dark:!border-gray-800 !opacity-0 group-hover:!opacity-100 !transition-opacity !duration-200 hover:!scale-150 !cursor-crosshair"
+      />
+      <Handle
+        type="target"
+        position={Position.Right}
+        id="right-tgt"
+        className="!w-3 !h-3 !bg-light-primary dark:!bg-dark-primary !border-2 !border-white dark:!border-gray-800 !opacity-0 group-hover:!opacity-100 !transition-opacity !duration-200 hover:!scale-150 !cursor-crosshair"
+      />
+      {/* Left */}
+      <Handle
+        type="source"
+        position={Position.Left}
+        id="left-src"
+        className="!w-3 !h-3 !bg-light-primary dark:!bg-dark-primary !border-2 !border-white dark:!border-gray-800 !opacity-0 group-hover:!opacity-100 !transition-opacity !duration-200 hover:!scale-150 !cursor-crosshair"
+      />
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="left-tgt"
+        className="!w-3 !h-3 !bg-light-primary dark:!bg-dark-primary !border-2 !border-white dark:!border-gray-800 !opacity-0 group-hover:!opacity-100 !transition-opacity !duration-200 hover:!scale-150 !cursor-crosshair"
+      />
 
       {/* Selected indicator - visible badge with icon for accessibility */}
       {selected && (
