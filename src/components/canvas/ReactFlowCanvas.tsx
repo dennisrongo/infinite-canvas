@@ -5,6 +5,7 @@ import {
   ReactFlow,
   Background,
   Controls,
+  MiniMap,
   useNodesState,
   useEdgesState,
   addEdge,
@@ -896,6 +897,18 @@ function ReactFlowCanvasInner({
           <FitViewControl />
           <ResetZoomControl />
         </Controls>
+        <MiniMap
+          nodeColor={(node) => {
+            // Use theme-based colors for note nodes
+            return theme === 'dark' ? '#1E293B' : '#FFFFFF';
+          }}
+          maskColor={theme === 'dark' ? 'rgba(15, 23, 42, 0.6)' : 'rgba(0, 0, 0, 0.2)'}
+          pannable
+          zoomable
+          position="bottom-right"
+          className="minimap-wrapper"
+          ariaLabel="Canvas minimap"
+        />
       </ReactFlow>
 
       {/* Empty State Overlay - shows when there are no notes */}

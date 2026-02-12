@@ -275,3 +275,52 @@ mark {
 .animate-scale-in {
   animation: scale-in 200ms ease-out;
 }
+
+/* ========================================
+   Minimap Styles
+   ======================================== */
+
+/* Minimap container */
+.react-flow__minimap {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* Minimap mask (viewport indicator) */
+.react-flow__minimap-mask {
+  fill: var(--color-primary);
+  fill-opacity: 0.1;
+  stroke: var(--color-primary);
+  stroke-width: 1;
+}
+
+/* Minimap node styling */
+.react-flow__minimap-node {
+  fill: var(--color-note);
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+/* Selected nodes in minimap */
+.react-flow__minimap-node.selected {
+  stroke: var(--color-primary);
+  stroke-width: 2;
+}
+
+/* Dark theme adjustments */
+.dark .react-flow__minimap {
+  background: var(--color-canvas);
+  border-color: var(--color-border);
+}
+
+.dark .react-flow__minimap-node {
+  fill: var(--color-note);
+  stroke: var(--color-border);
+}
+
+.dark .react-flow__minimap-node.selected {
+  stroke: var(--color-primary);
+}
