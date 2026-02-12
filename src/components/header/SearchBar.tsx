@@ -87,15 +87,12 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
       setSearching(true);
 
       try {
-        const scopeParam = searchScope === 'current' && currentCanvasId
-          ? `?canvasId=${currentCanvasId}`
-          : '';
-
-        const res = await fetch(`/api/search${scopeParam}`, {
+        const res = await fetch('/api/search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             query: debouncedSearchQuery.trim(),
+            canvasId: searchScope === 'current' && currentCanvasId ? currentCanvasId : undefined,
             sortBy,
             sortOrder,
             dateFilter: dateFilter === 'all' ? undefined : dateFilter,
