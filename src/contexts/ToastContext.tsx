@@ -15,6 +15,7 @@ interface ToastContextType {
   toasts: Toast[];
   showToast: (message: string, type?: ToastType, duration?: number) => void;
   removeToast: (id: string) => void;
+  clearToasts: () => void;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
@@ -41,8 +42,6 @@ export function ToastProvider({ children }: ToastProviderProps) {
   }, []);
 
   const showToast = useCallback((message: string, type: ToastType = 'success', duration: number = 3000) => {
-    if (!mounted) return;
-
     const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
     const newToast: Toast = { id, message, type, duration };
 
@@ -54,14 +53,18 @@ export function ToastProvider({ children }: ToastProviderProps) {
         setToasts(prev => prev.filter(t => t.id !== id));
       }, duration);
     }
-  }, [mounted]);
+  }, []);
 
   const removeToast = useCallback((id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
+  const clearToasts = useCallback(() => {
+    setToasts([]);
+  }, []);
+
   return (
-    <ToastContext.Provider value={{ toasts, showToast, removeToast }}>
+    <ToastContext.Provider value={{ toasts, showToast, removeToast, clearToasts }}>
       {children}
     </ToastContext.Provider>
   );

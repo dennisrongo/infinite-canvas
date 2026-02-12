@@ -42,15 +42,15 @@ export interface ReactFlowProps {
 }
 
 export const Background = ({ children }: { children?: React.ReactNode }) => {
-  return <>{children}</>
+  return React.createElement(React.Fragment, null, children)
 }
 
 export const Controls = () => {
-  return <div data-testid="react-flow-controls" />
+  return React.createElement('div', { 'data-testid': 'react-flow-controls' })
 }
 
 export const MiniMap = () => {
-  return <div data-testid="react-flow-minimap" />
+  return React.createElement('div', { 'data-testid': 'react-flow-minimap' })
 }
 
 export const MarkerType = {
@@ -76,20 +76,18 @@ export const ConnectionMode = {
 }
 
 export const Panel = ({ children, position }: { children: React.ReactNode; position?: string }) => {
-  return <div data-testid={`react-flow-panel-${position || 'default'}`}>{children}</div>
+  return React.createElement('div', { 'data-testid': `react-flow-panel-${position || 'default'}` }, children)
 }
 
 export const ReactFlowProvider = ({ children }: { children: React.ReactNode }) => {
-  return <>{children}</>
+  return React.createElement(React.Fragment, null, children)
 }
 
 const ReactFlowComponent = ({ nodes, edges, children, className = '' }: ReactFlowProps) => {
-  return (
-    <div className={`react-flow ${className}`} data-testid="react-flow">
-      {children}
-      <div data-testid="react-flow-nodes" data-nodes-count={nodes.length} />
-      <div data-testid="react-flow-edges" data-edges-count={edges.length} />
-    </div>
+  return React.createElement('div', { className: `react-flow ${className}`, 'data-testid': 'react-flow' },
+    children,
+    React.createElement('div', { 'data-testid': 'react-flow-nodes', 'data-nodes-count': nodes.length }),
+    React.createElement('div', { 'data-testid': 'react-flow-edges', 'data-edges-count': edges.length })
   )
 }
 

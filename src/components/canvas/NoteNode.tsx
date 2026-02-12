@@ -121,7 +121,7 @@ export default function NoteNode({ data, selected, id }: NoteNodeProps) {
 
       {/* Selected indicator - visible badge with icon for accessibility */}
       {selected && (
-        <div className="absolute -top-3 -right-3 w-6 h-6 bg-light-primary dark:bg-dark-primary rounded-full flex items-center justify-center shadow-md" aria-label="Selected note">
+        <div data-testid="selected-indicator" className="absolute -top-3 -right-3 w-6 h-6 bg-light-primary dark:bg-dark-primary rounded-full flex items-center justify-center shadow-md" aria-label="Selected note">
           <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
           </svg>
@@ -155,6 +155,7 @@ export default function NoteNode({ data, selected, id }: NoteNodeProps) {
       {/* Duplicate button - visible on hover, with touch-friendly sizing */}
       {data.onDuplicate && (
         <button
+          data-testid="duplicate-btn"
           onClick={(e) => {
             e.stopPropagation();
             data.onDuplicate?.(id);
@@ -192,18 +193,22 @@ export default function NoteNode({ data, selected, id }: NoteNodeProps) {
       {selected && (
         <>
           <div
+            data-testid="resize-se"
             className="absolute bottom-0 right-0 w-3 h-3 cursor-se-resize min-w-[44px] min-h-[44px]"
             onMouseDown={(e) => handleResizeStart(e, 'se')}
           />
           <div
+            data-testid="resize-sw"
             className="absolute bottom-0 left-0 w-3 h-3 cursor-sw-resize min-w-[44px] min-h-[44px]"
             onMouseDown={(e) => handleResizeStart(e, 'sw')}
           />
           <div
+            data-testid="resize-ne"
             className="absolute top-0 right-0 w-3 h-3 cursor-ne-resize min-w-[44px] min-h-[44px]"
             onMouseDown={(e) => handleResizeStart(e, 'ne')}
           />
           <div
+            data-testid="resize-nw"
             className="absolute top-0 left-0 w-3 h-3 cursor-nw-resize min-w-[44px] min-h-[44px]"
             onMouseDown={(e) => handleResizeStart(e, 'nw')}
           />
