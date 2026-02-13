@@ -671,11 +671,11 @@ export default function AppSidebar({
       )}
 
       <aside
-        className={`${sidebarWidth} transition-all duration-300 ease-in-out flex-shrink-0 fixed lg:static inset-y-0 left-0 z-50 transform ${
+        className={`${sidebarWidth} transition-[width] duration-150 ease-out flex-shrink-0 fixed lg:static inset-y-0 left-0 z-50 transform ${
           sidebarOpen ? 'translate-x-0 w-72' : '-translate-x-full lg:translate-x-0'
         } ${sidebarCollapsed ? 'lg:w-0 lg:overflow-hidden' : 'lg:w-72'}`}
       >
-        <div className="h-full flex flex-col bg-white dark:bg-[#0c1222] border-r border-gray-200/60 dark:border-gray-800/60">
+        <div className={`h-full flex flex-col bg-white dark:bg-[#0c1222] border-r border-gray-200/60 dark:border-gray-800/60 transition-opacity duration-100 ${sidebarCollapsed ? 'opacity-0' : 'opacity-100'}`}>
           {/* Header: Logo + Close/Collapse */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800/60">
             <Link

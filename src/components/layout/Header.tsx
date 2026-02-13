@@ -68,7 +68,7 @@ export default function Header({
   };
 
   return (
-    <header className={`bg-white/95 dark:bg-[#0c1222]/95 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-800/50 py-2 sticky top-0 z-30 transition-all duration-200 px-3 md:px-5 ${sidebarCollapsed ? 'lg:pl-12' : ''}`}>
+    <header className={`bg-white/95 dark:bg-[#0c1222]/95 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-800/50 py-2 sticky top-0 z-30 transition-[padding] duration-150 ease-out px-3 md:px-5 ${sidebarCollapsed ? 'lg:pl-12' : ''}`}>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
           {/* Hamburger menu button - visible on mobile */}
