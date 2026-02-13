@@ -489,10 +489,9 @@ export default function AppSidebar({
       autoExpandTimeoutRef.current = null;
     }
 
-    // Restore expanded folders if we were dragging a folder
+    // Clear the saved folder state (folders remain collapsed)
     const wasDraggingFolder = active.id.toString().startsWith('folder-');
-    if (wasDraggingFolder && previousExpandedFoldersRef.current) {
-      setExpandedFolders(previousExpandedFoldersRef.current);
+    if (wasDraggingFolder) {
       previousExpandedFoldersRef.current = null;
     }
 
