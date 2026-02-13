@@ -174,13 +174,9 @@ function CanvasPageContent() {
     }
   }, [canvasId, renameCanvasMutation, showToast]);
 
-  // Track previous canvas name to avoid unnecessary header updates
-  const prevCanvasNameRef = useRef<string | null>(null);
-
-  // Update canvas header when canvas name changes
+  // Update canvas header when canvas data changes
   useEffect(() => {
-    if (canvas && canvas.name !== prevCanvasNameRef.current) {
-      prevCanvasNameRef.current = canvas.name;
+    if (canvas) {
       setCanvasHeader(canvas.name, handleExport, handleTitleChange);
     }
     return () => {
