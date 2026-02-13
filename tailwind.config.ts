@@ -38,6 +38,28 @@ const config: Config = {
           note: "#1E293B",
           'note-border': "#475569",
         },
+        // Landing page colors (from Stitch design)
+        landing: {
+          bg: "#ffffff",
+          'bg-alt': "#f9fafb",
+          'bg-footer': "#f9fafb",
+          'primary-text': "#111827",
+          'secondary-text': "#6b7280",
+          accent: "#3b82f6",
+          'accent-hover': "#2563eb",
+          'accent-light': "#EBF8FF",
+          border: "#E2E8F0",
+          'footer-text': "#6b7280",
+        },
+        // Brand colors from Stitch design
+        brand: {
+          blue: '#2563EB',
+          dark: '#111827',
+          light: '#F9FAFB',
+          gray: '#6B7280',
+          accent: '#8B5CF6',
+          neon: '#F472B6',
+        },
         // Semantic colors
         semantic: {
           success: "#22C55E",
@@ -53,6 +75,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: [
+          'Inter',
           '-apple-system',
           'BlinkMacSystemFont',
           "'Segoe UI'",
@@ -65,6 +88,9 @@ const config: Config = {
           "'Helvetica Neue'",
           'sans-serif',
         ],
+      },
+      letterSpacing: {
+        'tighter-custom': '-0.02em',
       },
       fontSize: {
         // Consistent typography scale
@@ -121,6 +147,10 @@ const config: Config = {
           '0%': { transform: 'scale(0.95)', opacity: '0' },
           '100%': { transform: 'scale(1)', opacity: '1' },
         },
+      },
+      backgroundImage: {
+        'dot-pattern': 'radial-gradient(#CBD5E1 1px, transparent 1px)',
+        'dot-grid-canvas': 'radial-gradient(#94a3b8 1.5px, transparent 1.5px)',
       },
     },
   },

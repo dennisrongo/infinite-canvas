@@ -324,3 +324,23 @@ mark {
 .dark .react-flow__minimap-node.selected {
   stroke: var(--color-primary);
 }
+
+/* ========================================
+   Landing Page Styles
+   ======================================== */
+
+/* Hero background with dot pattern */
+.hero-bg {
+  background-color: #ffffff;
+  background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Glass effect for note cards */
+.glass-note {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+}
