@@ -101,6 +101,58 @@ function CanvasPageContent() {
     }
   }, [canvasData, canvasId, seededCanvasId]);
 
+  // ── Header callbacks (stable references) ──
+  const handleExport = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/canvases/${canvasId}/export`);
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${canvas?.name?.replace(/[^a-z0-9]/gi, '_') || 'canvas'}_export.json`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        showToast('Canvas exported successfully', 'success');
+      } else {
+        showToast('Failed to export canvas', 'error');
+      }
+    } catch (error) {
+      console.error('Error exporting canvas:', error);
+      showToast('Failed to export canvas', 'error');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canvasId, showToast]);
+
+  const handleTitleChange = useCallback(async (newTitle: string) => {
+    if (!newTitle?.trim()) return;
+    try {
+      await renameCanvasMutation.mutateAsync({
+        id: canvasId,
+        name: newTitle.trim()
+      });
+      setCanvas(prev => prev ? { ...prev, name: newTitle.trim() } : null);
+      showToast('Canvas renamed successfully', 'success');
+    } catch (error: any) {
+      console.error('Error renaming canvas:', error);
+      showToast(error?.message || 'Failed to rename canvas', 'error');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canvasId, renameCanvasMutation.mutateAsync, showToast]);
+
+  // Set canvas header - runs once when canvas is seeded and on name changes
+  useEffect(() => {
+    if (canvas) {
+      setCanvasHeader(canvas.name, handleExport, handleTitleChange);
+    }
+    return () => {
+      setCanvasHeader(null, null, null);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canvas?.name, setCanvasHeader]);
+
   // Seed connections from TanStack Query data
   useEffect(() => {
     if (connectionsData?.connections) {
@@ -131,59 +183,6 @@ function CanvasPageContent() {
       setSelectedNoteId(null);
     }
   }, [canvasId, seededCanvasId]);
-
-  // Set canvas header for layout's Header component
-  const handleExport = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/canvases/${canvasId}/export`);
-      if (res.ok) {
-        // Download the file
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${canvas?.name.replace(/[^a-z0-9]/gi, '_')}_export.json`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        showToast('Canvas exported successfully', 'success');
-      } else {
-        showToast('Failed to export canvas', 'error');
-      }
-    } catch (error) {
-      console.error('Error exporting canvas:', error);
-      showToast('Failed to export canvas', 'error');
-    }
-  }, [canvasId, canvas?.name, showToast]);
-
-  // Handle canvas title change from Header
-  const handleTitleChange = useCallback(async (newTitle: string) => {
-    if (!newTitle?.trim()) return;
-    try {
-      await renameCanvasMutation.mutateAsync({
-        id: canvasId,
-        name: newTitle.trim()
-      });
-      // Update local canvas state
-      setCanvas(prev => prev ? { ...prev, name: newTitle.trim() } : null);
-      showToast('Canvas renamed successfully', 'success');
-    } catch (error: any) {
-      console.error('Error renaming canvas:', error);
-      showToast(error?.message || 'Failed to rename canvas', 'error');
-    }
-  }, [canvasId, renameCanvasMutation, showToast]);
-
-  // Update canvas header when canvas data changes
-  useEffect(() => {
-    if (canvas) {
-      setCanvasHeader(canvas.name, handleExport, handleTitleChange);
-    }
-    return () => {
-      // Clear canvas header when unmounting
-      setCanvasHeader(null, null, null);
-    };
-  }, [canvas?.name, handleExport, handleTitleChange, setCanvasHeader]);
 
   // Handle deep linking to specific note
   useEffect(() => {
