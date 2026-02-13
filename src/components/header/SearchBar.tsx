@@ -179,7 +179,7 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search notes... (Ctrl+K)"
-          className="search-input w-full pl-10 pr-24 py-2 border border-light-note-border dark:border-dark-note-border rounded-lg bg-white dark:bg-dark-input text-light-text dark:text-dark-text focus:outline-none focus:border-light-primary dark:focus:border-dark-primary"
+          className="search-input type-nav w-full pl-10 pr-24 py-2 border border-light-note-border dark:border-dark-note-border rounded-lg bg-white dark:bg-dark-input text-light-text dark:text-dark-text focus:outline-none focus:border-light-primary dark:focus:border-dark-primary"
         />
 
         {/* Scope Selector and Filter Button */}
@@ -188,7 +188,7 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
             <select
               value={searchScope}
               onChange={(e) => setSearchScope(e.target.value as 'all' | 'current')}
-              className="px-2 py-1 text-xs border border-light-note-border dark:border-dark-note-border rounded bg-white dark:bg-dark-bg text-light-text-secondary dark:text-dark-text-tertiary focus:outline-none"
+              className="type-meta px-2 py-1 border border-light-note-border dark:border-dark-note-border rounded bg-white dark:bg-dark-bg text-light-text-secondary dark:text-dark-text-tertiary focus:outline-none"
             >
               <option value="all">All Canvases</option>
               <option value="current">This Canvas</option>
@@ -198,7 +198,7 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
           {/* Filter Toggle Button */}
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-1 px-2 py-1 text-xs border border-light-note-border dark:border-dark-note-border rounded bg-white dark:bg-dark-bg text-light-text-secondary dark:text-dark-text-tertiary hover:bg-light-hover dark:hover:bg-dark-hover transition focus:outline-none"
+            className="type-meta flex items-center gap-1 px-2 py-1 border border-light-note-border dark:border-dark-note-border rounded bg-white dark:bg-dark-bg text-light-text-secondary dark:text-dark-text-tertiary hover:bg-light-hover dark:hover:bg-dark-hover transition focus:outline-none"
             title="Filter and sort options"
           >
             <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -219,7 +219,7 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as 'createdAt' | 'updatedAt' | 'title')}
-                className="w-full px-3 py-2 text-sm border border-light-note-border dark:border-dark-note-border rounded bg-white dark:bg-dark-input text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary"
+                className="type-button w-full px-3 py-2 border border-light-note-border dark:border-dark-note-border rounded bg-white dark:bg-dark-input text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary"
               >
                 <option value="updatedAt">Last Modified</option>
                 <option value="createdAt">Date Created</option>
@@ -235,7 +235,7 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
               <select
                 value={sortOrder}
                 onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-                className="w-full px-3 py-2 text-sm border border-light-note-border dark:border-dark-note-border rounded bg-white dark:bg-dark-input text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary"
+                className="type-button w-full px-3 py-2 border border-light-note-border dark:border-dark-note-border rounded bg-white dark:bg-dark-input text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary"
               >
                 <option value="desc">Newest First</option>
                 <option value="asc">Oldest First</option>
@@ -250,7 +250,7 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
               <select
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value as 'all' | 'today' | 'week' | 'month' | 'year')}
-                className="w-full px-3 py-2 text-sm border border-light-note-border dark:border-dark-note-border rounded bg-white dark:bg-dark-input text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary"
+                className="type-button w-full px-3 py-2 border border-light-note-border dark:border-dark-note-border rounded bg-white dark:bg-dark-input text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary"
               >
                 <option value="all">All Time</option>
                 <option value="today">Today</option>
@@ -264,7 +264,7 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
           {/* Active Filters Display */}
           {(dateFilter !== 'all' || sortBy !== 'updatedAt' || sortOrder !== 'desc') && (
             <div className="mt-3 pt-3 border-t border-light-note-border dark:border-dark-note-border flex items-center justify-between">
-              <div className="text-xs text-light-text-secondary dark:text-dark-text-tertiary">
+              <div className="type-meta text-light-text-secondary dark:text-dark-text-tertiary">
                 Active filters:{' '}
                 {dateFilter !== 'all' && (
                   <span className="inline-flex items-center gap-1 ml-1 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded">
@@ -288,7 +288,7 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
                   setSortOrder('desc');
                   setDateFilter('all');
                 }}
-                className="text-xs text-light-primary dark:text-dark-primary hover:text-light-primary-hover dark:hover:text-dark-primary-hover transition"
+                className="type-meta text-light-primary dark:text-dark-primary hover:text-light-primary-hover dark:hover:text-dark-primary-hover transition"
               >
                 Clear all filters
               </button>
@@ -310,11 +310,11 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
             </div>
           )}
           {searching ? (
-            <div className="p-4 text-center text-light-text-secondary dark:text-dark-text-tertiary">
+            <div className="p-4 type-nav text-center text-light-text-secondary dark:text-dark-text-tertiary">
               Searching...
             </div>
           ) : searchResults.length === 0 ? (
-            <div className="p-4 text-center text-light-text-secondary dark:text-dark-text-tertiary">
+            <div className="p-4 type-nav text-center text-light-text-secondary dark:text-dark-text-tertiary">
               No results found for "{searchQuery}"
             </div>
           ) : (
@@ -333,14 +333,14 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
                   <div className="flex items-start justify-between gap-3 w-full">
                     <div className="flex-1 min-w-0">
                       <div
-                        className="font-medium text-light-text dark:text-dark-text truncate"
+                        className="type-nav text-light-text dark:text-dark-text truncate"
                         dangerouslySetInnerHTML={{ __html: result.highlightedTitle }}
                       />
                       <div
-                        className="text-sm text-light-text-secondary dark:text-dark-text-tertiary mt-1 line-clamp-2"
+                        className="type-meta text-light-text-secondary dark:text-dark-text-tertiary mt-1 line-clamp-2"
                         dangerouslySetInnerHTML={{ __html: result.highlightedContent }}
                       />
-                      <div className="flex items-center gap-2 mt-1 text-xs text-light-text-tertiary dark:text-dark-text-secondary">
+                      <div className="type-meta flex items-center gap-2 mt-1 text-light-text-tertiary dark:text-dark-text-secondary">
                         <span>in {result.canvasName}</span>
                         <span>•</span>
                         <span title={formatDateTime(result[sortBy === 'createdAt' ? 'createdAt' : 'updatedAt'])}>

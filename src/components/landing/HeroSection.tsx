@@ -122,10 +122,10 @@ const GlassNote: React.FC<GlassNoteProps> = ({ title, borderColor = 'brand-blue'
       {hasAvatars && (
         <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
           <div className="flex -space-x-2">
-            <div className="w-7 h-7 rounded-full bg-blue-100 border-2 border-white flex items-center justify-center text-[10px] text-blue-600 font-bold">
+            <div className="w-7 h-7 rounded-full bg-blue-100 border-2 border-white flex items-center justify-center text-xs text-blue-600 font-bold">
               JD
             </div>
-            <div className="w-7 h-7 rounded-full bg-purple-100 border-2 border-white flex items-center justify-center text-[10px] text-purple-600 font-bold">
+            <div className="w-7 h-7 rounded-full bg-purple-100 border-2 border-white flex items-center justify-center text-xs text-purple-600 font-bold">
               AS
             </div>
           </div>
@@ -139,14 +139,14 @@ const ResearchNote: React.FC = () => {
   return (
     <div className="glass-note p-5 rounded-2xl w-56 border-t-4 border-t-brand-accent shadow-md hover:shadow-lg transition-all duration-300">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-[10px] font-bold text-brand-accent uppercase tracking-widest">
+        <span className="text-xs font-bold text-brand-accent uppercase tracking-widest">
           RESEARCH
         </span>
         <span className="text-gray-300 text-sm">...</span>
       </div>
       <p className="text-sm text-gray-700 font-semibold mb-3">User Interviews Q3</p>
       <div className="flex gap-2 flex-wrap">
-        <span className="px-2.5 py-1 bg-purple-50 text-purple-600 text-[10px] font-medium rounded-md border border-purple-100">
+        <span className="px-2.5 py-1 bg-purple-50 text-purple-600 text-xs font-medium rounded-md border border-purple-100">
           High Priority
         </span>
       </div>

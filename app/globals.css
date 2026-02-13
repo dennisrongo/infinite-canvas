@@ -164,6 +164,23 @@ h4, .h4 {
   @apply text-xs;
 }
 
+/* Semantic UI typography utilities */
+.type-nav {
+  @apply text-sm font-medium;
+}
+
+.type-label {
+  @apply text-sm font-medium;
+}
+
+.type-button {
+  @apply text-sm font-medium;
+}
+
+.type-meta {
+  @apply text-xs;
+}
+
 /* ========================================
    Component Base Styles
    ======================================== */
