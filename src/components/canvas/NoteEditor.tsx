@@ -422,7 +422,7 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
             </button>
           </div>
           {/* Timestamps and Status Row */}
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center justify-between type-meta">
             <div className="flex items-center gap-3 text-[#94A3B8] dark:text-[#64748B]">
               {note?.createdAt && (
                 <span title={formatDateTime(note.createdAt)}>
@@ -437,13 +437,13 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
             </div>
             <div className="flex items-center gap-2">
               {saveStatus === 'saving' && (
-                <span className="text-sm text-[#64748B] dark:text-[#94A3B8]">Saving...</span>
+                <span className="type-nav text-[#64748B] dark:text-[#94A3B8]">Saving...</span>
               )}
               {saveStatus === 'saved' && (
-                <span className="text-sm text-green-600 dark:text-green-400">Saved ✓</span>
+                <span className="type-nav text-green-600 dark:text-green-400">Saved ✓</span>
               )}
               {hasUnsavedChanges && saveStatus !== 'saving' && saveStatus !== 'saved' && (
-                <span className="text-sm text-amber-600 dark:text-amber-400">Unsaved changes</span>
+                <span className="type-nav text-amber-600 dark:text-amber-400">Unsaved changes</span>
               )}
             </div>
           </div>
@@ -466,7 +466,7 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
           <div className="mb-4">
             <label
               htmlFor="note-title"
-              className="block text-sm font-medium text-[#64748B] dark:text-[#94A3B8] mb-2"
+              className="type-label block text-[#64748B] dark:text-[#94A3B8] mb-2"
             >
               Title
             </label>
@@ -475,7 +475,7 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3B82F6] bg-white dark:bg-[#0F172A] text-[#1E293B] dark:text-[#F1F5F9] text-lg font-semibold"
+              className="h3 w-full px-3 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3B82F6] bg-white dark:bg-[#0F172A] text-[#1E293B] dark:text-[#F1F5F9]"
               placeholder="Enter note title..."
             />
           </div>
@@ -485,14 +485,14 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
             <div className="flex items-center justify-between mb-2">
               <label
                 htmlFor="note-content"
-                className="block text-sm font-medium text-[#64748B] dark:text-[#94A3B8]"
+                className="type-label block text-[#64748B] dark:text-[#94A3B8]"
               >
                 Content (Markdown supported)
               </label>
               <div className="flex gap-2">
                 <button
                   onClick={() => setViewMode('edit')}
-                  className={`px-3 py-1 text-sm rounded transition ${
+                  className={`type-button px-3 py-1 rounded transition ${
                     viewMode === 'edit'
                       ? 'bg-[#3B82F6] text-white'
                       : 'bg-[#E2E8F0] dark:bg-[#475569] text-[#64748B] dark:text-[#94A3B8] hover:bg-[#CBD5E1] dark:hover:bg-[#64748B]'
@@ -502,7 +502,7 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
                 </button>
                 <button
                   onClick={() => setViewMode('preview')}
-                  className={`px-3 py-1 text-sm rounded transition ${
+                  className={`type-button px-3 py-1 rounded transition ${
                     viewMode === 'preview'
                       ? 'bg-[#3B82F6] text-white'
                       : 'bg-[#E2E8F0] dark:bg-[#475569] text-[#64748B] dark:text-[#94A3B8] hover:bg-[#CBD5E1] dark:hover:bg-[#64748B]'
@@ -512,7 +512,7 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
                 </button>
                 <button
                   onClick={() => setViewMode('split')}
-                  className={`px-3 py-1 text-sm rounded transition ${
+                  className={`type-button px-3 py-1 rounded transition ${
                     viewMode === 'split'
                       ? 'bg-[#3B82F6] text-white'
                       : 'bg-[#E2E8F0] dark:bg-[#475569] text-[#64748B] dark:text-[#94A3B8] hover:bg-[#CBD5E1] dark:hover:bg-[#64748B]'
@@ -625,7 +625,7 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
               <div className="mt-2">
                 {imageUploadProgress > 0 ? (
                   <div className="space-y-1">
-                    <div className="flex justify-between text-sm text-[#64748B] dark:text-[#94A3B8]">
+                    <div className="type-nav flex justify-between text-[#64748B] dark:text-[#94A3B8]">
                       <span>Uploading image...</span>
                       <span>{imageUploadProgress}%</span>
                     </div>
@@ -637,7 +637,7 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
                     </div>
                   </div>
                 ) : (
-                  <div className="text-sm text-[#64748B] dark:text-[#94A3B8]">
+                  <div className="type-nav text-[#64748B] dark:text-[#94A3B8]">
                     Uploading image...
                   </div>
                 )}
@@ -648,14 +648,14 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
 
         {/* Footer with action buttons */}
         <div className="flex items-center justify-between p-4 border-t border-[#E2E8F0] dark:border-[#475569]">
-          <div className="text-sm text-[#64748B] dark:text-[#94A3B8]">
+          <div className="type-nav text-[#64748B] dark:text-[#94A3B8]">
             Changes are saved manually or when closing
           </div>
           <div className="flex gap-3">
             <button
               onClick={handleSave}
               disabled={saving}
-              className="px-4 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] disabled:bg-[#94A3B8] disabled:cursor-not-allowed transition flex items-center gap-2"
+              className="type-button px-4 py-2 bg-[#3B82F6] text-white rounded-lg hover:bg-[#2563EB] disabled:bg-[#94A3B8] disabled:cursor-not-allowed transition flex items-center gap-2"
             >
               {saving ? (
                 <>
@@ -666,7 +666,7 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
             </button>
             <button
               onClick={handleClose}
-              className="px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] text-[#1E293B] dark:text-[#F1F5F9] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
+              className="type-button px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] text-[#1E293B] dark:text-[#F1F5F9] rounded-lg hover:bg-[#F1F5F9] dark:hover:bg-[#1E293B] transition"
             >
               Close
             </button>

@@ -21,7 +21,7 @@ const FONT_FAMILIES = [
   { name: 'Verdana', value: 'Verdana, sans-serif' },
 ];
 
-const FONT_SIZES = [12, 14, 16, 18, 20, 24, 28, 32];
+const FONT_SIZES = [12, 14, 16, 18, 20, 24, 30, 36];
 
 export default function RichTextToolbar({
   onBold,
@@ -39,7 +39,7 @@ export default function RichTextToolbar({
         <button
           type="button"
           onClick={onBold}
-          className="px-3 py-1.5 font-bold text-[#1E293B] dark:text-[#F1F5F9] hover:bg-[#E2E8F0] dark:hover:bg-[#475569] rounded transition"
+          className="type-button px-3 py-1.5 font-bold text-[#1E293B] dark:text-[#F1F5F9] hover:bg-[#E2E8F0] dark:hover:bg-[#475569] rounded transition"
           title="Bold (Ctrl+B)"
         >
           B
@@ -47,7 +47,7 @@ export default function RichTextToolbar({
         <button
           type="button"
           onClick={onItalic}
-          className="px-3 py-1.5 italic text-[#1E293B] dark:text-[#F1F5F9] hover:bg-[#E2E8F0] dark:hover:bg-[#475569] rounded transition"
+          className="type-button px-3 py-1.5 italic text-[#1E293B] dark:text-[#F1F5F9] hover:bg-[#E2E8F0] dark:hover:bg-[#475569] rounded transition"
           title="Italic (Ctrl+I)"
         >
           I
@@ -55,7 +55,7 @@ export default function RichTextToolbar({
         <button
           type="button"
           onClick={onUnderline}
-          className="px-3 py-1.5 underline text-[#1E293B] dark:text-[#F1F5F9] hover:bg-[#E2E8F0] dark:hover:bg-[#475569] rounded transition"
+          className="type-button px-3 py-1.5 underline text-[#1E293B] dark:text-[#F1F5F9] hover:bg-[#E2E8F0] dark:hover:bg-[#475569] rounded transition"
           title="Underline (Ctrl+U)"
         >
           U
@@ -64,14 +64,14 @@ export default function RichTextToolbar({
 
       {/* Font Family Dropdown */}
       <div className="flex items-center gap-2 border-r border-[#E2E8F0] dark:border-[#475569] pr-2">
-        <label htmlFor="font-family" className="text-sm text-[#64748B] dark:text-[#94A3B8]">
+        <label htmlFor="font-family" className="type-label text-[#64748B] dark:text-[#94A3B8]">
           Font:
         </label>
         <select
           id="font-family"
           value={fontFamily}
           onChange={(e) => onFontFamilyChange(e.target.value)}
-          className="px-2 py-1.5 border border-[#E2E8F0] dark:border-[#475569] rounded bg-white dark:bg-[#0F172A] text-[#1E293B] dark:text-[#F1F5F9] text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+          className="type-nav px-2 py-1.5 border border-[#E2E8F0] dark:border-[#475569] rounded bg-white dark:bg-[#0F172A] text-[#1E293B] dark:text-[#F1F5F9] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
         >
           {FONT_FAMILIES.map((font) => (
             <option key={font.value} value={font.value}>
@@ -83,14 +83,14 @@ export default function RichTextToolbar({
 
       {/* Font Size Dropdown */}
       <div className="flex items-center gap-2">
-        <label htmlFor="font-size" className="text-sm text-[#64748B] dark:text-[#94A3B8]">
+        <label htmlFor="font-size" className="type-label text-[#64748B] dark:text-[#94A3B8]">
           Size:
         </label>
         <select
           id="font-size"
           value={fontSize}
           onChange={(e) => onFontSizeChange(Number(e.target.value))}
-          className="px-2 py-1.5 border border-[#E2E8F0] dark:border-[#475569] rounded bg-white dark:bg-[#0F172A] text-[#1E293B] dark:text-[#F1F5F9] text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+          className="type-nav px-2 py-1.5 border border-[#E2E8F0] dark:border-[#475569] rounded bg-white dark:bg-[#0F172A] text-[#1E293B] dark:text-[#F1F5F9] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
         >
           {FONT_SIZES.map((size) => (
             <option key={size} value={size}>
