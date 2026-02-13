@@ -92,7 +92,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { name, folderId, viewportX, viewportY, zoom } = body;
+    const { name, folderId, viewportX, viewportY, zoom, order } = body;
 
     // Security: Validate folderId UUID if provided
     if (folderId !== undefined && folderId !== null && !isValidUUID(folderId)) {
@@ -167,7 +167,7 @@ export async function PUT(
     }
 
     // Update canvas
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     if (name !== undefined) {
       updateData.name = name.trim();
     }
@@ -182,6 +182,9 @@ export async function PUT(
     }
     if (zoom !== undefined) {
       updateData.zoom = zoom;
+    }
+    if (order !== undefined) {
+      updateData.order = order;
     }
 
     const canvas = await prisma.canvas.update({

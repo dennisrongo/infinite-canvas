@@ -25,11 +25,12 @@ export async function GET() {
     const sortOrder = userSettings?.canvasSortOrder || 'updated';
 
     // Determine sort order for canvases
-    let orderBy: { [key: string]: 'asc' | 'desc' } = { updatedAt: 'desc' };
+    // Primary sort by user preference, secondary sort by order field
+    let orderBy: { [key: string]: 'asc' | 'desc' }[] = [{ order: 'asc' }, { updatedAt: 'desc' }];
     if (sortOrder === 'alphabetical') {
-      orderBy = { name: 'asc' };
+      orderBy = [{ order: 'asc' }, { name: 'asc' }];
     } else if (sortOrder === 'created') {
-      orderBy = { createdAt: 'desc' };
+      orderBy = [{ order: 'asc' }, { createdAt: 'desc' }];
     }
 
     const canvases = await prisma.canvas.findMany({

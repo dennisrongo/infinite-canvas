@@ -1,10 +1,30 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useCurrentUser } from '@/hooks/api/useAuth';
+import { useReorderCanvases } from '@/hooks/api/useCanvases';
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  DragStartEvent,
+  DragEndEvent,
+  DragOverEvent,
+  UniqueIdentifier,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   ChevronDown,
   ChevronRight,
@@ -22,12 +42,14 @@ import {
   LayoutGrid,
   PanelLeftClose,
   X,
+  GripVertical,
 } from 'lucide-react';
 
 interface Canvas {
   id: string;
   name: string;
   updatedAt?: string;
+  order?: number;
 }
 
 interface FolderType {
@@ -60,6 +82,279 @@ interface AppSidebarProps {
   readonly onCollapseToggle?: () => void;
 }
 
+// Draggable canvas item component
+interface DraggableCanvasItemProps {
+  canvas: Canvas;
+  currentCanvasId?: string;
+  folderId?: string;
+  onSidebarClose: () => void;
+  onRenameCanvas?: (canvas: Canvas, folderId?: string) => void;
+  onMoveCanvas?: (canvas: Canvas, folderId?: string) => void;
+  onDeleteCanvas?: (canvas: Canvas, folderId?: string) => void;
+}
+
+function DraggableCanvasItem({
+  canvas,
+  currentCanvasId,
+  folderId,
+  onSidebarClose,
+  onRenameCanvas,
+  onMoveCanvas,
+  onDeleteCanvas,
+}: DraggableCanvasItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: canvas.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition: isDragging ? 'none' : transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`flex items-center justify-between px-2 py-1.5 rounded-lg transition-colors group/canvas cursor-grab active:cursor-grabbing ${
+        canvas.id === currentCanvasId
+          ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300'
+          : 'hover:bg-gray-50 dark:hover:bg-gray-800/40'
+      } ${isDragging ? 'shadow-lg ring-2 ring-blue-400/50 bg-white dark:bg-gray-900 z-50' : ''}`}
+    >
+      {/* Drag handle indicator */}
+      <GripVertical className="w-3 h-3 mr-1 text-gray-300 dark:text-gray-600 group-hover/canvas:text-gray-400 dark:group-hover/canvas:text-gray-500 flex-shrink-0" />
+
+      <Link
+        href={`/canvas/${canvas.id}`}
+        onClick={onSidebarClose}
+        className={`text-sm truncate flex-1 ${
+          canvas.id === currentCanvasId
+            ? 'font-medium text-blue-700 dark:text-blue-300'
+            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+        }`}
+      >
+        {canvas.name}
+      </Link>
+
+      {/* Canvas actions */}
+      <div
+        className="flex gap-0.5 opacity-0 group-hover/canvas:opacity-100 transition-opacity flex-shrink-0"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {onRenameCanvas && (
+          <button
+            onClick={() => onRenameCanvas(canvas, folderId)}
+            className="p-1 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-500/10 rounded transition-all"
+            title="Rename"
+          >
+            <Pencil className="w-2.5 h-2.5" />
+          </button>
+        )}
+        {onMoveCanvas && (
+          <button
+            onClick={() => onMoveCanvas(canvas, folderId)}
+            className="p-1 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-500/10 rounded transition-all"
+            title="Move"
+          >
+            <ArrowRightLeft className="w-2.5 h-2.5" />
+          </button>
+        )}
+        {onDeleteCanvas && (
+          <button
+            onClick={() => onDeleteCanvas(canvas, folderId)}
+            className="p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-500/10 rounded transition-all"
+            title="Delete"
+          >
+            <Trash2 className="w-2.5 h-2.5" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Droppable folder wrapper
+interface DroppableFolderProps {
+  folder: FolderType;
+  isExpanded: boolean;
+  onToggle: () => void;
+  currentCanvasId?: string;
+  onSidebarClose: () => void;
+  onCreateCanvas?: (folderId: string) => void;
+  onRenameFolder?: (folder: FolderType) => void;
+  onDeleteFolder?: (folder: FolderType) => void;
+  onRenameCanvas?: (canvas: Canvas, folderId?: string) => void;
+  onMoveCanvas?: (canvas: Canvas, folderId?: string) => void;
+  onDeleteCanvas?: (canvas: Canvas, folderId?: string) => void;
+  isCreatingCanvas?: boolean;
+  isOverFolder: boolean;
+}
+
+function DroppableFolder({
+  folder,
+  isExpanded,
+  onToggle,
+  currentCanvasId,
+  onSidebarClose,
+  onCreateCanvas,
+  onRenameFolder,
+  onDeleteFolder,
+  onRenameCanvas,
+  onMoveCanvas,
+  onDeleteCanvas,
+  isCreatingCanvas,
+  isOverFolder,
+}: DroppableFolderProps) {
+  const { setNodeRef } = useSortable({ id: `folder-${folder.id}` });
+
+  return (
+    <div ref={setNodeRef}>
+      <div
+        className={`flex items-center justify-between px-2 py-1.5 rounded-lg cursor-pointer transition-colors group ${
+          isOverFolder
+            ? 'bg-blue-100 dark:bg-blue-500/20 ring-2 ring-blue-400'
+            : 'hover:bg-gray-100 dark:hover:bg-gray-800/60'
+        }`}
+        onClick={onToggle}
+      >
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {isExpanded ? (
+            <ChevronDown className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+          ) : (
+            <ChevronRight className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+          )}
+          <Folder className={`w-3.5 h-3.5 flex-shrink-0 ${isOverFolder ? 'text-blue-600 dark:text-blue-400' : 'text-blue-500 dark:text-blue-400'}`} />
+          <span className={`text-sm font-medium truncate ${isOverFolder ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-200'}`}>
+            {folder.name}
+          </span>
+          <span className="text-[10px] text-gray-400 dark:text-gray-500 flex-shrink-0 tabular-nums">
+            {folder.canvases.length}
+          </span>
+        </div>
+
+        {/* Folder actions */}
+        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+          {onCreateCanvas && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onCreateCanvas(folder.id); }}
+              disabled={isCreatingCanvas}
+              className="p-1 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-500/10 rounded transition-all"
+              title="Add canvas"
+            >
+              <FilePlus className="w-3 h-3" />
+            </button>
+          )}
+          {onRenameFolder && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onRenameFolder(folder); }}
+              className="p-1 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-500/10 rounded transition-all"
+              title="Rename folder"
+            >
+              <Pencil className="w-3 h-3" />
+            </button>
+          )}
+          {onDeleteFolder && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onDeleteFolder(folder); }}
+              className="p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-500/10 rounded transition-all"
+              title="Delete folder"
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Folder contents */}
+      {isExpanded && (
+        <div className="ml-3 mt-0.5 space-y-0.5 border-l border-gray-100 dark:border-gray-800 pl-3">
+          {folder.canvases.length === 0 ? (
+            <p className={`text-xs py-2 px-2 ${isOverFolder ? 'text-blue-500 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}>
+              {isOverFolder ? 'Drop here to add' : 'Empty folder'}
+            </p>
+          ) : (
+            <SortableContext items={folder.canvases.map(c => c.id)} strategy={verticalListSortingStrategy}>
+              {folder.canvases.map((canvas) => (
+                <DraggableCanvasItem
+                  key={canvas.id}
+                  canvas={canvas}
+                  currentCanvasId={currentCanvasId}
+                  folderId={folder.id}
+                  onSidebarClose={onSidebarClose}
+                  onRenameCanvas={onRenameCanvas}
+                  onMoveCanvas={onMoveCanvas}
+                  onDeleteCanvas={onDeleteCanvas}
+                />
+              ))}
+            </SortableContext>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Droppable root area
+interface DroppableRootAreaProps {
+  rootCanvases: Canvas[];
+  currentCanvasId?: string;
+  onSidebarClose: () => void;
+  onRenameCanvas?: (canvas: Canvas, folderId?: string) => void;
+  onMoveCanvas?: (canvas: Canvas, folderId?: string) => void;
+  onDeleteCanvas?: (canvas: Canvas, folderId?: string) => void;
+  hasFolders: boolean;
+  isOverRoot: boolean;
+}
+
+function DroppableRootArea({
+  rootCanvases,
+  currentCanvasId,
+  onSidebarClose,
+  onRenameCanvas,
+  onMoveCanvas,
+  onDeleteCanvas,
+  hasFolders,
+  isOverRoot,
+}: DroppableRootAreaProps) {
+  const { setNodeRef } = useSortable({ id: 'root-area' });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`rounded-lg transition-colors ${isOverRoot ? 'bg-blue-50 dark:bg-blue-500/10 ring-2 ring-blue-400 ring-inset' : ''}`}
+    >
+      {hasFolders && <div className="my-2 border-t border-gray-100 dark:border-gray-800/60" />}
+      {rootCanvases.length === 0 ? (
+        <p className={`text-xs py-2 px-2 ${isOverRoot ? 'text-blue-500 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}>
+          {isOverRoot ? 'Drop here to move to root' : 'No canvases in root'}
+        </p>
+      ) : (
+        <SortableContext items={rootCanvases.map(c => c.id)} strategy={verticalListSortingStrategy}>
+          {rootCanvases.map((canvas) => (
+            <DraggableCanvasItem
+              key={canvas.id}
+              canvas={canvas}
+              currentCanvasId={currentCanvasId}
+              onSidebarClose={onSidebarClose}
+              onRenameCanvas={onRenameCanvas}
+              onMoveCanvas={onMoveCanvas}
+              onDeleteCanvas={onDeleteCanvas}
+            />
+          ))}
+        </SortableContext>
+      )}
+    </div>
+  );
+}
+
 export default function AppSidebar({
   variant,
   folders,
@@ -88,8 +383,18 @@ export default function AppSidebar({
   const { theme, toggleTheme } = useTheme();
   const { data: userData } = useCurrentUser();
   const user = userData?.user;
+  const reorderMutation = useReorderCanvases();
 
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
+  const [overId, setOverId] = useState<UniqueIdentifier | null>(null);
+  const autoExpandTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Get all canvas IDs for sortable context
+  const allCanvasIds = [
+    ...rootCanvases.map(c => c.id),
+    ...folders.flatMap(f => f.canvases.map(c => c.id)),
+  ];
 
   useEffect(() => {
     const saved = localStorage.getItem('expandedFolders');
@@ -117,6 +422,150 @@ export default function AppSidebar({
     }
     setExpandedFolders(newExpanded);
   };
+
+  // Auto-expand folder when dragging over it
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    const { over } = event;
+    setOverId(over?.id || null);
+
+    if (over && typeof over.id === 'string' && over.id.startsWith('folder-')) {
+      const folderId = over.id.replace('folder-', '');
+      if (!expandedFolders.has(folderId)) {
+        // Clear any existing timeout
+        if (autoExpandTimeoutRef.current) {
+          clearTimeout(autoExpandTimeoutRef.current);
+        }
+        // Auto-expand after 500ms
+        autoExpandTimeoutRef.current = setTimeout(() => {
+          setExpandedFolders(prev => new Set([...prev, folderId]));
+        }, 500);
+      }
+    } else {
+      // Clear timeout if not over a folder
+      if (autoExpandTimeoutRef.current) {
+        clearTimeout(autoExpandTimeoutRef.current);
+        autoExpandTimeoutRef.current = null;
+      }
+    }
+  }, [expandedFolders]);
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    // Clear auto-expand timeout
+    if (autoExpandTimeoutRef.current) {
+      clearTimeout(autoExpandTimeoutRef.current);
+      autoExpandTimeoutRef.current = null;
+    }
+
+    setActiveId(null);
+    setOverId(null);
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const canvasId = active.id as string;
+    const overIdStr = over.id as string;
+
+    // Determine if dropped on a folder, root area, or another canvas
+    let targetFolderId: string | null = null;
+    let targetIndex = 0;
+
+    if (overIdStr === 'root-area') {
+      // Dropped on root area
+      targetFolderId = null;
+      targetIndex = rootCanvases.length;
+    } else if (overIdStr.startsWith('folder-')) {
+      // Dropped on a folder
+      targetFolderId = overIdStr.replace('folder-', '');
+      const targetFolder = folders.find(f => f.id === targetFolderId);
+      targetIndex = targetFolder ? targetFolder.canvases.length : 0;
+    } else {
+      // Dropped on another canvas - determine position and folder
+      const sourceFolder = folders.find(f => f.canvases.some(c => c.id === canvasId));
+      const sourceIndex = sourceFolder
+        ? sourceFolder.canvases.findIndex(c => c.id === canvasId)
+        : rootCanvases.findIndex(c => c.id === canvasId);
+
+      // Find target canvas and its folder
+      let targetCanvas: Canvas | undefined;
+      let targetFolder: FolderType | undefined;
+
+      for (const folder of folders) {
+        targetCanvas = folder.canvases.find(c => c.id === overIdStr);
+        if (targetCanvas) {
+          targetFolder = folder;
+          break;
+        }
+      }
+
+      if (!targetCanvas) {
+        targetCanvas = rootCanvases.find(c => c.id === overIdStr);
+        targetFolderId = null;
+      } else if (targetFolder) {
+        targetFolderId = targetFolder.id;
+      }
+
+      if (targetCanvas) {
+        if (targetFolder) {
+          targetIndex = targetFolder.canvases.findIndex(c => c.id === overIdStr);
+        } else {
+          targetIndex = rootCanvases.findIndex(c => c.id === overIdStr);
+        }
+      }
+    }
+
+    // Build the reorder updates
+    // We need to update all canvases in the target location
+    const updates: Array<{ canvasId: string; folderId: string | null; order: number }> = [];
+
+    if (targetFolderId === null) {
+      // Moving to root
+      const reorderedCanvases = rootCanvases.filter(c => c.id !== canvasId);
+      reorderedCanvases.splice(targetIndex, 0, { id: canvasId, name: '' } as Canvas);
+      reorderedCanvases.forEach((c, idx) => {
+        updates.push({ canvasId: c.id, folderId: null, order: idx });
+      });
+    } else {
+      // Moving to a folder
+      const targetFolder = folders.find(f => f.id === targetFolderId);
+      if (targetFolder) {
+        const reorderedCanvases = targetFolder.canvases.filter(c => c.id !== canvasId);
+        reorderedCanvases.splice(targetIndex, 0, { id: canvasId, name: '' } as Canvas);
+        reorderedCanvases.forEach((c, idx) => {
+          updates.push({ canvasId: c.id, folderId: targetFolderId, order: idx });
+        });
+      }
+    }
+
+    if (updates.length > 0) {
+      reorderMutation.mutate(updates);
+    }
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 2,
+      },
+    }),
+    useSensor(KeyboardSensor)
+  );
+
+  // Find the active canvas for drag overlay
+  const activeCanvas = activeId
+    ? [...rootCanvases, ...folders.flatMap(f => f.canvases)].find(c => c.id === activeId)
+    : null;
+
+  // Determine what we're currently over
+  const isOverFolder = overId && typeof overId === 'string' && overId.startsWith('folder-');
+  const isOverRoot = overId === 'root-area';
+  const overFolderId = isOverFolder ? (overId as string).replace('folder-', '') : null;
 
   const sidebarWidth = sidebarCollapsed ? 'w-0' : 'w-72';
 
@@ -220,14 +669,14 @@ export default function AppSidebar({
             {/* Sort Order */}
             {onSortChange && (
               <div className="flex items-center gap-2 mt-3">
-                <label className="text-xs font-medium text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                <label className="text-sm font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
                   Sort:
                 </label>
                 <select
                   value={sortOrder || 'updated'}
                   onChange={(e) => onSortChange(e.target.value as 'updated' | 'alphabetical' | 'created')}
                   disabled={isUpdatingSortOrder}
-                  className="flex-1 px-2 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-[#0c1222] text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+                  className="flex-1 px-2.5 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-[#0c1222] text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
                 >
                   <option value="updated">Recently Updated</option>
                   <option value="created">Recently Created</option>
@@ -237,7 +686,7 @@ export default function AppSidebar({
             )}
           </div>
 
-          {/* Canvas Navigation */}
+          {/* Canvas Navigation with DnD */}
           <div className="flex-1 overflow-y-auto px-3 py-3">
             <div className="mb-2 px-2">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
@@ -252,189 +701,63 @@ export default function AppSidebar({
                 </p>
               </div>
             ) : (
-              <div className="space-y-1">
-                {/* Folders */}
-                {folders.map((folder) => (
-                  <div key={folder.id}>
-                    <div
-                      className="flex items-center justify-between px-2 py-1.5 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800/60 transition-colors group"
-                      onClick={() => toggleFolder(folder.id)}
-                    >
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        {expandedFolders.has(folder.id) ? (
-                          <ChevronDown className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
-                        ) : (
-                          <ChevronRight className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
-                        )}
-                        <Folder className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 flex-shrink-0" />
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">
-                          {folder.name}
-                        </span>
-                        <span className="text-[10px] text-gray-400 dark:text-gray-500 flex-shrink-0 tabular-nums">
-                          {folder.canvases.length}
-                        </span>
-                      </div>
-
-                      {/* Folder actions */}
-                      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                        {onCreateCanvas && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); onCreateCanvas(folder.id); }}
-                            disabled={isCreatingCanvas}
-                            className="p-1 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-500/10 rounded transition-all"
-                            title="Add canvas"
-                          >
-                            <FilePlus className="w-3 h-3" />
-                          </button>
-                        )}
-                        {onRenameFolder && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); onRenameFolder(folder); }}
-                            className="p-1 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-500/10 rounded transition-all"
-                            title="Rename folder"
-                          >
-                            <Pencil className="w-3 h-3" />
-                          </button>
-                        )}
-                        {onDeleteFolder && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); onDeleteFolder(folder); }}
-                            className="p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-500/10 rounded transition-all"
-                            title="Delete folder"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Folder contents */}
-                    {expandedFolders.has(folder.id) && (
-                      <div className="ml-3 mt-0.5 space-y-0.5 border-l border-gray-100 dark:border-gray-800 pl-3">
-                        {folder.canvases.length === 0 ? (
-                          <p className="text-xs text-gray-400 dark:text-gray-500 py-2 px-2">
-                            Empty folder
-                          </p>
-                        ) : (
-                          folder.canvases.map((canvas) => (
-                            <div
-                              key={canvas.id}
-                              className={`flex items-center justify-between px-2 py-1.5 rounded-lg transition-colors group/canvas ${
-                                canvas.id === currentCanvasId
-                                  ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300'
-                                  : 'hover:bg-gray-50 dark:hover:bg-gray-800/40'
-                              }`}
-                            >
-                              <Link
-                                href={`/canvas/${canvas.id}`}
-                                onClick={onSidebarClose}
-                                className={`text-sm truncate flex-1 ${
-                                  canvas.id === currentCanvasId
-                                    ? 'font-medium text-blue-700 dark:text-blue-300'
-                                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                                }`}
-                              >
-                                {canvas.name}
-                              </Link>
-                              {/* Canvas actions */}
-                              <div className="flex gap-0.5 opacity-0 group-hover/canvas:opacity-100 transition-opacity flex-shrink-0">
-                                {onRenameCanvas && (
-                                  <button
-                                    onClick={() => onRenameCanvas(canvas, folder.id)}
-                                    className="p-1 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-500/10 rounded transition-all"
-                                    title="Rename"
-                                  >
-                                    <Pencil className="w-2.5 h-2.5" />
-                                  </button>
-                                )}
-                                {onMoveCanvas && (
-                                  <button
-                                    onClick={() => onMoveCanvas(canvas, folder.id)}
-                                    className="p-1 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-500/10 rounded transition-all"
-                                    title="Move"
-                                  >
-                                    <ArrowRightLeft className="w-2.5 h-2.5" />
-                                  </button>
-                                )}
-                                {onDeleteCanvas && (
-                                  <button
-                                    onClick={() => onDeleteCanvas(canvas, folder.id)}
-                                    className="p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-500/10 rounded transition-all"
-                                    title="Delete"
-                                  >
-                                    <Trash2 className="w-2.5 h-2.5" />
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-                {/* Root canvases */}
-                {rootCanvases.length > 0 && (
-                  <div>
-                    {folders.length > 0 && (
-                      <div className="my-2 border-t border-gray-100 dark:border-gray-800/60" />
-                    )}
-                    {rootCanvases.map((canvas) => (
-                      <div
-                        key={canvas.id}
-                        className={`flex items-center justify-between px-2 py-1.5 rounded-lg transition-colors group/canvas ${
-                          canvas.id === currentCanvasId
-                            ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300'
-                            : 'hover:bg-gray-50 dark:hover:bg-gray-800/40'
-                        }`}
-                      >
-                        <Link
-                          href={`/canvas/${canvas.id}`}
-                          onClick={onSidebarClose}
-                          className={`text-sm truncate flex-1 ${
-                            canvas.id === currentCanvasId
-                              ? 'font-medium text-blue-700 dark:text-blue-300'
-                              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                          }`}
-                        >
-                          {canvas.name}
-                        </Link>
-                        {/* Canvas actions */}
-                        <div className="flex gap-0.5 opacity-0 group-hover/canvas:opacity-100 transition-opacity flex-shrink-0">
-                          {onRenameCanvas && (
-                            <button
-                              onClick={() => onRenameCanvas(canvas)}
-                              className="p-1 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-500/10 rounded transition-all"
-                              title="Rename"
-                            >
-                              <Pencil className="w-2.5 h-2.5" />
-                            </button>
-                          )}
-                          {onMoveCanvas && (
-                            <button
-                              onClick={() => onMoveCanvas(canvas, undefined)}
-                              className="p-1 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-500/10 rounded transition-all"
-                              title="Move"
-                            >
-                              <ArrowRightLeft className="w-2.5 h-2.5" />
-                            </button>
-                          )}
-                          {onDeleteCanvas && (
-                            <button
-                              onClick={() => onDeleteCanvas(canvas)}
-                              className="p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-500/10 rounded transition-all"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-2.5 h-2.5" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDragEnd={handleDragEnd}
+              >
+                <div className="space-y-1">
+                  {/* Folders */}
+                  <SortableContext items={[...folders.map(f => `folder-${f.id}`), ...allCanvasIds]} strategy={verticalListSortingStrategy}>
+                    {folders.map((folder) => (
+                      <DroppableFolder
+                        key={folder.id}
+                        folder={folder}
+                        isExpanded={expandedFolders.has(folder.id)}
+                        onToggle={() => toggleFolder(folder.id)}
+                        currentCanvasId={currentCanvasId}
+                        onSidebarClose={onSidebarClose}
+                        onCreateCanvas={onCreateCanvas}
+                        onRenameFolder={onRenameFolder}
+                        onDeleteFolder={onDeleteFolder}
+                        onRenameCanvas={onRenameCanvas}
+                        onMoveCanvas={onMoveCanvas}
+                        onDeleteCanvas={onDeleteCanvas}
+                        isCreatingCanvas={isCreatingCanvas}
+                        isOverFolder={overFolderId === folder.id}
+                      />
                     ))}
-                  </div>
-                )}
-              </div>
+
+                    {/* Root canvases */}
+                    {rootCanvases.length > 0 && (
+                      <DroppableRootArea
+                        rootCanvases={rootCanvases}
+                        currentCanvasId={currentCanvasId}
+                        onSidebarClose={onSidebarClose}
+                        onRenameCanvas={onRenameCanvas}
+                        onMoveCanvas={onMoveCanvas}
+                        onDeleteCanvas={onDeleteCanvas}
+                        hasFolders={folders.length > 0}
+                        isOverRoot={isOverRoot}
+                      />
+                    )}
+                  </SortableContext>
+                </div>
+
+                {/* Drag overlay - shows the item being dragged */}
+                <DragOverlay>
+                  {activeCanvas ? (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-900 rounded-lg shadow-lg ring-2 ring-blue-400">
+                      <GripVertical className="w-3 h-3 text-gray-400" />
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                        {activeCanvas.name}
+                      </span>
+                    </div>
+                  ) : null}
+                </DragOverlay>
+              </DndContext>
             )}
           </div>
 
@@ -461,23 +784,23 @@ export default function AppSidebar({
             <div className="flex items-center gap-1">
               <button
                 onClick={toggleTheme}
-                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all"
+                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all"
                 title={theme === 'light' ? 'Dark mode' : 'Light mode'}
               >
                 {theme === 'light' ? (
-                  <Moon className="w-3.5 h-3.5" />
+                  <Moon className="w-4 h-4" />
                 ) : (
-                  <Sun className="w-3.5 h-3.5" />
+                  <Sun className="w-4 h-4" />
                 )}
                 <span className="hidden sm:inline">{theme === 'light' ? 'Dark' : 'Light'}</span>
               </button>
 
               <Link
                 href="/settings"
-                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all"
+                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all"
                 title="Settings"
               >
-                <Settings className="w-3.5 h-3.5" />
+                <Settings className="w-4 h-4" />
                 <span className="hidden sm:inline">Settings</span>
               </Link>
 
@@ -486,10 +809,10 @@ export default function AppSidebar({
                   await fetch('/api/auth/logout', { method: 'POST' });
                   router.push('/auth/login');
                 }}
-                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium text-red-500/70 dark:text-red-400/70 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-all"
+                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2 text-sm font-medium text-red-500/70 dark:text-red-400/70 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-all"
                 title="Log out"
               >
-                <LogOut className="w-3.5 h-3.5" />
+                <LogOut className="w-4 h-4" />
                 <span className="hidden sm:inline">Logout</span>
               </button>
             </div>

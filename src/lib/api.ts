@@ -78,6 +78,9 @@ export const canvasApi = {
 
   import: (body: { importData: any; folderId?: string }) =>
     jsonFetch('/api/canvases/import', { method: 'POST', body: JSON.stringify(body) }),
+
+  reorder: (body: { updates: Array<{ canvasId: string; folderId: string | null; order: number }> }) =>
+    jsonFetch('/api/canvases/reorder', { method: 'POST', body: JSON.stringify(body) }),
 };
 
 // ─── Folders ────────────────────────────────────────────────

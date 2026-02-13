@@ -18,18 +18,19 @@ export async function GET() {
     const sortOrder = userSettings?.canvasSortOrder || 'updated';
 
     // Determine sort order for canvases
-    let canvasOrderBy: { [key: string]: 'asc' | 'desc' } = { updatedAt: 'desc' };
+    // Primary sort by user preference, secondary sort by order field
+    let canvasOrderBy: { [key: string]: 'asc' | 'desc' }[] = [{ order: 'asc' }, { updatedAt: 'desc' }];
     if (sortOrder === 'alphabetical') {
-      canvasOrderBy = { name: 'asc' };
+      canvasOrderBy = [{ order: 'asc' }, { name: 'asc' }];
     } else if (sortOrder === 'created') {
-      canvasOrderBy = { createdAt: 'desc' };
+      canvasOrderBy = [{ order: 'asc' }, { createdAt: 'desc' }];
     }
 
     const folders = await prisma.folder.findMany({
       where: { userId: session.userId },
       include: {
         canvases: {
-          select: { id: true, name: true, updatedAt: true, createdAt: true },
+          select: { id: true, name: true, updatedAt: true, createdAt: true, order: true },
           orderBy: canvasOrderBy,
         },
       },

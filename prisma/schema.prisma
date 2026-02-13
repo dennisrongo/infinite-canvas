@@ -57,6 +57,7 @@ model Canvas {
   viewportX   Float?           @default(0) @map("viewport_x")
   viewportY   Float?           @default(0) @map("viewport_y")
   zoom        Float?           @default(1)
+  order       Int              @default(0)
   createdAt   DateTime         @default(now()) @map("created_at")
   updatedAt   DateTime         @updatedAt @map("updated_at")
   folder      Folder?          @relation(fields: [folderId], references: [id])
