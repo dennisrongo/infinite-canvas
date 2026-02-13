@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRegister } from '@/hooks/api/useAuth';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import AuthLayout from '@/components/auth/AuthLayout';
+import { Mail, Lock, ShieldCheck } from 'lucide-react';
 
 // Client-side password validation matching the server-side validation
 function validatePasswordClient(password: string): string[] {
@@ -33,6 +35,18 @@ function validatePasswordClient(password: string): string[] {
   return errors;
 }
 
+// Password strength as a score out of 5
+function getPasswordStrengthScore(password: string): number {
+  if (!password) return 0;
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[a-z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) score++;
+  return score;
+}
+
 interface ValidationErrors {
   email?: string;
   password?: string;
@@ -59,9 +73,21 @@ export default function RegisterPage() {
   }, [formData.password]);
 
   const hasPasswordErrors = passwordErrors.length > 0;
-  const passwordStrength = formData.password ? (
-    passwordErrors.length === 0 ? 'valid' : 'invalid'
-  ) : '';
+
+  const strengthScore = useMemo(() => getPasswordStrengthScore(formData.password), [formData.password]);
+
+  const strengthLabel = useMemo(() => {
+    if (!formData.password) return '';
+    if (strengthScore <= 2) return 'Weak';
+    if (strengthScore <= 4) return 'Medium';
+    return 'Strong';
+  }, [formData.password, strengthScore]);
+
+  const strengthColor = useMemo(() => {
+    if (strengthScore <= 2) return 'bg-red-500';
+    if (strengthScore <= 4) return 'bg-yellow-500';
+    return 'bg-green-500';
+  }, [strengthScore]);
 
   const validateField = (name: string, value: string): string | undefined => {
     if (!value || value.trim() === '') {
@@ -130,181 +156,216 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-light-canvas dark:bg-dark-canvas flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
-        <div className="bg-white dark:bg-dark-bg rounded-2xl shadow-sm border border-light-note-border/60 dark:border-dark-note-border/60 p-8">
-          <h1 className="text-3xl font-bold text-light-text dark:text-dark-text mb-2 text-center">
-            Create Account
-          </h1>
-          <p className="text-light-text/60 dark:text-dark-text/60 text-center mb-8">
-            Join Infinite Canvas today
-          </p>
+    <AuthLayout
+      title="Create account"
+      subtitle="Join our community of spatial thinkers today."
+    >
+      {errors.length > 0 && (
+        <div role="alert" aria-live="assertive" className="mb-6 p-3.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg flex items-start gap-3">
+          <div className="w-5 h-5 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <span className="text-red-600 dark:text-red-400 text-xs font-bold">!</span>
+          </div>
+          <div>
+            {errors.map((error, index) => (
+              <p key={index} className="text-red-600 dark:text-red-400 text-sm">
+                {error}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
 
-          {errors.length > 0 && (
-            <div role="alert" aria-live="assertive" className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-              {errors.map((error, index) => (
-                <p key={index} className="text-red-600 dark:text-red-400 text-sm">
-                  {error}
-                </p>
-              ))}
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            Email Address
+          </label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+              <Mail className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+            </div>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => {
+                setFormData({ ...formData, email: e.target.value });
+                // Clear error when user starts typing
+                if (fieldErrors.email) {
+                  setFieldErrors(prev => ({ ...prev, email: undefined }));
+                }
+              }}
+              onBlur={() => handleFieldBlur('email')}
+              className={`w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-gray-900/50 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-colors ${
+                touched.has('email') && fieldErrors.email
+                  ? 'border-red-500 focus:ring-red-500/20'
+                  : 'border-gray-200 dark:border-gray-700 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400'
+              }`}
+              placeholder="you@example.com"
+            />
+          </div>
+          {touched.has('email') && fieldErrors.email && (
+            <p role="alert" className="mt-1.5 text-sm text-red-600 dark:text-red-400">{fieldErrors.email}</p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            Password
+          </label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+              <Lock className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+            </div>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              value={formData.password}
+              onChange={(e) => {
+                setFormData({ ...formData, password: e.target.value });
+                // Clear error when user starts typing
+                if (fieldErrors.password) {
+                  setFieldErrors(prev => ({ ...prev, password: undefined }));
+                }
+              }}
+              onBlur={() => handleFieldBlur('password')}
+              className={`w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-gray-900/50 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-colors ${
+                touched.has('password') && fieldErrors.password
+                  ? 'border-red-500 focus:ring-red-500/20'
+                  : 'border-gray-200 dark:border-gray-700 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400'
+              }`}
+              placeholder="Min 8 chars, uppercase, lowercase, number, special"
+            />
+          </div>
+          {touched.has('password') && fieldErrors.password && (
+            <p role="alert" className="mt-1.5 text-sm text-red-600 dark:text-red-400">{fieldErrors.password}</p>
+          )}
+
+          {/* Password strength bar */}
+          {formData.password && (
+            <div className="mt-2.5">
+              <div className="flex gap-1 mb-1">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={`h-1 flex-1 rounded-full transition-colors ${
+                      i < strengthScore ? strengthColor : 'bg-gray-200 dark:bg-gray-700'
+                    }`}
+                  />
+                ))}
+              </div>
+              <div className="flex items-center justify-between">
+                <span className={`text-xs font-medium ${
+                  strengthScore <= 2 ? 'text-red-500' : strengthScore <= 4 ? 'text-yellow-500' : 'text-green-500'
+                }`}>
+                  {strengthLabel}
+                </span>
+                {!hasPasswordErrors && (
+                  <span className="text-xs text-green-500 flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3" /> All requirements met
+                  </span>
+                )}
+              </div>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-light-text dark:text-dark-text mb-1">
-                Email
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => {
-                  setFormData({ ...formData, email: e.target.value });
-                  // Clear error when user starts typing
-                  if (fieldErrors.email) {
-                    setFieldErrors(prev => ({ ...prev, email: undefined }));
-                  }
-                }}
-                onBlur={() => handleFieldBlur('email')}
-                className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-dark-canvas text-light-text dark:text-dark-text ${
-                  touched.has('email') && fieldErrors.email
-                    ? 'border-red-500 focus:ring-red-500'
-                    : 'border-light-note-border dark:border-dark-note-border focus:ring-light-primary dark:focus:ring-dark-primary'
-                }`}
-                placeholder="you@example.com"
-              />
-              {touched.has('email') && fieldErrors.email && (
-                <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.email}</p>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-light-text dark:text-dark-text mb-1">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={(e) => {
-                  setFormData({ ...formData, password: e.target.value });
-                  // Clear error when user starts typing
-                  if (fieldErrors.password) {
-                    setFieldErrors(prev => ({ ...prev, password: undefined }));
-                  }
-                }}
-                onBlur={() => handleFieldBlur('password')}
-                className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-dark-canvas text-light-text dark:text-dark-text ${
-                  touched.has('password') && fieldErrors.password
-                    ? 'border-red-500 focus:ring-red-500'
-                    : passwordStrength === 'valid'
-                    ? 'border-green-500 focus:ring-green-500'
-                    : passwordStrength === 'invalid'
-                    ? 'border-red-500 focus:ring-red-500'
-                    : 'border-light-note-border dark:border-dark-note-border focus:ring-light-primary dark:focus:ring-dark-primary'
-                }`}
-                placeholder="Min 8 chars, uppercase, lowercase, number, special"
-              />
-              {touched.has('password') && fieldErrors.password && (
-                <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.password}</p>
-              )}
-              {formData.password && hasPasswordErrors && (
-                <ul role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400 list-disc list-inside">
-                  {passwordErrors.map((error, index) => (
-                    <li key={index}>{error}</li>
-                  ))}
-                </ul>
-              )}
-              {formData.password && !hasPasswordErrors && !fieldErrors.password && (
-                <p className="mt-2 text-sm text-green-600 dark:text-green-400">
-                  ✓ Password meets all requirements
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-light-text dark:text-dark-text mb-1">
-                Confirm Password
-              </label>
-              <input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={(e) => {
-                  setFormData({ ...formData, confirmPassword: e.target.value });
-                  // Clear error when user starts typing
-                  if (fieldErrors.confirmPassword) {
-                    setFieldErrors(prev => ({ ...prev, confirmPassword: undefined }));
-                  }
-                }}
-                onBlur={() => handleFieldBlur('confirmPassword')}
-                className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-dark-canvas text-light-text dark:text-dark-text ${
-                  touched.has('confirmPassword') && fieldErrors.confirmPassword
-                    ? 'border-red-500 focus:ring-red-500'
-                    : formData.confirmPassword && formData.password === formData.confirmPassword
-                    ? 'border-green-500 focus:ring-green-500'
-                    : formData.confirmPassword && formData.password !== formData.confirmPassword
-                    ? 'border-red-500 focus:ring-red-500'
-                    : 'border-light-note-border dark:border-dark-note-border focus:ring-light-primary dark:focus:ring-dark-primary'
-                }`}
-                placeholder="Repeat your password"
-              />
-              {touched.has('confirmPassword') && fieldErrors.confirmPassword && (
-                <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.confirmPassword}</p>
-              )}
-              {formData.confirmPassword && !fieldErrors.confirmPassword && formData.password === formData.confirmPassword && (
-                <p className="mt-1 text-sm text-green-600 dark:text-green-400">
-                  ✓ Passwords match
-                </p>
-              )}
-              {formData.confirmPassword && !fieldErrors.confirmPassword && formData.password !== formData.confirmPassword && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                  Passwords do not match
-                </p>
-              )}
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setFormData({ email: '', password: '', confirmPassword: '' });
-                  setFieldErrors({});
-                  setTouched(new Set());
-                  setErrors([]);
-                }}
-                disabled={loading}
-                className="flex-1 py-3 px-4 border border-light-note-border dark:border-dark-note-border text-light-text dark:text-dark-text rounded-xl hover:bg-light-canvas dark:hover:bg-dark-canvas transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-              >
-                Reset
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex-1 py-3 px-4 bg-light-primary dark:bg-dark-primary text-white rounded-xl hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover transition disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <LoadingSpinner size="sm" />
-                    Creating account...
-                  </>
-                ) : 'Create Account'}
-              </button>
-            </div>
-          </form>
-
-          <p className="mt-6 text-center text-sm text-light-text/60 dark:text-dark-text/60">
-            Already have an account?{' '}
-            <Link href="/auth/login" className="text-light-primary dark:text-dark-primary hover:underline">
-              Login
-            </Link>
-          </p>
+          {formData.password && hasPasswordErrors && (
+            <ul role="alert" className="mt-2 space-y-1">
+              {passwordErrors.map((error, index) => (
+                <li key={index} className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+                  <span className="w-1 h-1 rounded-full bg-red-400 flex-shrink-0" />
+                  {error}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
-      </div>
-    </div>
+
+        <div>
+          <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            Confirm Password
+          </label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+              <Lock className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+            </div>
+            <input
+              id="confirmPassword"
+              name="confirmPassword"
+              type="password"
+              value={formData.confirmPassword}
+              onChange={(e) => {
+                setFormData({ ...formData, confirmPassword: e.target.value });
+                // Clear error when user starts typing
+                if (fieldErrors.confirmPassword) {
+                  setFieldErrors(prev => ({ ...prev, confirmPassword: undefined }));
+                }
+              }}
+              onBlur={() => handleFieldBlur('confirmPassword')}
+              className={`w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-gray-900/50 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-colors ${
+                touched.has('confirmPassword') && fieldErrors.confirmPassword
+                  ? 'border-red-500 focus:ring-red-500/20'
+                  : formData.confirmPassword && formData.password === formData.confirmPassword
+                  ? 'border-green-500 focus:ring-green-500/20'
+                  : formData.confirmPassword && formData.password !== formData.confirmPassword
+                  ? 'border-red-500 focus:ring-red-500/20'
+                  : 'border-gray-200 dark:border-gray-700 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400'
+              }`}
+              placeholder="Repeat your password"
+            />
+          </div>
+          {touched.has('confirmPassword') && fieldErrors.confirmPassword && (
+            <p role="alert" className="mt-1.5 text-sm text-red-600 dark:text-red-400">{fieldErrors.confirmPassword}</p>
+          )}
+          {formData.confirmPassword && !fieldErrors.confirmPassword && formData.password === formData.confirmPassword && (
+            <p className="mt-1.5 text-xs text-green-500 flex items-center gap-1">
+              <ShieldCheck className="w-3 h-3" /> Passwords match
+            </p>
+          )}
+          {formData.confirmPassword && !fieldErrors.confirmPassword && formData.password !== formData.confirmPassword && (
+            <p className="mt-1.5 text-xs text-red-500">
+              Passwords do not match
+            </p>
+          )}
+        </div>
+
+        <div className="flex gap-3 pt-1">
+          <button
+            type="button"
+            onClick={() => {
+              setFormData({ email: '', password: '', confirmPassword: '' });
+              setFieldErrors({});
+              setTouched(new Set());
+              setErrors([]);
+            }}
+            disabled={loading}
+            className="flex-1 py-2.5 px-4 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm"
+          >
+            Reset
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="flex-[2] py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm flex items-center justify-center gap-2 shadow-sm shadow-blue-500/20 active:scale-[0.98]"
+          >
+            {loading ? (
+              <>
+                <LoadingSpinner size="sm" />
+                Creating account...
+              </>
+            ) : 'Create Account'}
+          </button>
+        </div>
+      </form>
+
+      <p className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
+        Already have an account?{' '}
+        <Link href="/auth/login" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors">
+          Log in
+        </Link>
+      </p>
+    </AuthLayout>
   );
 }

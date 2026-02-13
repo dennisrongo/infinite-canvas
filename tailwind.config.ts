@@ -44,6 +44,8 @@ const config: Config = {
           sidebar: "#1E293B",
           note: "#1E293B",
           'note-border': "#475569",
+          input: "#1E293B",
+          hover: "#334155",
         },
         // Landing page colors (from Stitch design)
         landing: {

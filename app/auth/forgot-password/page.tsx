@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForgotPassword } from '@/hooks/api/useAuth';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import AuthLayout from '@/components/auth/AuthLayout';
+import { Mail, CheckCircle } from 'lucide-react';
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -52,110 +54,113 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-light-canvas dark:bg-dark-canvas flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
-        <div className="bg-white dark:bg-dark-bg rounded-2xl shadow-sm border border-light-note-border/60 dark:border-dark-note-border/60 p-8">
-          <h1 className="text-3xl font-bold text-light-text dark:text-dark-text mb-2 text-center">
-            Forgot Password
-          </h1>
-          <p className="text-light-text/60 dark:text-dark-text/60 text-center mb-8">
-            Enter your email to receive a password reset link
-          </p>
-
-          {error && (
-            <div role="alert" aria-live="assertive" className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-              <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
-            </div>
-          )}
-
-          {success ? (
-            <div className="text-center">
-              <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
-                <p className="text-green-600 dark:text-green-400 text-sm">
-                  If an account exists with that email, a password reset link has been sent.
-                </p>
-              </div>
-              <p className="text-sm text-light-text dark:text-dark-text mb-4">
-                Check your email inbox and spam folder for the reset link.
-              </p>
-              <button
-                onClick={() => router.push('/auth/login')}
-                className="w-full py-3 px-4 bg-light-primary dark:bg-dark-primary text-white rounded-xl hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover transition font-medium"
-              >
-                Back to Login
-              </button>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-light-text dark:text-dark-text mb-1">
-                  Email
-                </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    // Clear error when user starts typing
-                    if (fieldError) {
-                      setFieldError('');
-                    }
-                  }}
-                  onBlur={handleFieldBlur}
-                  className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-dark-canvas text-light-text dark:text-dark-text ${
-                    touched && fieldError
-                      ? 'border-red-500 focus:ring-red-500'
-                      : 'border-light-note-border dark:border-dark-note-border focus:ring-light-primary dark:focus:ring-dark-primary'
-                  }`}
-                  placeholder="you@example.com"
-                />
-                {touched && fieldError && (
-                  <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldError}</p>
-                )}
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmail('');
-                    setFieldError('');
-                    setTouched(false);
-                    setError('');
-                  }}
-                  disabled={loading}
-                  className="flex-1 py-3 px-4 border border-light-note-border dark:border-dark-note-border text-light-text dark:text-dark-text rounded-xl hover:bg-light-canvas dark:hover:bg-dark-canvas transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                >
-                  Reset
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex-1 py-3 px-4 bg-light-primary dark:bg-dark-primary text-white rounded-xl hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover transition disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
-                >
-                  {loading ? (
-                    <>
-                      <LoadingSpinner size="sm" />
-                      Sending...
-                    </>
-                  ) : 'Send Reset Link'}
-                </button>
-              </div>
-            </form>
-          )}
-
-          {!success && (
-            <p className="mt-6 text-center text-sm text-light-text/60 dark:text-dark-text/60">
-              Remember your password?{' '}
-              <Link href="/auth/login" className="text-light-primary dark:text-dark-primary hover:underline">
-                Login
-              </Link>
-            </p>
-          )}
+    <AuthLayout
+      title="Forgot password?"
+      subtitle="No worries, we'll send you a reset link."
+    >
+      {error && (
+        <div role="alert" aria-live="assertive" className="mb-6 p-3.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg flex items-start gap-3">
+          <div className="w-5 h-5 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <span className="text-red-600 dark:text-red-400 text-xs font-bold">!</span>
+          </div>
+          <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
         </div>
-      </div>
-    </div>
+      )}
+
+      {success ? (
+        <div className="text-center">
+          <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
+            <CheckCircle className="w-6 h-6 text-green-500" />
+          </div>
+          <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 rounded-lg">
+            <p className="text-green-600 dark:text-green-400 text-sm">
+              If an account exists with that email, a password reset link has been sent.
+            </p>
+          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+            Check your email inbox and spam folder for the reset link.
+          </p>
+          <button
+            onClick={() => router.push('/auth/login')}
+            className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all font-medium text-sm shadow-sm shadow-blue-500/20 active:scale-[0.98]"
+          >
+            Back to Login
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Email Address
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <Mail className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+              </div>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  // Clear error when user starts typing
+                  if (fieldError) {
+                    setFieldError('');
+                  }
+                }}
+                onBlur={handleFieldBlur}
+                className={`w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-gray-900/50 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-colors ${
+                  touched && fieldError
+                    ? 'border-red-500 focus:ring-red-500/20'
+                    : 'border-gray-200 dark:border-gray-700 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400'
+                }`}
+                placeholder="you@example.com"
+              />
+            </div>
+            {touched && fieldError && (
+              <p role="alert" className="mt-1.5 text-sm text-red-600 dark:text-red-400">{fieldError}</p>
+            )}
+          </div>
+
+          <div className="flex gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                setEmail('');
+                setFieldError('');
+                setTouched(false);
+                setError('');
+              }}
+              disabled={loading}
+              className="flex-1 py-2.5 px-4 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm"
+            >
+              Reset
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-[2] py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm flex items-center justify-center gap-2 shadow-sm shadow-blue-500/20 active:scale-[0.98]"
+            >
+              {loading ? (
+                <>
+                  <LoadingSpinner size="sm" />
+                  Sending...
+                </>
+              ) : 'Send Reset Link'}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {!success && (
+        <p className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
+          Remember your password?{' '}
+          <Link href="/auth/login" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors">
+            Log in
+          </Link>
+        </p>
+      )}
+    </AuthLayout>
   );
 }

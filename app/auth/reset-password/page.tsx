@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useResetPassword } from '@/hooks/api/useAuth';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { AuthFormSkeleton } from '@/components/ui/SkeletonLoader';
+import AuthLayout from '@/components/auth/AuthLayout';
+import { Lock, CheckCircle, AlertTriangle } from 'lucide-react';
 
 interface ValidationErrors {
   password?: string;
@@ -108,150 +110,158 @@ function ResetPasswordForm() {
 
   if (!tokenValid) {
     return (
-      <div className="min-h-screen bg-light-canvas dark:bg-dark-canvas flex items-center justify-center p-4">
-        <div className="max-w-md w-full">
-          <div className="bg-white dark:bg-dark-bg rounded-2xl shadow-sm border border-light-note-border/60 dark:border-dark-note-border/60 p-8 text-center">
-            <h1 className="text-3xl font-bold text-light-text dark:text-dark-text mb-4">
-              Invalid Reset Link
-            </h1>
-            <p className="text-light-text dark:text-dark-text mb-6">
-              {error}
-            </p>
-            <button
-              onClick={() => router.push('/auth/forgot-password')}
-              className="w-full py-3 px-4 bg-light-primary dark:bg-dark-primary text-white rounded-xl hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover transition font-medium"
-            >
-              Request New Reset Link
-            </button>
+      <AuthLayout
+        title="Invalid Reset Link"
+      >
+        <div className="text-center">
+          <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-yellow-50 dark:bg-yellow-900/20 flex items-center justify-center">
+            <AlertTriangle className="w-6 h-6 text-yellow-500" />
           </div>
+          <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">
+            {error}
+          </p>
+          <button
+            onClick={() => router.push('/auth/forgot-password')}
+            className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all font-medium text-sm shadow-sm shadow-blue-500/20 active:scale-[0.98]"
+          >
+            Request New Reset Link
+          </button>
         </div>
-      </div>
+      </AuthLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-light-canvas dark:bg-dark-canvas flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
-        <div className="bg-white dark:bg-dark-bg rounded-2xl shadow-sm border border-light-note-border/60 dark:border-dark-note-border/60 p-8">
-          <h1 className="text-3xl font-bold text-light-text dark:text-dark-text mb-2 text-center">
-            Reset Password
-          </h1>
-          <p className="text-light-text/60 dark:text-dark-text/60 text-center mb-8">
-            Enter your new password
-          </p>
-
-          {error && (
-            <div role="alert" aria-live="assertive" className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-              <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
-            </div>
-          )}
-
-          {success ? (
-            <div className="text-center">
-              <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
-                <p className="text-green-600 dark:text-green-400 text-sm">
-                  Password has been reset successfully!
-                </p>
-              </div>
-              <p className="text-sm text-light-text dark:text-dark-text">
-                Redirecting to login page...
-              </p>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-light-text dark:text-dark-text mb-1">
-                  New Password
-                </label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => {
-                    setFormData({ ...formData, password: e.target.value });
-                    // Clear error when user starts typing
-                    if (fieldErrors.password) {
-                      setFieldErrors(prev => ({ ...prev, password: undefined }));
-                    }
-                  }}
-                  onBlur={() => handleFieldBlur('password')}
-                  className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-dark-canvas text-light-text dark:text-dark-text ${
-                    touched.has('password') && fieldErrors.password
-                      ? 'border-red-500 focus:ring-red-500'
-                      : 'border-light-note-border dark:border-dark-note-border focus:ring-light-primary dark:focus:ring-dark-primary'
-                  }`}
-                  placeholder="Enter new password"
-                />
-                {touched.has('password') && fieldErrors.password && (
-                  <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.password}</p>
-                )}
-                <p className="mt-1 text-xs text-light-text/60 dark:text-dark-text/60">
-                  Must be at least 8 characters with uppercase, lowercase, number, and special character
-                </p>
-              </div>
-
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-light-text dark:text-dark-text mb-1">
-                  Confirm Password
-                </label>
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={(e) => {
-                    setFormData({ ...formData, confirmPassword: e.target.value });
-                    // Clear error when user starts typing
-                    if (fieldErrors.confirmPassword) {
-                      setFieldErrors(prev => ({ ...prev, confirmPassword: undefined }));
-                    }
-                  }}
-                  onBlur={() => handleFieldBlur('confirmPassword')}
-                  className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-dark-canvas text-light-text dark:text-dark-text ${
-                    touched.has('confirmPassword') && fieldErrors.confirmPassword
-                      ? 'border-red-500 focus:ring-red-500'
-                      : 'border-light-note-border dark:border-dark-note-border focus:ring-light-primary dark:focus:ring-dark-primary'
-                  }`}
-                  placeholder="Confirm new password"
-                />
-                {touched.has('confirmPassword') && fieldErrors.confirmPassword && (
-                  <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.confirmPassword}</p>
-                )}
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFormData({ password: '', confirmPassword: '' });
-                    setFieldErrors({});
-                    setTouched(new Set());
-                    setError('');
-                  }}
-                  disabled={loading}
-                  className="flex-1 py-3 px-4 border border-light-note-border dark:border-dark-note-border text-light-text dark:text-dark-text rounded-xl hover:bg-light-canvas dark:hover:bg-dark-canvas transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                >
-                  Reset
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex-1 py-3 px-4 bg-light-primary dark:bg-dark-primary text-white rounded-xl hover:bg-light-primary-hover dark:hover:bg-dark-primary-hover transition disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
-                >
-                  {loading ? (
-                    <>
-                      <LoadingSpinner size="sm" />
-                      Resetting...
-                    </>
-                  ) : 'Reset Password'}
-                </button>
-              </div>
-            </form>
-          )}
+    <AuthLayout
+      title="Reset password"
+      subtitle="Enter your new password below."
+    >
+      {error && (
+        <div role="alert" aria-live="assertive" className="mb-6 p-3.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg flex items-start gap-3">
+          <div className="w-5 h-5 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <span className="text-red-600 dark:text-red-400 text-xs font-bold">!</span>
+          </div>
+          <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
         </div>
-      </div>
-    </div>
+      )}
+
+      {success ? (
+        <div className="text-center">
+          <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
+            <CheckCircle className="w-6 h-6 text-green-500" />
+          </div>
+          <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 rounded-lg">
+            <p className="text-green-600 dark:text-green-400 text-sm">
+              Password has been reset successfully!
+            </p>
+          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Redirecting to login page...
+          </p>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              New Password
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <Lock className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+              </div>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                value={formData.password}
+                onChange={(e) => {
+                  setFormData({ ...formData, password: e.target.value });
+                  // Clear error when user starts typing
+                  if (fieldErrors.password) {
+                    setFieldErrors(prev => ({ ...prev, password: undefined }));
+                  }
+                }}
+                onBlur={() => handleFieldBlur('password')}
+                className={`w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-gray-900/50 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-colors ${
+                  touched.has('password') && fieldErrors.password
+                    ? 'border-red-500 focus:ring-red-500/20'
+                    : 'border-gray-200 dark:border-gray-700 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400'
+                }`}
+                placeholder="Enter new password"
+              />
+            </div>
+            {touched.has('password') && fieldErrors.password && (
+              <p role="alert" className="mt-1.5 text-sm text-red-600 dark:text-red-400">{fieldErrors.password}</p>
+            )}
+            <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
+              Must be at least 8 characters with uppercase, lowercase, number, and special character
+            </p>
+          </div>
+
+          <div>
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Confirm Password
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <Lock className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+              </div>
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                value={formData.confirmPassword}
+                onChange={(e) => {
+                  setFormData({ ...formData, confirmPassword: e.target.value });
+                  // Clear error when user starts typing
+                  if (fieldErrors.confirmPassword) {
+                    setFieldErrors(prev => ({ ...prev, confirmPassword: undefined }));
+                  }
+                }}
+                onBlur={() => handleFieldBlur('confirmPassword')}
+                className={`w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-gray-900/50 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-colors ${
+                  touched.has('confirmPassword') && fieldErrors.confirmPassword
+                    ? 'border-red-500 focus:ring-red-500/20'
+                    : 'border-gray-200 dark:border-gray-700 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400'
+                }`}
+                placeholder="Confirm new password"
+              />
+            </div>
+            {touched.has('confirmPassword') && fieldErrors.confirmPassword && (
+              <p role="alert" className="mt-1.5 text-sm text-red-600 dark:text-red-400">{fieldErrors.confirmPassword}</p>
+            )}
+          </div>
+
+          <div className="flex gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                setFormData({ password: '', confirmPassword: '' });
+                setFieldErrors({});
+                setTouched(new Set());
+                setError('');
+              }}
+              disabled={loading}
+              className="flex-1 py-2.5 px-4 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm"
+            >
+              Reset
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-[2] py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm flex items-center justify-center gap-2 shadow-sm shadow-blue-500/20 active:scale-[0.98]"
+            >
+              {loading ? (
+                <>
+                  <LoadingSpinner size="sm" />
+                  Resetting...
+                </>
+              ) : 'Reset Password'}
+            </button>
+          </div>
+        </form>
+      )}
+    </AuthLayout>
   );
 }
 
