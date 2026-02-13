@@ -256,7 +256,7 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
   const setCanvasHeader = useCallback((title: string | null, onExport: (() => void) | null, onTitleChangeCallback?: ((newTitle: string) => Promise<void>) | null) => {
     setCanvasTitle(title);
     setOnExportClick(() => onExport);
-    setOnTitleChange(onTitleChangeCallback ?? null);
+    setOnTitleChange(() => onTitleChangeCallback ?? null);
   }, []);
 
   const value: SidebarContextType = {
