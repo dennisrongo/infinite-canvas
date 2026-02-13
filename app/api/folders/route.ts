@@ -9,35 +9,18 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user's canvas sort order preference
-    const userSettings = await prisma.userSettings.findUnique({
-      where: { userId: session.userId },
-      select: { canvasSortOrder: true },
-    });
-
-    const sortOrder = userSettings?.canvasSortOrder || 'updated';
-
-    // Determine sort order for canvases
-    // Primary sort by user preference, secondary sort by order field
-    let canvasOrderBy: { [key: string]: 'asc' | 'desc' }[] = [{ order: 'asc' }, { updatedAt: 'desc' }];
-    if (sortOrder === 'alphabetical') {
-      canvasOrderBy = [{ order: 'asc' }, { name: 'asc' }];
-    } else if (sortOrder === 'created') {
-      canvasOrderBy = [{ order: 'asc' }, { createdAt: 'desc' }];
-    }
-
     const folders = await prisma.folder.findMany({
       where: { userId: session.userId },
       include: {
         canvases: {
           select: { id: true, name: true, updatedAt: true, createdAt: true, order: true },
-          orderBy: canvasOrderBy,
+          orderBy: { order: 'asc' },
         },
       },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { order: 'asc' },
     });
 
-    return NextResponse.json({ folders, sortOrder });
+    return NextResponse.json({ folders });
   } catch (error) {
     console.error('Error fetching folders:', error);
     return NextResponse.json({ error: 'Failed to fetch folders' }, { status: 500 });

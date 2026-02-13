@@ -97,6 +97,9 @@ export const folderApi = {
 
   delete: (id: string, moveCanvasesToRoot: boolean = true) =>
     jsonFetch(`/api/folders/${id}?moveCanvasesToRoot=${moveCanvasesToRoot}`, { method: 'DELETE' }),
+
+  reorder: (body: { updates: Array<{ folderId: string; order: number }> }) =>
+    jsonFetch('/api/folders/reorder', { method: 'POST', body: JSON.stringify(body) }),
 };
 
 // ─── Notes ──────────────────────────────────────────────────

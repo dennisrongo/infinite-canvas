@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import AppSidebar from '@/components/layout/AppSidebar';
@@ -10,7 +10,6 @@ import { useToast } from '@/contexts/ToastContext';
 import { SidebarProvider, useSidebar } from '@/contexts/SidebarContext';
 import { useFolders, useCreateFolder, useDeleteFolder, useRenameFolder } from '@/hooks/api/useFolders';
 import { useCanvases, useCreateCanvas, useDeleteCanvas, useRenameCanvas, useMoveCanvas, useImportCanvas } from '@/hooks/api/useCanvases';
-import { useUpdateSettings } from '@/hooks/api/useUser';
 import { useCsrfToken } from '@/hooks/api/useAuth';
 
 // Types
@@ -56,13 +55,6 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
   );
   const rootCanvases: Canvas[] = allCanvases.filter((c: Canvas) => !folderCanvasIds.has(c.id));
 
-  // Sync sort order from folders API response
-  useEffect(() => {
-    if (foldersData?.sortOrder) {
-      sidebar.setSortOrder(foldersData.sortOrder);
-    }
-  }, [foldersData, sidebar]);
-
   // Mutation hooks
   const createFolderMutation = useCreateFolder();
   const deleteFolderMutation = useDeleteFolder();
@@ -72,7 +64,6 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
   const renameCanvasMutation = useRenameCanvas();
   const moveCanvasMutation = useMoveCanvas();
   const importCanvasMutation = useImportCanvas();
-  const updateSettingsMutation = useUpdateSettings();
 
   // Derive loading states from mutations
   const isCreatingFolder = createFolderMutation.isPending;
@@ -82,21 +73,8 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
   const isDeletingCanvas = deleteCanvasMutation.isPending;
   const isRenamingCanvas = renameCanvasMutation.isPending;
   const isMovingCanvas = moveCanvasMutation.isPending;
-  const isUpdatingSortOrder = updateSettingsMutation.isPending;
 
   // ── Action Handlers ──
-
-  const updateSortOrder = async (newSortOrder: 'updated' | 'alphabetical' | 'created') => {
-    if (isUpdatingSortOrder) return;
-    try {
-      await updateSettingsMutation.mutateAsync({ canvasSortOrder: newSortOrder });
-      sidebar.setSortOrder(newSortOrder);
-      showToast(`Sort order changed to ${newSortOrder}`, 'success');
-    } catch (error) {
-      console.error('Error updating sort order:', error);
-      showToast('Failed to update sort order', 'error');
-    }
-  };
 
   const handleImport = async (importData: any, folderId?: string) => {
     try {
@@ -244,9 +222,6 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
         onRenameCanvas={sidebar.openRenameCanvasModal}
         onDeleteCanvas={sidebar.openDeleteCanvasModal}
         onMoveCanvas={sidebar.openMoveCanvasModal}
-        sortOrder={sidebar.sortOrder}
-        onSortChange={updateSortOrder}
-        isUpdatingSortOrder={isUpdatingSortOrder}
         isCreatingFolder={isCreatingFolder}
         isCreatingCanvas={isCreatingCanvas}
       />

@@ -6,6 +6,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useCurrentUser } from '@/hooks/api/useAuth';
 import { useReorderCanvases } from '@/hooks/api/useCanvases';
+import { useReorderFolders } from '@/hooks/api/useFolders';
 import {
   DndContext,
   DragOverlay,
@@ -55,6 +56,7 @@ interface Canvas {
 interface FolderType {
   id: string;
   name: string;
+  order?: number;
   canvases: Canvas[];
 }
 
@@ -73,9 +75,6 @@ interface AppSidebarProps {
   readonly onRenameCanvas?: (canvas: Canvas, folderId?: string) => void;
   readonly onDeleteCanvas?: (canvas: Canvas, folderId?: string) => void;
   readonly onMoveCanvas?: (canvas: Canvas, folderId?: string) => void;
-  readonly sortOrder?: 'updated' | 'alphabetical' | 'created';
-  readonly onSortChange?: (sort: 'updated' | 'alphabetical' | 'created') => void;
-  readonly isUpdatingSortOrder?: boolean;
   readonly isCreatingFolder?: boolean;
   readonly isCreatingCanvas?: boolean;
   readonly sidebarCollapsed?: boolean;
@@ -114,7 +113,7 @@ function DraggableCanvasItem({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition: isDragging ? 'none' : transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0 : 1,
   };
 
   return (
@@ -127,7 +126,7 @@ function DraggableCanvasItem({
         canvas.id === currentCanvasId
           ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300'
           : 'hover:bg-gray-50 dark:hover:bg-gray-800/40'
-      } ${isDragging ? 'shadow-lg ring-2 ring-blue-400/50 bg-white dark:bg-gray-900 z-50' : ''}`}
+      }`}
     >
       {/* Drag handle indicator */}
       <GripVertical className="w-3 h-3 mr-1 text-gray-300 dark:text-gray-600 group-hover/canvas:text-gray-400 dark:group-hover/canvas:text-gray-500 flex-shrink-0" />
@@ -213,10 +212,28 @@ function DroppableFolder({
   isCreatingCanvas,
   isOverFolder,
 }: DroppableFolderProps) {
-  const { setNodeRef } = useSortable({ id: `folder-${folder.id}` });
+  const {
+    setNodeRef,
+    attributes,
+    listeners,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: `folder-${folder.id}` });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition: isDragging ? 'none' : transition,
+    opacity: isDragging ? 0 : 1,
+  };
 
   return (
-    <div ref={setNodeRef}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+    >
       <div
         className={`flex items-center justify-between px-2 py-1.5 rounded-lg cursor-pointer transition-colors group ${
           isOverFolder
@@ -226,6 +243,8 @@ function DroppableFolder({
         onClick={onToggle}
       >
         <div className="flex items-center gap-2 min-w-0 flex-1">
+          {/* Drag handle indicator */}
+          <GripVertical className="w-3 h-3 text-gray-300 dark:text-gray-600 group-hover:text-gray-400 dark:group-hover:text-gray-500 flex-shrink-0" />
           {isExpanded ? (
             <ChevronDown className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
           ) : (
@@ -370,9 +389,6 @@ export default function AppSidebar({
   onRenameCanvas,
   onDeleteCanvas,
   onMoveCanvas,
-  sortOrder,
-  onSortChange,
-  isUpdatingSortOrder,
   isCreatingFolder,
   isCreatingCanvas,
   sidebarCollapsed,
@@ -383,18 +399,14 @@ export default function AppSidebar({
   const { theme, toggleTheme } = useTheme();
   const { data: userData } = useCurrentUser();
   const user = userData?.user;
-  const reorderMutation = useReorderCanvases();
+  const reorderCanvasMutation = useReorderCanvases();
+  const reorderFolderMutation = useReorderFolders();
 
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [overId, setOverId] = useState<UniqueIdentifier | null>(null);
   const autoExpandTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Get all canvas IDs for sortable context
-  const allCanvasIds = [
-    ...rootCanvases.map(c => c.id),
-    ...folders.flatMap(f => f.canvases.map(c => c.id)),
-  ];
+  const previousExpandedFoldersRef = useRef<Set<string> | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem('expandedFolders');
@@ -423,10 +435,16 @@ export default function AppSidebar({
     setExpandedFolders(newExpanded);
   };
 
-  // Auto-expand folder when dragging over it
+  // Auto-expand folder when dragging over it (only for canvas drags)
   const handleDragOver = useCallback((event: DragOverEvent) => {
-    const { over } = event;
+    const { active, over } = event;
     setOverId(over?.id || null);
+
+    // Don't auto-expand folders when dragging a folder
+    const isActiveFolder = active.id.toString().startsWith('folder-');
+    if (isActiveFolder) {
+      return;
+    }
 
     if (over && typeof over.id === 'string' && over.id.startsWith('folder-')) {
       const folderId = over.id.replace('folder-', '');
@@ -451,6 +469,15 @@ export default function AppSidebar({
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id);
+
+    // If dragging a folder, collapse all folders for better UX
+    const isActiveFolder = event.active.id.toString().startsWith('folder-');
+    if (isActiveFolder) {
+      // Save current expanded state to restore later
+      previousExpandedFoldersRef.current = new Set(expandedFolders);
+      // Collapse all folders
+      setExpandedFolders(new Set());
+    }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -462,6 +489,13 @@ export default function AppSidebar({
       autoExpandTimeoutRef.current = null;
     }
 
+    // Restore expanded folders if we were dragging a folder
+    const wasDraggingFolder = active.id.toString().startsWith('folder-');
+    if (wasDraggingFolder && previousExpandedFoldersRef.current) {
+      setExpandedFolders(previousExpandedFoldersRef.current);
+      previousExpandedFoldersRef.current = null;
+    }
+
     setActiveId(null);
     setOverId(null);
 
@@ -469,8 +503,45 @@ export default function AppSidebar({
       return;
     }
 
-    const canvasId = active.id as string;
+    const activeIdStr = active.id as string;
     const overIdStr = over.id as string;
+
+    // Check if we're dragging a folder
+    if (activeIdStr.startsWith('folder-')) {
+      const draggedFolderId = activeIdStr.replace('folder-', '');
+
+      // Only reorder if dropped on another folder (not on root area or canvas)
+      if (overIdStr.startsWith('folder-')) {
+        const targetFolderId = overIdStr.replace('folder-', '');
+
+        if (draggedFolderId === targetFolderId) {
+          return; // Dropped on itself
+        }
+
+        // Calculate new folder order
+        const reorderedFolders = [...folders];
+        const draggedIndex = reorderedFolders.findIndex(f => f.id === draggedFolderId);
+        const targetIndex = reorderedFolders.findIndex(f => f.id === targetFolderId);
+
+        if (draggedIndex !== -1 && targetIndex !== -1) {
+          // Remove dragged folder and insert at target position
+          const [draggedFolder] = reorderedFolders.splice(draggedIndex, 1);
+          reorderedFolders.splice(targetIndex, 0, draggedFolder);
+
+          // Build reorder updates
+          const updates = reorderedFolders.map((folder, idx) => ({
+            folderId: folder.id,
+            order: idx,
+          }));
+
+          reorderFolderMutation.mutate(updates);
+        }
+      }
+      return; // Don't process canvas logic for folder drags
+    }
+
+    // Canvas drag logic
+    const canvasId = activeIdStr;
 
     // Determine if dropped on a folder, root area, or another canvas
     let targetFolderId: string | null = null;
@@ -544,7 +615,7 @@ export default function AppSidebar({
     }
 
     if (updates.length > 0) {
-      reorderMutation.mutate(updates);
+      reorderCanvasMutation.mutate(updates);
     }
   };
 
@@ -558,14 +629,21 @@ export default function AppSidebar({
   );
 
   // Find the active canvas for drag overlay
-  const activeCanvas = activeId
+  const activeCanvas = activeId && !String(activeId).startsWith('folder-')
     ? [...rootCanvases, ...folders.flatMap(f => f.canvases)].find(c => c.id === activeId)
     : null;
 
+  // Find the active folder for drag overlay
+  const activeFolder = activeId && String(activeId).startsWith('folder-')
+    ? folders.find(f => f.id === String(activeId).replace('folder-', ''))
+    : null;
+
   // Determine what we're currently over
+  const isDraggingFolder = activeId && String(activeId).startsWith('folder-');
   const isOverFolder = overId && typeof overId === 'string' && overId.startsWith('folder-');
   const isOverRoot = overId === 'root-area';
-  const overFolderId = isOverFolder ? (overId as string).replace('folder-', '') : null;
+  // Only highlight folder for canvas drops, not for folder reordering
+  const overFolderId = isOverFolder && !isDraggingFolder ? (overId as string).replace('folder-', '') : null;
   const isSettingsPage = pathname === '/settings';
 
   const sidebarWidth = sidebarCollapsed ? 'w-0' : 'w-72';
@@ -666,25 +744,6 @@ export default function AppSidebar({
                 </button>
               )}
             </div>
-
-            {/* Sort Order */}
-            {onSortChange && (
-              <div className="flex items-center gap-2 mt-3">
-                <label className="type-label text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                  Sort:
-                </label>
-                <select
-                  value={sortOrder || 'updated'}
-                  onChange={(e) => onSortChange(e.target.value as 'updated' | 'alphabetical' | 'created')}
-                  disabled={isUpdatingSortOrder}
-                  className="type-button flex-1 px-2.5 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-[#0c1222] text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
-                >
-                  <option value="updated">Recently Updated</option>
-                  <option value="created">Recently Created</option>
-                  <option value="alphabetical">Alphabetical</option>
-                </select>
-              </div>
-            )}
           </div>
 
           {/* Canvas Navigation with DnD */}
@@ -709,51 +768,61 @@ export default function AppSidebar({
                 onDragOver={handleDragOver}
                 onDragEnd={handleDragEnd}
               >
-                <div className="space-y-1">
-                  {/* Folders */}
-                  <SortableContext items={[...folders.map(f => `folder-${f.id}`), ...allCanvasIds]} strategy={verticalListSortingStrategy}>
-                    {folders.map((folder) => (
-                      <DroppableFolder
-                        key={folder.id}
-                        folder={folder}
-                        isExpanded={expandedFolders.has(folder.id)}
-                        onToggle={() => toggleFolder(folder.id)}
-                        currentCanvasId={currentCanvasId}
-                        onSidebarClose={onSidebarClose}
-                        onCreateCanvas={onCreateCanvas}
-                        onRenameFolder={onRenameFolder}
-                        onDeleteFolder={onDeleteFolder}
-                        onRenameCanvas={onRenameCanvas}
-                        onMoveCanvas={onMoveCanvas}
-                        onDeleteCanvas={onDeleteCanvas}
-                        isCreatingCanvas={isCreatingCanvas}
-                        isOverFolder={overFolderId === folder.id}
-                      />
-                    ))}
-
-                    {/* Root canvases */}
-                    {rootCanvases.length > 0 && (
-                      <DroppableRootArea
-                        rootCanvases={rootCanvases}
-                        currentCanvasId={currentCanvasId}
-                        onSidebarClose={onSidebarClose}
-                        onRenameCanvas={onRenameCanvas}
-                        onMoveCanvas={onMoveCanvas}
-                        onDeleteCanvas={onDeleteCanvas}
-                        hasFolders={folders.length > 0}
-                        isOverRoot={isOverRoot}
-                      />
-                    )}
+                {/* Folders section - separate sortable context */}
+                {folders.length > 0 && (
+                  <SortableContext items={folders.map(f => `folder-${f.id}`)} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-1 mb-2">
+                      {folders.map((folder) => (
+                        <DroppableFolder
+                          key={folder.id}
+                          folder={folder}
+                          isExpanded={expandedFolders.has(folder.id)}
+                          onToggle={() => toggleFolder(folder.id)}
+                          currentCanvasId={currentCanvasId}
+                          onSidebarClose={onSidebarClose}
+                          onCreateCanvas={onCreateCanvas}
+                          onRenameFolder={onRenameFolder}
+                          onDeleteFolder={onDeleteFolder}
+                          onRenameCanvas={onRenameCanvas}
+                          onMoveCanvas={onMoveCanvas}
+                          onDeleteCanvas={onDeleteCanvas}
+                          isCreatingCanvas={isCreatingCanvas}
+                          isOverFolder={overFolderId === folder.id}
+                        />
+                      ))}
+                    </div>
                   </SortableContext>
-                </div>
+                )}
+
+                {/* Root canvases section - separate sortable context */}
+                <SortableContext items={rootCanvases.map(c => c.id)} strategy={verticalListSortingStrategy}>
+                  <DroppableRootArea
+                    rootCanvases={rootCanvases}
+                    currentCanvasId={currentCanvasId}
+                    onSidebarClose={onSidebarClose}
+                    onRenameCanvas={onRenameCanvas}
+                    onMoveCanvas={onMoveCanvas}
+                    onDeleteCanvas={onDeleteCanvas}
+                    hasFolders={folders.length > 0}
+                    isOverRoot={isOverRoot}
+                  />
+                </SortableContext>
 
                 {/* Drag overlay - shows the item being dragged */}
                 <DragOverlay>
                   {activeCanvas ? (
-                    <div className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-900 rounded-lg shadow-lg ring-2 ring-blue-400">
-                      <GripVertical className="w-3 h-3 text-gray-400" />
-                      <span className="type-nav text-gray-700 dark:text-gray-200">
+                    <div className="flex items-center gap-1.5 px-2 py-1.5 bg-white dark:bg-gray-800 rounded-md shadow-xl ring-2 ring-blue-500 max-w-[200px]">
+                      <GripVertical className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                      <span className="type-nav text-gray-700 dark:text-gray-200 truncate text-sm">
                         {activeCanvas.name}
+                      </span>
+                    </div>
+                  ) : activeFolder ? (
+                    <div className="flex items-center gap-1.5 px-2 py-1.5 bg-white dark:bg-gray-800 rounded-md shadow-xl ring-2 ring-blue-500 max-w-[200px]">
+                      <GripVertical className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                      <Folder className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 flex-shrink-0" />
+                      <span className="type-nav text-gray-700 dark:text-gray-200 truncate text-sm">
+                        {activeFolder.name}
                       </span>
                     </div>
                   ) : null}

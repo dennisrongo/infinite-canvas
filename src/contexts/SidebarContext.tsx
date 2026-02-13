@@ -59,7 +59,6 @@ interface SidebarContextType extends SidebarModalState {
   // Sidebar state
   sidebarOpen: boolean;
   sidebarCollapsed: boolean;
-  sortOrder: 'updated' | 'alphabetical' | 'created';
 
   // Canvas header state (set by canvas page, read by layout's Header)
   canvasTitle: string | null;
@@ -71,7 +70,6 @@ interface SidebarContextType extends SidebarModalState {
   toggleSidebar: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   toggleSidebarCollapsed: () => void;
-  setSortOrder: (order: 'updated' | 'alphabetical' | 'created') => void;
 
   // Canvas header actions
   setCanvasHeader: (title: string | null, onExport: (() => void) | null, onTitleChange?: ((newTitle: string) => Promise<void>) | null) => void;
@@ -116,7 +114,6 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
   // Sidebar state
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [sortOrder, setSortOrder] = useState<'updated' | 'alphabetical' | 'created'>('updated');
 
   // Canvas header state
   const [canvasTitle, setCanvasTitle] = useState<string | null>(null);
@@ -263,7 +260,6 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
     // Sidebar state
     sidebarOpen,
     sidebarCollapsed,
-    sortOrder,
     canvasTitle,
     onExportClick,
     onTitleChange,
@@ -271,7 +267,6 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
     toggleSidebar,
     setSidebarCollapsed,
     toggleSidebarCollapsed,
-    setSortOrder,
     setCanvasHeader,
 
     // Modal states
