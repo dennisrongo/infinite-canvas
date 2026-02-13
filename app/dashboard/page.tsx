@@ -103,6 +103,7 @@ export default function DashboardPage() {
   const [canvasToRename, setCanvasToRename] = useState<{ canvas: Canvas; folderId?: string } | null>(null);
   const [canvasRenameName, setCanvasRenameName] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showNewCanvasModal, setShowNewCanvasModal] = useState(false);
   const [newCanvasName, setNewCanvasName] = useState('');
@@ -340,6 +341,8 @@ export default function DashboardPage() {
         isUpdatingSortOrder={isUpdatingSortOrder}
         isCreatingFolder={isCreatingFolder}
         isCreatingCanvas={isCreatingCanvas}
+        sidebarCollapsed={sidebarCollapsed}
+        onCollapseToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
 
       {/* Main Content */}
@@ -348,6 +351,7 @@ export default function DashboardPage() {
         <Header
           showMenuButton={true}
           onMenuClick={() => setSidebarOpen(!sidebarOpen)}
+          sidebarCollapsed={sidebarCollapsed}
         />
 
         {/* Dashboard Content */}

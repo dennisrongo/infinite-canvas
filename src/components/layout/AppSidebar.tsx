@@ -118,7 +118,6 @@ export default function AppSidebar({
     setExpandedFolders(newExpanded);
   };
 
-  const isDashboard = variant === 'dashboard';
   const sidebarWidth = sidebarCollapsed ? 'w-0' : 'w-72';
 
   return (
@@ -185,60 +184,58 @@ export default function AppSidebar({
             </div>
           </div>
 
-          {/* Action Buttons - Dashboard variant */}
-          {isDashboard && (
-            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800/60">
-              <div className="flex gap-2">
-                {onCreateCanvas && (
-                  <button
-                    onClick={() => { onCreateCanvas(); onSidebarClose(); }}
-                    disabled={isCreatingCanvas}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] shadow-sm"
-                  >
-                    <FilePlus className="w-3.5 h-3.5" />
-                    Canvas
-                  </button>
-                )}
-                {onCreateFolder && (
-                  <button
-                    onClick={() => { onCreateFolder(); onSidebarClose(); }}
-                    disabled={isCreatingFolder}
-                    className="flex items-center justify-center gap-1.5 px-3 py-2 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
-                  >
-                    <FolderPlus className="w-3.5 h-3.5" />
-                  </button>
-                )}
-                {onImport && (
-                  <button
-                    onClick={() => { onImport(); onSidebarClose(); }}
-                    className="flex items-center justify-center gap-1.5 px-3 py-2 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-150 active:scale-[0.98]"
-                    title="Import canvas"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-
-              {/* Sort Order */}
-              {onSortChange && (
-                <div className="flex items-center gap-2 mt-3">
-                  <label className="text-xs font-medium text-gray-400 dark:text-gray-500 whitespace-nowrap">
-                    Sort:
-                  </label>
-                  <select
-                    value={sortOrder || 'updated'}
-                    onChange={(e) => onSortChange(e.target.value as 'updated' | 'alphabetical' | 'created')}
-                    disabled={isUpdatingSortOrder}
-                    className="flex-1 px-2 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-[#0c1222] text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
-                  >
-                    <option value="updated">Recently Updated</option>
-                    <option value="created">Recently Created</option>
-                    <option value="alphabetical">Alphabetical</option>
-                  </select>
-                </div>
+          {/* Action Buttons */}
+          <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800/60">
+            <div className="flex gap-2">
+              {onCreateCanvas && (
+                <button
+                  onClick={() => { onCreateCanvas(); onSidebarClose(); }}
+                  disabled={isCreatingCanvas}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] shadow-sm"
+                >
+                  <FilePlus className="w-3.5 h-3.5" />
+                  Canvas
+                </button>
+              )}
+              {onCreateFolder && (
+                <button
+                  onClick={() => { onCreateFolder(); onSidebarClose(); }}
+                  disabled={isCreatingFolder}
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+                >
+                  <FolderPlus className="w-3.5 h-3.5" />
+                </button>
+              )}
+              {onImport && (
+                <button
+                  onClick={() => { onImport(); onSidebarClose(); }}
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-150 active:scale-[0.98]"
+                  title="Import canvas"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                </button>
               )}
             </div>
-          )}
+
+            {/* Sort Order */}
+            {onSortChange && (
+              <div className="flex items-center gap-2 mt-3">
+                <label className="text-xs font-medium text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                  Sort:
+                </label>
+                <select
+                  value={sortOrder || 'updated'}
+                  onChange={(e) => onSortChange(e.target.value as 'updated' | 'alphabetical' | 'created')}
+                  disabled={isUpdatingSortOrder}
+                  className="flex-1 px-2 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-[#0c1222] text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+                >
+                  <option value="updated">Recently Updated</option>
+                  <option value="created">Recently Created</option>
+                  <option value="alphabetical">Alphabetical</option>
+                </select>
+              </div>
+            )}
+          </div>
 
           {/* Canvas Navigation */}
           <div className="flex-1 overflow-y-auto px-3 py-3">
@@ -278,39 +275,37 @@ export default function AppSidebar({
                         </span>
                       </div>
 
-                      {/* Folder actions - dashboard only */}
-                      {isDashboard && (
-                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                          {onCreateCanvas && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); onCreateCanvas(folder.id); }}
-                              disabled={isCreatingCanvas}
-                              className="p-1 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-500/10 rounded transition-all"
-                              title="Add canvas"
-                            >
-                              <FilePlus className="w-3 h-3" />
-                            </button>
-                          )}
-                          {onRenameFolder && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); onRenameFolder(folder); }}
-                              className="p-1 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-500/10 rounded transition-all"
-                              title="Rename folder"
-                            >
-                              <Pencil className="w-3 h-3" />
-                            </button>
-                          )}
-                          {onDeleteFolder && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); onDeleteFolder(folder); }}
-                              className="p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-500/10 rounded transition-all"
-                              title="Delete folder"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
-                          )}
-                        </div>
-                      )}
+                      {/* Folder actions */}
+                      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                        {onCreateCanvas && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onCreateCanvas(folder.id); }}
+                            disabled={isCreatingCanvas}
+                            className="p-1 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-500/10 rounded transition-all"
+                            title="Add canvas"
+                          >
+                            <FilePlus className="w-3 h-3" />
+                          </button>
+                        )}
+                        {onRenameFolder && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onRenameFolder(folder); }}
+                            className="p-1 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-500/10 rounded transition-all"
+                            title="Rename folder"
+                          >
+                            <Pencil className="w-3 h-3" />
+                          </button>
+                        )}
+                        {onDeleteFolder && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onDeleteFolder(folder); }}
+                            className="p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-500/10 rounded transition-all"
+                            title="Delete folder"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {/* Folder contents */}
@@ -341,38 +336,36 @@ export default function AppSidebar({
                               >
                                 {canvas.name}
                               </Link>
-                              {/* Canvas actions - dashboard only */}
-                              {isDashboard && (
-                                <div className="flex gap-0.5 opacity-0 group-hover/canvas:opacity-100 transition-opacity flex-shrink-0">
-                                  {onRenameCanvas && (
-                                    <button
-                                      onClick={() => onRenameCanvas(canvas, folder.id)}
-                                      className="p-1 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-500/10 rounded transition-all"
-                                      title="Rename"
-                                    >
-                                      <Pencil className="w-2.5 h-2.5" />
-                                    </button>
-                                  )}
-                                  {onMoveCanvas && (
-                                    <button
-                                      onClick={() => onMoveCanvas(canvas, folder.id)}
-                                      className="p-1 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-500/10 rounded transition-all"
-                                      title="Move"
-                                    >
-                                      <ArrowRightLeft className="w-2.5 h-2.5" />
-                                    </button>
-                                  )}
-                                  {onDeleteCanvas && (
-                                    <button
-                                      onClick={() => onDeleteCanvas(canvas, folder.id)}
-                                      className="p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-500/10 rounded transition-all"
-                                      title="Delete"
-                                    >
-                                      <Trash2 className="w-2.5 h-2.5" />
-                                    </button>
-                                  )}
-                                </div>
-                              )}
+                              {/* Canvas actions */}
+                              <div className="flex gap-0.5 opacity-0 group-hover/canvas:opacity-100 transition-opacity flex-shrink-0">
+                                {onRenameCanvas && (
+                                  <button
+                                    onClick={() => onRenameCanvas(canvas, folder.id)}
+                                    className="p-1 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-500/10 rounded transition-all"
+                                    title="Rename"
+                                  >
+                                    <Pencil className="w-2.5 h-2.5" />
+                                  </button>
+                                )}
+                                {onMoveCanvas && (
+                                  <button
+                                    onClick={() => onMoveCanvas(canvas, folder.id)}
+                                    className="p-1 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-500/10 rounded transition-all"
+                                    title="Move"
+                                  >
+                                    <ArrowRightLeft className="w-2.5 h-2.5" />
+                                  </button>
+                                )}
+                                {onDeleteCanvas && (
+                                  <button
+                                    onClick={() => onDeleteCanvas(canvas, folder.id)}
+                                    className="p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-500/10 rounded transition-all"
+                                    title="Delete"
+                                  >
+                                    <Trash2 className="w-2.5 h-2.5" />
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           ))
                         )}
@@ -407,38 +400,36 @@ export default function AppSidebar({
                         >
                           {canvas.name}
                         </Link>
-                        {/* Canvas actions - dashboard only */}
-                        {isDashboard && (
-                          <div className="flex gap-0.5 opacity-0 group-hover/canvas:opacity-100 transition-opacity flex-shrink-0">
-                            {onRenameCanvas && (
-                              <button
-                                onClick={() => onRenameCanvas(canvas)}
-                                className="p-1 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-500/10 rounded transition-all"
-                                title="Rename"
-                              >
-                                <Pencil className="w-2.5 h-2.5" />
-                              </button>
-                            )}
-                            {onMoveCanvas && (
-                              <button
-                                onClick={() => onMoveCanvas(canvas, undefined)}
-                                className="p-1 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-500/10 rounded transition-all"
-                                title="Move"
-                              >
-                                <ArrowRightLeft className="w-2.5 h-2.5" />
-                              </button>
-                            )}
-                            {onDeleteCanvas && (
-                              <button
-                                onClick={() => onDeleteCanvas(canvas)}
-                                className="p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-500/10 rounded transition-all"
-                                title="Delete"
-                              >
-                                <Trash2 className="w-2.5 h-2.5" />
-                              </button>
-                            )}
-                          </div>
-                        )}
+                        {/* Canvas actions */}
+                        <div className="flex gap-0.5 opacity-0 group-hover/canvas:opacity-100 transition-opacity flex-shrink-0">
+                          {onRenameCanvas && (
+                            <button
+                              onClick={() => onRenameCanvas(canvas)}
+                              className="p-1 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-500/10 rounded transition-all"
+                              title="Rename"
+                            >
+                              <Pencil className="w-2.5 h-2.5" />
+                            </button>
+                          )}
+                          {onMoveCanvas && (
+                            <button
+                              onClick={() => onMoveCanvas(canvas, undefined)}
+                              className="p-1 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-500/10 rounded transition-all"
+                              title="Move"
+                            >
+                              <ArrowRightLeft className="w-2.5 h-2.5" />
+                            </button>
+                          )}
+                          {onDeleteCanvas && (
+                            <button
+                              onClick={() => onDeleteCanvas(canvas)}
+                              className="p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-500/10 rounded transition-all"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-2.5 h-2.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
