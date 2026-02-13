@@ -684,18 +684,18 @@ function CanvasPageContent() {
   return (
     <div className="h-screen flex bg-light-canvas dark:bg-dark-canvas overflow-hidden">
       {/* Sidebar */}
-      <div className={`${sidebarCollapsed ? 'w-0' : 'w-64'} transition-all duration-300 border-r border-light-note-border/60 dark:border-dark-note-border/60 bg-white/95 dark:bg-dark-bg/95 backdrop-blur-xl overflow-hidden flex-shrink-0 fixed lg:static inset-y-0 left-0 z-50 transform ${
+      <div className={`${sidebarCollapsed ? 'w-0' : 'w-64'} transition-all duration-300 border-r border-gray-200/60 dark:border-gray-700/60 bg-[#F8F9FA]/95 dark:bg-dark-bg/95 backdrop-blur-xl overflow-hidden flex-shrink-0 fixed lg:static inset-y-0 left-0 z-50 transform ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       }`}>
         {!sidebarCollapsed && (
           <div className="p-4 h-screen overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-light-text dark:text-dark-text">
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
                 Canvases
               </h2>
               <button
                 onClick={() => router.push('/dashboard')}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-light-primary dark:text-dark-primary hover:bg-light-primary/10 dark:hover:bg-dark-primary/10 rounded-lg transition-all"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-purple-600 dark:text-purple-400 hover:bg-purple-500/10 dark:hover:bg-purple-400/10 rounded-lg transition-all"
               >
                 <LayoutDashboard className="w-3.5 h-3.5" />
                 Dashboard
@@ -706,19 +706,19 @@ function CanvasPageContent() {
               {folders.map((folder) => (
                 <div key={folder.id}>
                   <div
-                    className="flex items-center gap-2 p-2 cursor-pointer hover:bg-light-primary/5 dark:hover:bg-dark-primary/5 rounded-lg transition-colors"
+                    className="flex items-center gap-2 p-2 cursor-pointer hover:bg-purple-500/5 dark:hover:bg-purple-400/5 rounded-lg transition-colors"
                     onClick={() => toggleFolder(folder.id)}
                   >
                     {expandedFolders.has(folder.id) ? (
-                      <ChevronDown className="w-3.5 h-3.5 text-light-text/50 dark:text-dark-text/50 flex-shrink-0" />
+                      <ChevronDown className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
                     ) : (
-                      <ChevronRight className="w-3.5 h-3.5 text-light-text/50 dark:text-dark-text/50 flex-shrink-0" />
+                      <ChevronRight className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
                     )}
-                    <Folder className="w-3.5 h-3.5 text-light-primary dark:text-dark-primary flex-shrink-0" />
-                    <span className="text-sm font-medium text-light-text dark:text-dark-text truncate">
+                    <Folder className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400 flex-shrink-0" />
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">
                       {folder.name}
                     </span>
-                    <span className="text-xs text-light-text/50 dark:text-dark-text/50 flex-shrink-0">
+                    <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">
                       ({folder.canvases.length})
                     </span>
                   </div>
@@ -732,8 +732,8 @@ function CanvasPageContent() {
                           onClick={() => setSidebarOpen(false)}
                           className={`block p-2 rounded-lg text-sm transition-colors ${
                             c.id === canvasId
-                              ? 'bg-light-primary dark:bg-dark-primary text-white font-medium'
-                              : 'text-light-text/60 dark:text-dark-text/60 hover:bg-light-primary/5 dark:hover:bg-dark-primary/5 hover:text-light-text dark:hover:text-dark-text'
+                              ? 'bg-purple-500 text-white font-medium'
+                              : 'text-gray-600 dark:text-gray-400 hover:bg-purple-500/5 dark:hover:bg-purple-400/5 hover:text-gray-800 dark:hover:text-gray-200'
                           }`}
                         >
                           {c.name}
@@ -747,10 +747,10 @@ function CanvasPageContent() {
               {rootCanvases.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 p-2">
-                    <span className="text-sm font-medium text-light-text dark:text-dark-text">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
                       Root
                     </span>
-                    <span className="text-xs text-light-text/50 dark:text-dark-text/50">
+                    <span className="text-xs text-gray-400 dark:text-gray-500">
                       ({rootCanvases.length})
                     </span>
                   </div>
@@ -762,8 +762,8 @@ function CanvasPageContent() {
                         onClick={() => setSidebarOpen(false)}
                         className={`block p-2 rounded-lg text-sm transition-colors ${
                           c.id === canvasId
-                            ? 'bg-light-primary dark:bg-dark-primary text-white font-medium'
-                            : 'text-light-text/60 dark:text-dark-text/60 hover:bg-light-primary/5 dark:hover:bg-dark-primary/5 hover:text-light-text dark:hover:text-dark-text'
+                            ? 'bg-purple-500 text-white font-medium'
+                            : 'text-gray-600 dark:text-gray-400 hover:bg-purple-500/5 dark:hover:bg-purple-400/5 hover:text-gray-800 dark:hover:text-gray-200'
                         }`}
                       >
                         {c.name}

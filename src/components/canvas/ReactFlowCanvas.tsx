@@ -901,7 +901,7 @@ function ReactFlowCanvasInner({
         panOnScroll
         zoomOnDoubleClick={false}
         selectionOnDrag
-        className="bg-[#F8FAFC] dark:bg-[#1E293B]"
+        className="bg-[#FAFAFA] dark:bg-[#1E293B]"
       >
         <Background
           variant={BackgroundVariant.Dots}
@@ -915,14 +915,14 @@ function ReactFlowCanvasInner({
         </Controls>
         <MiniMap
           nodeColor={(node) => {
-            // Use theme-based colors for note nodes
-            return theme === 'dark' ? '#1E293B' : '#FFFFFF';
+            // Use purple-tinted colors for note nodes in minimap (Stitch design)
+            return theme === 'dark' ? '#374151' : '#F3F4F6';
           }}
-          maskColor={theme === 'dark' ? 'rgba(15, 23, 42, 0.6)' : 'rgba(0, 0, 0, 0.2)'}
+          maskColor={theme === 'dark' ? 'rgba(15, 23, 42, 0.7)' : 'rgba(139, 92, 246, 0.08)'}
           pannable
           zoomable
           position="bottom-right"
-          className="minimap-wrapper"
+          className="!bg-white/90 dark:!bg-gray-800/90 !border !border-gray-200/60 dark:!border-gray-600/40 !rounded-lg !shadow-lg"
           ariaLabel="Canvas minimap"
         />
       </ReactFlow>
@@ -930,12 +930,21 @@ function ReactFlowCanvasInner({
       {/* Empty State Overlay - shows when there are no notes */}
       {showEmptyState && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="text-center bg-white dark:bg-[#1E293B] p-6 rounded-lg shadow-lg">
-            <p className="text-[#1E293B] dark:text-[#F1F5F9] text-lg mb-2">
+          <div className="text-center bg-white/95 dark:bg-[#1E293B]/95 backdrop-blur-sm p-8 rounded-xl shadow-xl border border-gray-200/60 dark:border-gray-600/40 max-w-sm mx-4">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-500/10 to-pink-500/10 flex items-center justify-center">
+              <svg className="w-8 h-8 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </div>
+            <p className="text-gray-800 dark:text-gray-100 text-lg font-medium mb-2">
               No notes yet
             </p>
-            <p className="text-[#64748B] dark:text-[#94A3B8]">
-              Double-click anywhere or press <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">N</kbd> to create your first note
+            <p className="text-gray-500 dark:text-gray-400">
+              Double-click anywhere or press{' '}
+              <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-md text-sm font-mono text-purple-600 dark:text-purple-400">
+                N
+              </kbd>{' '}
+              to create your first note
             </p>
           </div>
         </div>

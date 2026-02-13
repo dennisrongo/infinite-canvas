@@ -75,5 +75,28 @@ export default function FloatingEdge({ id, source, target, sourceHandleId, targe
     targetPosition: targetPos,
   });
 
-  return <BaseEdge id={id} path={path} style={style} />;
+  // Stitch design: Purple connection lines with subtle glow effect
+  const edgeStyle = {
+    stroke: '#8B5CF6', // Purple accent color
+    strokeWidth: 2,
+    ...style,
+  };
+
+  return (
+    <>
+      {/* Glow effect layer */}
+      <BaseEdge
+        id={`${id}-glow`}
+        path={path}
+        style={{
+          stroke: '#8B5CF6',
+          strokeWidth: 6,
+          opacity: 0.15,
+          filter: 'blur(4px)',
+        }}
+      />
+      {/* Main edge path */}
+      <BaseEdge id={id} path={path} style={edgeStyle} />
+    </>
+  );
 }

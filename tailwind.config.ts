@@ -7,6 +7,13 @@ const config: Config = {
     "./src/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   darkMode: 'class',
+  safelist: [
+    // NoteNode accent colors (dynamically selected via hash)
+    'border-l-pink-500', 'border-l-blue-500', 'border-l-sky-400',
+    'border-l-purple-500', 'border-l-teal-500', 'border-l-orange-500',
+    'bg-pink-500', 'bg-blue-500', 'bg-sky-400',
+    'bg-purple-500', 'bg-teal-500', 'bg-orange-500',
+  ],
   theme: {
     extend: {
       colors: {
@@ -151,6 +158,13 @@ const config: Config = {
       backgroundImage: {
         'dot-pattern': 'radial-gradient(#CBD5E1 1px, transparent 1px)',
         'dot-grid-canvas': 'radial-gradient(#94a3b8 1.5px, transparent 1.5px)',
+        // Stitch design gradients for note cards
+        'gradient-pink-purple': 'linear-gradient(135deg, #EC4899 0%, #8B5CF6 100%)',
+        'gradient-blue-purple': 'linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%)',
+        'gradient-light-blue': 'linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%)',
+        'gradient-purple-pink': 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)',
+        'gradient-teal-blue': 'linear-gradient(135deg, #14B8A6 0%, #3B82F6 100%)',
+        'gradient-orange-pink': 'linear-gradient(135deg, #F97316 0%, #EC4899 100%)',
       },
     },
   },

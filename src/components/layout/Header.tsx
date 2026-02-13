@@ -41,14 +41,14 @@ export default function Header({
   onImportClick,
 }: HeaderProps) {
   return (
-    <header className="bg-white/80 dark:bg-dark-bg/80 backdrop-blur-xl border-b border-light-note-border/60 dark:border-dark-note-border/60 px-3 md:px-5 py-2.5 sticky top-0 z-40 transition-all duration-300 shadow-sm">
+    <header className="bg-white/90 dark:bg-dark-bg/90 backdrop-blur-xl border-b border-gray-200/60 dark:border-gray-700/60 px-3 md:px-5 py-2.5 sticky top-0 z-40 transition-all duration-300 shadow-sm">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 md:gap-3 flex-1">
           {/* Hamburger menu button - visible on mobile */}
           {showMenuButton && onMenuClick && (
             <button
               onClick={onMenuClick}
-              className="lg:hidden min-w-[40px] min-h-[40px] p-2 rounded-xl hover:bg-light-primary/10 dark:hover:bg-dark-primary/10 active:scale-95 transition-all duration-150 flex-shrink-0 text-light-text dark:text-dark-text"
+              className="lg:hidden min-w-[40px] min-h-[40px] p-2 rounded-xl hover:bg-purple-500/10 dark:hover:bg-purple-400/10 active:scale-95 transition-all duration-150 flex-shrink-0 text-gray-700 dark:text-gray-200"
               aria-label="Toggle menu"
             >
               <Menu className="w-5 h-5" />
@@ -59,7 +59,7 @@ export default function Header({
           {showCollapseButton && onCollapseClick && (
             <button
               onClick={onCollapseClick}
-              className="hidden md:flex min-w-[40px] min-h-[40px] items-center justify-center p-2 rounded-xl hover:bg-light-primary/10 dark:hover:bg-dark-primary/10 active:scale-95 transition-all duration-150 flex-shrink-0 text-light-text/70 dark:text-dark-text/70 hover:text-light-text dark:hover:text-dark-text"
+              className="hidden md:flex min-w-[40px] min-h-[40px] items-center justify-center p-2 rounded-xl hover:bg-purple-500/10 dark:hover:bg-purple-400/10 active:scale-95 transition-all duration-150 flex-shrink-0 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
               aria-label="Toggle sidebar"
               title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
@@ -73,12 +73,12 @@ export default function Header({
 
           {/* Logo or Title - truncate on small screens */}
           {title ? (
-            <h1 className="text-base md:text-xl font-semibold text-light-text dark:text-dark-text truncate">
+            <h1 className="text-base md:text-xl font-semibold text-gray-800 dark:text-gray-100 truncate">
               {title}
             </h1>
           ) : (
             <Link href="/dashboard" className="flex items-center gap-1.5 flex-shrink-0 group">
-              <h1 className="text-base md:text-xl font-semibold text-light-text dark:text-dark-text group-hover:text-light-primary dark:group-hover:text-dark-primary transition-colors">
+              <h1 className="text-base md:text-xl font-semibold text-gray-800 dark:text-gray-100 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
                 Infinite Canvas
               </h1>
             </Link>
