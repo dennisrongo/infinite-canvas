@@ -122,7 +122,7 @@ function DraggableCanvasItem({
       style={style}
       {...attributes}
       {...listeners}
-      className={`flex items-center justify-between px-2 py-1.5 rounded-lg transition-colors group/canvas cursor-grab active:cursor-grabbing ${
+      className={`flex items-center justify-between px-2 py-1.5 rounded-lg transition-colors group/canvas cursor-grab active:cursor-grabbing select-none ${
         canvas.id === currentCanvasId
           ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300'
           : 'hover:bg-gray-50 dark:hover:bg-gray-800/40'
@@ -235,7 +235,7 @@ function DroppableFolder({
       {...listeners}
     >
       <div
-        className={`flex items-center justify-between px-2 py-1.5 rounded-lg cursor-pointer transition-colors group ${
+        className={`flex items-center justify-between px-2 py-1.5 rounded-lg cursor-pointer transition-colors group select-none ${
           isOverFolder
             ? 'bg-blue-100 dark:bg-blue-500/20 ring-2 ring-blue-400'
             : 'hover:bg-gray-100 dark:hover:bg-gray-800/60'
