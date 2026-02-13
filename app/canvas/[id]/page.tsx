@@ -4,17 +4,15 @@ import { useEffect, useState, useCallback, Suspense, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Header from '@/components/layout/Header';
+import AppSidebar from '@/components/layout/AppSidebar';
 import ImportModal from '@/components/canvas/ImportModal';
 import { useToast } from '@/contexts/ToastContext';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { CanvasSkeleton } from '@/components/ui/SkeletonLoader';
 import { useCancellableRequest } from '@/hooks/useCancellableRequest';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCanvas, useCanvases, useConnections } from '@/hooks/api/useCanvases';
 import { canvasKeys } from '@/lib/queryKeys';
 import { useFolders } from '@/hooks/api/useFolders';
-import Link from 'next/link';
-import { ChevronDown, ChevronRight, Folder, LayoutDashboard } from 'lucide-react';
 
 // Dynamically import ReactFlowCanvas with SSR disabled
 const ReactFlowCanvas = dynamic(
@@ -96,7 +94,6 @@ function CanvasPageContent() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   // Track whether we've seeded local state from query data for this canvasId
   const [seededCanvasId, setSeededCanvasId] = useState<string | null>(null);
 
@@ -160,18 +157,6 @@ function CanvasPageContent() {
     }
   }, [canvasId, seededCanvasId]);
 
-  useEffect(() => {
-    // Load expanded folders from localStorage
-    const saved = localStorage.getItem('expandedFolders');
-    if (saved) {
-      try {
-        setExpandedFolders(new Set(JSON.parse(saved)));
-      } catch (e) {
-        console.error('Error loading expanded folders:', e);
-      }
-    }
-  }, []);
-
   // Handle deep linking to specific note
   useEffect(() => {
     if (noteIdParam && notes.length > 0) {
@@ -189,13 +174,6 @@ function CanvasPageContent() {
     }
   }, [noteIdParam, notes, showToast]);
 
-  // Save expanded folders to localStorage whenever they change
-  useEffect(() => {
-    if (expandedFolders.size > 0 || localStorage.getItem('expandedFolders')) {
-      localStorage.setItem('expandedFolders', JSON.stringify([...expandedFolders]));
-    }
-  }, [expandedFolders]);
-
   // Handle visibility change - check if canvas still exists when returning to tab
   // Feature #174: Detect when canvas was deleted in another tab
   useEffect(() => {
@@ -209,16 +187,6 @@ function CanvasPageContent() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [canvas, canvasDeleted, refetchCanvas]);
-
-  const toggleFolder = (folderId: string) => {
-    const newExpanded = new Set(expandedFolders);
-    if (newExpanded.has(folderId)) {
-      newExpanded.delete(folderId);
-    } else {
-      newExpanded.add(folderId);
-    }
-    setExpandedFolders(newExpanded);
-  };
 
   const handleNoteCreate = useCallback(async (position: { x: number; y: number }) => {
     const requestKey = `createNote-${Date.now()}`;
@@ -682,109 +650,18 @@ function CanvasPageContent() {
   }
 
   return (
-    <div className="h-screen flex bg-light-canvas dark:bg-dark-canvas overflow-hidden">
-      {/* Sidebar */}
-      <div className={`${sidebarCollapsed ? 'w-0' : 'w-64'} transition-all duration-300 border-r border-gray-200/60 dark:border-gray-700/60 bg-[#F8F9FA]/95 dark:bg-dark-bg/95 backdrop-blur-xl overflow-hidden flex-shrink-0 fixed lg:static inset-y-0 left-0 z-50 transform ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-      }`}>
-        {!sidebarCollapsed && (
-          <div className="p-4 h-screen overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-                Canvases
-              </h2>
-              <button
-                onClick={() => router.push('/dashboard')}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-purple-600 dark:text-purple-400 hover:bg-purple-500/10 dark:hover:bg-purple-400/10 rounded-lg transition-all"
-              >
-                <LayoutDashboard className="w-3.5 h-3.5" />
-                Dashboard
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              {folders.map((folder) => (
-                <div key={folder.id}>
-                  <div
-                    className="flex items-center gap-2 p-2 cursor-pointer hover:bg-purple-500/5 dark:hover:bg-purple-400/5 rounded-lg transition-colors"
-                    onClick={() => toggleFolder(folder.id)}
-                  >
-                    {expandedFolders.has(folder.id) ? (
-                      <ChevronDown className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
-                    ) : (
-                      <ChevronRight className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
-                    )}
-                    <Folder className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400 flex-shrink-0" />
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">
-                      {folder.name}
-                    </span>
-                    <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">
-                      ({folder.canvases.length})
-                    </span>
-                  </div>
-
-                  {expandedFolders.has(folder.id) && (
-                    <div className="ml-4 mt-1 space-y-0.5">
-                      {folder.canvases.map((c) => (
-                        <Link
-                          key={c.id}
-                          href={`/canvas/${c.id}`}
-                          onClick={() => setSidebarOpen(false)}
-                          className={`block p-2 rounded-lg text-sm transition-colors ${
-                            c.id === canvasId
-                              ? 'bg-purple-500 text-white font-medium'
-                              : 'text-gray-600 dark:text-gray-400 hover:bg-purple-500/5 dark:hover:bg-purple-400/5 hover:text-gray-800 dark:hover:text-gray-200'
-                          }`}
-                        >
-                          {c.name}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-
-              {rootCanvases.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 p-2">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                      Root
-                    </span>
-                    <span className="text-xs text-gray-400 dark:text-gray-500">
-                      ({rootCanvases.length})
-                    </span>
-                  </div>
-                  <div className="ml-4 mt-1 space-y-0.5">
-                    {rootCanvases.map((c) => (
-                      <Link
-                        key={c.id}
-                        href={`/canvas/${c.id}`}
-                        onClick={() => setSidebarOpen(false)}
-                        className={`block p-2 rounded-lg text-sm transition-colors ${
-                          c.id === canvasId
-                            ? 'bg-purple-500 text-white font-medium'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-purple-500/5 dark:hover:bg-purple-400/5 hover:text-gray-800 dark:hover:text-gray-200'
-                        }`}
-                      >
-                        {c.name}
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-          aria-hidden="true"
-        />
-      )}
+    <div className="h-screen flex bg-gray-50 dark:bg-[#0a0f1a] overflow-hidden">
+      {/* Shared Sidebar */}
+      <AppSidebar
+        variant="canvas"
+        folders={folders}
+        rootCanvases={rootCanvases}
+        currentCanvasId={canvasId}
+        sidebarOpen={sidebarOpen}
+        onSidebarClose={() => setSidebarOpen(false)}
+        sidebarCollapsed={sidebarCollapsed}
+        onCollapseToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+      />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -794,11 +671,9 @@ function CanvasPageContent() {
           title={canvas?.name || 'Canvas'}
           showMenuButton={true}
           onMenuClick={() => setSidebarOpen(!sidebarOpen)}
-          showCollapseButton={true}
-          onCollapseClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          isCollapsed={sidebarCollapsed}
           onExportClick={handleExport}
           onImportClick={() => setShowImportModal(true)}
+          sidebarCollapsed={sidebarCollapsed}
         />
 
         {/* Canvas Area */}

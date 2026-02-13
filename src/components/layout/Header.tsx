@@ -1,99 +1,87 @@
 'use client';
 
-import Link from 'next/link';
 import SearchBar from '@/components/header/SearchBar';
-import UserActions from '@/components/header/UserActions';
-import { Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Menu, Upload, Download } from 'lucide-react';
 
 interface HeaderProps {
   currentCanvasId?: string;
   onMenuClick?: () => void;
   showMenuButton?: boolean;
   title?: string;
-  showCollapseButton?: boolean;
-  onCollapseClick?: () => void;
-  isCollapsed?: boolean;
   onExportClick?: () => void;
   onImportClick?: () => void;
+  sidebarCollapsed?: boolean;
 }
 
 /**
- * Header - Main application header
+ * Header - Slim top bar with search and canvas-specific actions
  *
- * Refactored to use smaller, focused components:
- * - SearchBar for global search functionality
- * - UserActions for theme toggle, settings, and logout
- *
- * Features:
- * - Responsive design with mobile menu button
- * - Touch-friendly buttons (44px minimum)
- * - Design token color classes
+ * Simplified after sidebar redesign:
+ * - Branding, theme toggle, settings, logout moved to AppSidebar
+ * - Header focuses on search + canvas-specific export/import
  */
 export default function Header({
   currentCanvasId,
   onMenuClick,
   showMenuButton,
   title,
-  showCollapseButton,
-  onCollapseClick,
-  isCollapsed,
   onExportClick,
   onImportClick,
+  sidebarCollapsed,
 }: HeaderProps) {
   return (
-    <header className="bg-white/90 dark:bg-dark-bg/90 backdrop-blur-xl border-b border-gray-200/60 dark:border-gray-700/60 px-3 md:px-5 py-2.5 sticky top-0 z-40 transition-all duration-300 shadow-sm">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 md:gap-3 flex-1">
+    <header className={`bg-white/95 dark:bg-[#0c1222]/95 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-800/50 py-2 sticky top-0 z-30 transition-all duration-200 px-3 md:px-5 ${sidebarCollapsed ? 'lg:pl-12' : ''}`}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
           {/* Hamburger menu button - visible on mobile */}
           {showMenuButton && onMenuClick && (
             <button
               onClick={onMenuClick}
-              className="lg:hidden min-w-[40px] min-h-[40px] p-2 rounded-xl hover:bg-purple-500/10 dark:hover:bg-purple-400/10 active:scale-95 transition-all duration-150 flex-shrink-0 text-gray-700 dark:text-gray-200"
+              className="lg:hidden min-w-[36px] min-h-[36px] p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-95 transition-all duration-150 flex-shrink-0 text-gray-500 dark:text-gray-400"
               aria-label="Toggle menu"
             >
               <Menu className="w-5 h-5" />
             </button>
           )}
 
-          {/* Collapse sidebar button - for canvas page */}
-          {showCollapseButton && onCollapseClick && (
-            <button
-              onClick={onCollapseClick}
-              className="hidden md:flex min-w-[40px] min-h-[40px] items-center justify-center p-2 rounded-xl hover:bg-purple-500/10 dark:hover:bg-purple-400/10 active:scale-95 transition-all duration-150 flex-shrink-0 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-              aria-label="Toggle sidebar"
-              title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            >
-              {isCollapsed ? (
-                <PanelLeftOpen className="w-5 h-5" />
-              ) : (
-                <PanelLeftClose className="w-5 h-5" />
-              )}
-            </button>
-          )}
-
-          {/* Logo or Title - truncate on small screens */}
-          {title ? (
-            <h1 className="text-base md:text-xl font-semibold text-gray-800 dark:text-gray-100 truncate">
+          {/* Title - only for canvas pages */}
+          {title && (
+            <h1 className="text-sm md:text-base font-medium text-gray-700 dark:text-gray-200 truncate">
               {title}
             </h1>
-          ) : (
-            <Link href="/dashboard" className="flex items-center gap-1.5 flex-shrink-0 group">
-              <h1 className="text-base md:text-xl font-semibold text-gray-800 dark:text-gray-100 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
-                Infinite Canvas
-              </h1>
-            </Link>
           )}
 
           {/* Search Bar */}
           <SearchBar currentCanvasId={currentCanvasId} />
         </div>
 
-        {/* User Actions */}
-        <UserActions
-          currentCanvasId={currentCanvasId}
-          onExportClick={onExportClick}
-          onImportClick={onImportClick}
-        />
+        {/* Canvas-specific actions */}
+        {currentCanvasId && (onExportClick || onImportClick) && (
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {onExportClick && (
+              <button
+                onClick={onExportClick}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all"
+                title="Export canvas"
+                aria-label="Export canvas"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span className="hidden md:inline">Export</span>
+              </button>
+            )}
+            {onImportClick && (
+              <button
+                onClick={onImportClick}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all"
+                title="Import canvas"
+                aria-label="Import canvas"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span className="hidden md:inline">Import</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </header>
   );
