@@ -302,48 +302,55 @@ export function CanvasSkeleton() {
  */
 export function SettingsSkeleton() {
   return (
-    <div className="min-h-screen bg-light-canvas dark:bg-dark-canvas p-4 md:p-8" aria-live="polite" aria-busy="true">
-      <div className="max-w-4xl mx-auto w-full">
-        {/* Header skeleton */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <div className="h-8 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2" />
-            <div className="h-4 w-56 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-          </div>
-          <div className="h-10 w-40 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
+    <div className="bg-gray-50 dark:bg-[#0a0f1a]" aria-live="polite" aria-busy="true">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="mb-6">
+          <div className="h-8 w-36 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2" />
+          <div className="h-4 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
         </div>
 
-        {/* Profile section skeleton */}
-        <div className="bg-white dark:bg-dark-bg rounded-xl shadow-sm border border-light-note-border/60 dark:border-dark-note-border/60 p-6 mb-6">
-          <div className="h-6 w-44 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-4" />
-          <div className="space-y-4">
-            <div>
-              <div className="h-4 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2" />
-              <div className="h-10 w-full bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
-            </div>
-            <div>
-              <div className="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2" />
-              <div className="h-10 w-full bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
-            </div>
-            <div className="h-11 w-full bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
-          </div>
-        </div>
-
-        {/* Password section skeleton */}
-        <div className="bg-white dark:bg-dark-bg rounded-xl shadow-sm border border-light-note-border/60 dark:border-dark-note-border/60 p-6">
-          <div className="h-6 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-4" />
-          <div className="space-y-4">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i}>
-                <div className="h-4 w-36 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2" />
-                <div className="h-10 w-full bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
+          <aside className="lg:col-span-3">
+            <div className="bg-white dark:bg-[#111827] border border-gray-200/80 dark:border-gray-800 rounded-lg p-2">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-1">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-10 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"
+                  />
+                ))}
               </div>
-            ))}
-            <div className="flex gap-3">
-              <div className="flex-1 h-11 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
-              <div className="flex-1 h-11 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
             </div>
-          </div>
+          </aside>
+
+          <section className="lg:col-span-9">
+            <div className="bg-white dark:bg-[#111827] border border-gray-200/80 dark:border-gray-800 rounded-lg p-6">
+              <div className="h-6 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-5" />
+
+              <div className="flex items-center gap-3 p-4 mb-5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg">
+                <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
+                <div className="space-y-2 flex-1">
+                  <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                  <div className="h-3 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <div className="h-4 w-14 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2" />
+                  <div className="h-10 w-full bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />
+                </div>
+                <div>
+                  <div className="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2" />
+                  <div className="h-10 w-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3 pt-1">
+                  <div className="h-10 w-full sm:w-40 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+                  <div className="h-10 w-full sm:w-32 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
       </div>
     </div>
@@ -352,34 +359,60 @@ export function SettingsSkeleton() {
 
 /**
  * AuthFormSkeleton - Skeleton for auth form pages (login, register, reset password)
+ * Matches the split-screen AuthLayout design
  */
 export function AuthFormSkeleton() {
   return (
-    <div className="min-h-screen bg-light-canvas dark:bg-dark-canvas flex items-center justify-center p-4" aria-live="polite" aria-busy="true">
-      <div className="max-w-md w-full">
-        <div className="bg-white dark:bg-dark-bg rounded-2xl shadow-sm border border-light-note-border/60 dark:border-dark-note-border/60 p-8">
+    <div className="min-h-screen flex flex-col lg:flex-row" aria-live="polite" aria-busy="true">
+      {/* Left branding panel skeleton (hidden on mobile) */}
+      <div className="hidden lg:flex lg:w-[480px] xl:w-[520px] flex-shrink-0 bg-gradient-to-br from-[#0F172A] via-[#1a2744] to-[#0F172A]">
+        <div className="p-10 w-full flex flex-col justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-blue-500/20 animate-pulse" />
+            <div className="h-5 w-32 bg-white/10 rounded animate-pulse" />
+          </div>
+          <div className="space-y-4">
+            <div className="h-8 w-48 bg-white/10 rounded animate-pulse" />
+            <div className="h-8 w-40 bg-white/10 rounded animate-pulse" />
+            <div className="h-4 w-56 bg-white/5 rounded animate-pulse mt-4" />
+          </div>
+          <div className="h-3 w-32 bg-white/5 rounded animate-pulse" />
+        </div>
+      </div>
+
+      {/* Mobile brand header skeleton */}
+      <div className="lg:hidden flex items-center gap-2.5 px-6 py-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0a0f1a]">
+        <div className="w-8 h-8 rounded-lg bg-gray-200 dark:bg-gray-700 animate-pulse" />
+        <div className="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+      </div>
+
+      {/* Right form panel skeleton */}
+      <div className="flex-1 flex items-center justify-center px-6 py-10 sm:px-10 bg-white dark:bg-[#0a0f1a]">
+        <div className="w-full max-w-md">
           {/* Title skeleton */}
-          <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mx-auto mb-2" />
-          <div className="h-4 w-56 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mx-auto mb-8" />
+          <div className="mb-8">
+            <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2" />
+            <div className="h-4 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          </div>
 
           {/* Form fields skeleton */}
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div>
-              <div className="h-4 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2" />
-              <div className="h-10 w-full bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
+              <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-1.5" />
+              <div className="h-10 w-full bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />
             </div>
             <div>
-              <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2" />
-              <div className="h-10 w-full bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
+              <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-1.5" />
+              <div className="h-10 w-full bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />
             </div>
-            <div className="flex gap-3">
-              <div className="flex-1 h-11 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
-              <div className="flex-1 h-11 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
+            <div className="flex gap-3 pt-1">
+              <div className="flex-1 h-10 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />
+              <div className="flex-[2] h-10 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
             </div>
           </div>
 
           {/* Footer link skeleton */}
-          <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mx-auto mt-6" />
+          <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mx-auto mt-8" />
         </div>
       </div>
     </div>

@@ -566,6 +566,7 @@ export default function AppSidebar({
   const isOverFolder = overId && typeof overId === 'string' && overId.startsWith('folder-');
   const isOverRoot = overId === 'root-area';
   const overFolderId = isOverFolder ? (overId as string).replace('folder-', '') : null;
+  const isSettingsPage = pathname === '/settings';
 
   const sidebarWidth = sidebarCollapsed ? 'w-0' : 'w-72';
 
@@ -795,14 +796,24 @@ export default function AppSidebar({
                 <span className="hidden sm:inline">{theme === 'light' ? 'Dark' : 'Light'}</span>
               </button>
 
-              <Link
-                href="/settings"
-                className="type-button flex-1 flex items-center justify-center gap-1.5 px-2 py-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all"
+              <button
+                onClick={() => {
+                  onSidebarClose();
+                  if (!isSettingsPage) {
+                    router.push('/settings');
+                  }
+                }}
+                className={`type-button flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg transition-all ${
+                  isSettingsPage
+                    ? 'text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-500/15'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
                 title="Settings"
+                aria-current={isSettingsPage ? 'page' : undefined}
               >
                 <Settings className="w-4 h-4" />
                 <span className="hidden sm:inline">Settings</span>
-              </Link>
+              </button>
 
               <button
                 onClick={async () => {
