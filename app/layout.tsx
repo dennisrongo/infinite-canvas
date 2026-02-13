@@ -26,7 +26,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <head />
-      <body className="font-sans">
+      <body className="font-sans" suppressHydrationWarning>
         <QueryProvider>
         <ThemeProvider>
           <ToastProvider>
