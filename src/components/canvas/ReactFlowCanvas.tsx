@@ -302,21 +302,15 @@ function ReactFlowCanvasInner({
         Math.pow(position.y - lastClickPosition.current.y, 2)
       );
 
-      // Debug logging
-      console.log('[onPaneClick]', { clientX: event.clientX, clientY: event.clientY, timeDiff, distance });
-
       // Check if this is a double-click (within 300ms and close in position)
       if (timeDiff < 300 && distance < 10) {
-        console.log('[onPaneClick] Double-click detected! Creating note...');
         if (onNoteCreate) {
           try {
             const flowPosition = screenToFlowPosition({
               x: event.clientX,
               y: event.clientY,
             });
-            console.log('[onPaneClick] Flow position:', flowPosition);
             onNoteCreate(flowPosition);
-            console.log('[onPaneClick] Note created successfully');
           } catch (error) {
             console.error('[onPaneClick] Error creating note:', error);
           }
@@ -343,7 +337,6 @@ function ReactFlowCanvasInner({
   const onNodeDoubleClick = useCallback(
     (event: React.MouseEvent, node: Node) => {
       event.stopPropagation();
-      console.log('[onNodeDoubleClick] Opening node:', node.id, node.data);
 
       // CRITICAL FIX: Need to construct a Note object from the Node
       // Nodes have structure: { id, data: { title, content, ... }, position, ... }
@@ -371,7 +364,6 @@ function ReactFlowCanvasInner({
         updatedAt: initialNote?.updatedAt,
       };
 
-      console.log('[onNodeDoubleClick] Constructed note object:', note);
       setEditingNote(note);
       setIsEditorOpen(true);
     },
@@ -412,8 +404,6 @@ function ReactFlowCanvasInner({
 
   // Handle navigating to a linked note (Feature #74)
   const handleNavigateToNote = useCallback((noteTitle: string) => {
-    console.log('[handleNavigateToNote] Looking for note:', noteTitle);
-
     // Find the note by title in the current nodes
     const targetNode = nodes.find(node => {
       const title = node.data.title;
@@ -422,14 +412,11 @@ function ReactFlowCanvasInner({
     });
 
     if (targetNode) {
-      console.log('[handleNavigateToNote] Found note node:', targetNode.id);
-
       // First try to find full note data in initialNotes
       let noteData = initialNotes.find(n => n.id === targetNode.id);
 
       // If not found in initialNotes (e.g., newly created note), construct from node data
       if (!noteData) {
-        console.log('[handleNavigateToNote] Note not in initialNotes, using current node data');
         noteData = {
           id: targetNode.id,
           title: String(targetNode.data.title || ''),
@@ -443,7 +430,6 @@ function ReactFlowCanvasInner({
         };
       }
 
-      console.log('[handleNavigateToNote] Setting editing note:', noteData);
       setEditingNote(noteData);
       setIsEditorOpen(true);
 
@@ -515,21 +501,12 @@ function ReactFlowCanvasInner({
       !previousNotes?.some(pn => pn.id === note.id)
     );
 
-    console.log('[Sync Effect] initialNotes changed:', {
-      prevCount: previousNotes?.length || 0,
-      currentCount: initialNotes.length,
-      addedCount: addedNotes.length,
-      addedNotes: addedNotes.map(n => n.id)
-    });
-
     // Find notes that were removed (exist in prev but not in current)
     const removedNoteIds = new Set(
       previousNotes
         ?.filter(pn => !initialNotes.some(cn => cn.id === pn.id))
         ?.map(pn => pn.id)
     );
-
-    console.log('[Sync Effect] removedNoteIds:', Array.from(removedNoteIds));
 
     // Merge new changes with existing nodes state
     setNodes((currentNodes) => {
@@ -565,7 +542,6 @@ function ReactFlowCanvasInner({
         }
       }
 
-      console.log('[Sync Effect] Final nodes count:', updatedNodes.length);
       return updatedNodes;
     });
 
@@ -732,7 +708,6 @@ function ReactFlowCanvasInner({
       // Check for 'N' key to create a new note (Feature #54)
       // Only trigger if no modifier keys are pressed and not in an input field
       if (event.key === 'n' || event.key === 'N') {
-        console.log('[KeyDown] N key pressed');
         if (
           !event.ctrlKey &&
           !event.metaKey &&
@@ -742,25 +717,19 @@ function ReactFlowCanvasInner({
           (event.target as HTMLElement).tagName !== 'TEXTAREA' &&
           !(event.target as HTMLElement).isContentEditable
         ) {
-          console.log('[KeyDown] N key conditions met, creating note');
           event.preventDefault();
           if (onNoteCreate) {
             try {
               // Get current viewport to center the new note
               const viewport = getViewport();
-              console.log('[KeyDown] Viewport:', viewport);
               // Calculate center position in flow coordinates
               const centerX = -viewport.x + (window.innerWidth / 2) / viewport.zoom;
               const centerY = -viewport.y + (window.innerHeight / 2) / viewport.zoom;
-              console.log('[KeyDown] Creating note at center:', { centerX, centerY });
 
               onNoteCreate({ x: centerX, y: centerY });
-              console.log('[KeyDown] onNoteCreate called successfully');
             } catch (error) {
               console.error('[KeyDown] Error creating note with N key:', error);
             }
-          } else {
-            console.error('[KeyDown] onNoteCreate is not defined!');
           }
         }
       }

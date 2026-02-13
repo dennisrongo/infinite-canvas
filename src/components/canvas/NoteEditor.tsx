@@ -99,7 +99,6 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
   // Load note data when note changes - database is single source of truth
   useEffect(() => {
     if (note) {
-      console.log('[NoteEditor] Loading note from database:', note);
       setTitle(note.title || '');
       setContent(note.content || '');
       setFontFamily(note.fontFamily || 'Inter');
@@ -278,8 +277,6 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
   };
 
   const handleNoteLinkClick = (noteTitle: string) => {
-    console.log('Clicked link to note:', noteTitle);
-
     // Check if the note exists in the current canvas
     if (linkedNoteTitles.has(noteTitle)) {
       // Note exists, trigger navigation

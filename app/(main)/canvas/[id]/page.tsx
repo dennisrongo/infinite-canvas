@@ -244,13 +244,8 @@ function CanvasPageContent() {
 
       if (res.ok) {
         const data = await res.json();
-        console.log('[handleNoteCreate] Note created from API:', data.note);
         // Add new note to state
-        setNotes(prev => {
-          const newNotes = [...prev, data.note];
-          console.log('[handleNoteCreate] Updating notes state, new count:', newNotes.length);
-          return newNotes;
-        });
+        setNotes(prev => [...prev, data.note]);
         queryClient.invalidateQueries({ queryKey: canvasKeys.detail(canvasId) });
         showToast('Note created successfully', 'success');
       } else {
@@ -273,7 +268,6 @@ function CanvasPageContent() {
     } catch (error) {
       // Feature #175: Handle cancelled requests silently
       if (error instanceof Error && error.message === 'Request cancelled') {
-        console.log('Note creation cancelled (user navigated away)');
         return;
       }
       console.error('Error creating note:', error);
@@ -358,7 +352,6 @@ function CanvasPageContent() {
     } catch (error) {
       // Feature #175: Handle cancelled requests silently
       if (error instanceof Error && error.message === 'Request cancelled') {
-        console.log('Note update cancelled (user navigated away)');
         return;
       }
       console.error('Error updating note:', error);
@@ -418,7 +411,6 @@ function CanvasPageContent() {
     } catch (error) {
       // Feature #175: Handle cancelled requests silently
       if (error instanceof Error && error.message === 'Request cancelled') {
-        console.log('Note deletion cancelled (user navigated away)');
         return;
       }
       console.error('Error deleting note:', error);
@@ -449,7 +441,6 @@ function CanvasPageContent() {
     } catch (error) {
       // Feature #175: Handle cancelled requests silently
       if (error instanceof Error && error.message === 'Request cancelled') {
-        console.log('Note duplication cancelled (user navigated away)');
         return;
       }
       console.error('Error duplicating note:', error);
@@ -490,7 +481,6 @@ function CanvasPageContent() {
     } catch (error) {
       // Feature #175: Handle cancelled requests silently
       if (error instanceof Error && error.message === 'Request cancelled') {
-        console.log('Note restore cancelled (user navigated away)');
         return;
       }
       console.error('Error restoring note:', error);
@@ -523,7 +513,6 @@ function CanvasPageContent() {
     } catch (error) {
       // Feature #175: Handle cancelled requests silently
       if (error instanceof Error && error.message === 'Request cancelled') {
-        console.log('Connection creation cancelled (user navigated away)');
         return;
       }
       console.error('Error creating connection:', error);
@@ -554,7 +543,6 @@ function CanvasPageContent() {
     } catch (error) {
       // Feature #175: Handle cancelled requests silently
       if (error instanceof Error && error.message === 'Request cancelled') {
-        console.log('Connection deletion cancelled (user navigated away)');
         return;
       }
       console.error('Error deleting connection:', error);

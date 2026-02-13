@@ -44,10 +44,10 @@ export async function POST(request: NextRequest) {
       // In development, log the reset link to console
       // In production, you would send this via email
       const resetLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/reset-password?token=${token}`;
-      console.log('='.repeat(80));
-      console.log('PASSWORD RESET LINK (for development):');
-      console.log(resetLink);
-      console.log('='.repeat(80));
+      // Log reset link in development for testing
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Password reset link:', resetLink);
+      }
     }
 
     // Always return success (don't reveal if user exists)
