@@ -165,8 +165,9 @@ function ReactFlowCanvasInner({
         }, 300); // Reduced delay - viewport animates for 500ms but we can start opening earlier
       }
     }
-    // Reset opened note ref when selectedNoteId changes (for navigating to different notes)
-    if (!selectedNoteId) {
+    // Reset opened note ref when selectedNoteId is cleared or openEditorOnLoad becomes false
+    // This allows re-clicking search results after the URL param is cleared
+    if (!selectedNoteId || !openEditorOnLoad) {
       openedNoteRef.current = null;
     }
   }, [openEditorOnLoad, selectedNoteId, initialNotes]);
