@@ -67,7 +67,7 @@ export default function ImportModal({ isOpen, onClose, onImport, folders }: Impo
       <div className="bg-white dark:bg-[#0F172A] rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-[#E2E8F0] dark:border-[#475569]">
-          <h2 className="text-xl font-semibold text-[#1E293B] dark:text-[#F1F5F9]">
+          <h2 className="text-lg md:text-xl font-semibold text-[#1E293B] dark:text-[#F1F5F9]">
             Import Canvas
           </h2>
           <button

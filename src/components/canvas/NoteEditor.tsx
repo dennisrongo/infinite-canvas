@@ -397,7 +397,7 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
         {/* Header */}
         <div className="p-4 border-b border-[#E2E8F0] dark:border-[#475569]">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-xl font-semibold text-[#1E293B] dark:text-[#F1F5F9]">
+            <h2 className="text-lg md:text-xl font-semibold text-[#1E293B] dark:text-[#F1F5F9]">
               Edit Note
             </h2>
             <button

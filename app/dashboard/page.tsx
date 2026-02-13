@@ -360,7 +360,7 @@ export default function DashboardPage() {
             {/* Page Header */}
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
                   Recent Canvases
                 </h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -383,7 +383,7 @@ export default function DashboardPage() {
                 <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
                   <FileText className="w-8 h-8 text-gray-400 dark:text-gray-500" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                <h3 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white mb-2">
                   No canvases yet
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-sm mx-auto">
@@ -467,7 +467,7 @@ export default function DashboardPage() {
       {showNewFolderModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-dark-bg rounded-2xl shadow-xl p-6 max-w-md w-full animate-scale-in">
-            <h3 className="text-lg font-semibold text-light-text dark:text-dark-text mb-4">
+            <h3 className="text-lg md:text-xl font-semibold text-light-text dark:text-dark-text mb-4">
               Create New Folder
             </h3>
             <form onSubmit={createFolder}>
@@ -521,7 +521,7 @@ export default function DashboardPage() {
       {showDeleteModal && folderToDelete && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-dark-bg rounded-2xl shadow-xl p-6 max-w-md w-full animate-scale-in">
-            <h3 id="delete-folder-heading" className="text-lg font-semibold text-light-text dark:text-dark-text mb-4">
+            <h3 id="delete-folder-heading" className="text-lg md:text-xl font-semibold text-light-text dark:text-dark-text mb-4">
               Delete Folder
             </h3>
             {folderToDelete.canvases.length > 0 ? (
@@ -588,7 +588,7 @@ export default function DashboardPage() {
       {showRenameModal && folderToRename && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-dark-bg rounded-2xl shadow-xl p-6 max-w-md w-full animate-scale-in">
-            <h3 className="text-lg font-semibold text-light-text dark:text-dark-text mb-4">
+            <h3 className="text-lg md:text-xl font-semibold text-light-text dark:text-dark-text mb-4">
               Rename Folder
             </h3>
             <form onSubmit={renameFolder}>
@@ -646,7 +646,7 @@ export default function DashboardPage() {
       {showMoveModal && canvasToMove && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-dark-bg rounded-2xl shadow-xl p-6 max-w-md w-full animate-scale-in">
-            <h3 id="move-canvas-heading" className="text-lg font-semibold text-light-text dark:text-dark-text mb-4">
+            <h3 id="move-canvas-heading" className="text-lg md:text-xl font-semibold text-light-text dark:text-dark-text mb-4">
               Move Canvas
             </h3>
             <p className="text-light-text dark:text-dark-text mb-4">
@@ -710,7 +710,7 @@ export default function DashboardPage() {
       {showCanvasDeleteModal && canvasToDelete && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-dark-bg rounded-2xl shadow-xl p-6 max-w-md w-full animate-scale-in">
-            <h3 className="text-lg font-semibold text-light-text dark:text-dark-text mb-4">
+            <h3 className="text-lg md:text-xl font-semibold text-light-text dark:text-dark-text mb-4">
               Delete Canvas
             </h3>
             <div className="space-y-3 mb-4">
@@ -748,7 +748,7 @@ export default function DashboardPage() {
       {showCanvasRenameModal && canvasToRename && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-dark-bg rounded-2xl shadow-xl p-6 max-w-md w-full animate-scale-in">
-            <h3 className="text-lg font-semibold text-light-text dark:text-dark-text mb-4">
+            <h3 className="text-lg md:text-xl font-semibold text-light-text dark:text-dark-text mb-4">
               Rename Canvas
             </h3>
             <form onSubmit={renameCanvas}>
@@ -806,7 +806,7 @@ export default function DashboardPage() {
       {showNewCanvasModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-dark-bg rounded-2xl shadow-xl p-6 max-w-md w-full animate-scale-in">
-            <h3 className="text-lg font-semibold text-light-text dark:text-dark-text mb-4">
+            <h3 className="text-lg md:text-xl font-semibold text-light-text dark:text-dark-text mb-4">
               Create New Canvas
             </h3>
             <form onSubmit={submitCreateCanvas}>

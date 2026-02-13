@@ -22,7 +22,7 @@ export default function DeleteConfirmationModal({
       <div className="bg-white dark:bg-[#1E293B] rounded-lg shadow-xl w-full max-w-md mx-4 p-6">
         {/* Header */}
         <div className="mb-4">
-          <h2 className="text-xl font-semibold text-[#1E293B] dark:text-[#F1F5F9]">
+          <h2 className="text-lg md:text-xl font-semibold text-[#1E293B] dark:text-[#F1F5F9]">
             Delete Note
           </h2>
         </div>

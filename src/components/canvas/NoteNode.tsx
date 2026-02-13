@@ -212,18 +212,18 @@ export default function NoteNode({ data, selected, id }: NoteNodeProps) {
           {/* Title with accent dot */}
           <div className="flex items-center gap-2 mb-2 pr-6">
             <div className={`w-2 h-2 rounded-full ${accent.dot} flex-shrink-0`} />
-            <div className="font-bold text-gray-800 dark:text-gray-100 text-sm tracking-wide truncate">
+            <div className="font-bold text-gray-800 dark:text-gray-100 text-base tracking-wide truncate">
               {data.title || 'Untitled Note'}
             </div>
           </div>
 
           {/* Content preview */}
           {contentPreview ? (
-            <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            <div className="text-base text-gray-600 dark:text-gray-400 leading-relaxed">
               {contentPreview}
             </div>
           ) : (
-            <div className="text-sm text-gray-400 dark:text-gray-500 italic">
+            <div className="text-base text-gray-400 dark:text-gray-500 italic">
               No content yet
             </div>
           )}

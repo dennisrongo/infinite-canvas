@@ -81,20 +81,7 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: [
-          'Inter',
-          '-apple-system',
-          'BlinkMacSystemFont',
-          "'Segoe UI'",
-          'Roboto',
-          "'Oxygen'",
-          "'Ubuntu'",
-          'Cantarell',
-          "'Fira Sans'",
-          "'Droid Sans'",
-          "'Helvetica Neue'",
-          'sans-serif',
-        ],
+        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
       },
       letterSpacing: {
         'tighter-custom': '-0.02em',
