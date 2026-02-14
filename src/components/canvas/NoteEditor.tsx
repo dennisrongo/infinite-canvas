@@ -582,8 +582,14 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Tab') {
+                  e.preventDefault();
+                  textareaRef.current?.focus();
+                }
+              }}
               className="h3 w-full px-3 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3B82F6] bg-white dark:bg-[#0F172A] text-[#1E293B] dark:text-[#F1F5F9]"
-              placeholder="Enter note title..."
+              placeholder="Enter note title... (Press Tab to move to content)"
             />
           </div>
 
