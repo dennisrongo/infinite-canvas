@@ -363,41 +363,46 @@ function ReactFlowCanvasInner({
     [onNoteUpdate]
   );
 
+  // Helper function to construct a Note object from a Node
+  const getNoteFromNode = useCallback((node: Node): Note => {
+    const initialNote = initialNotes.find(n => n.id === node.id);
+    return {
+      id: node.id,
+      title: (node.data as any).title || 'Untitled Note',
+      content: (node.data as any).content || '',
+      positionX: node.position.x,
+      positionY: node.position.y,
+      width: typeof node.style?.width === 'number' ? node.style.width : 300,
+      height: typeof node.style?.height === 'number' ? node.style.height : 200,
+      fontFamily: (node.data as any).fontFamily,
+      fontSize: (node.data as any).fontSize,
+      createdAt: initialNote?.createdAt,
+      updatedAt: initialNote?.updatedAt,
+    };
+  }, [initialNotes]);
+
+  // Handle node single-click to open editor
+  const onNodeClick = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      event.stopPropagation();
+      
+      const note = getNoteFromNode(node);
+      setEditingNote(note);
+      setIsEditorOpen(true);
+    },
+    [getNoteFromNode]
+  );
+
   // Handle node double-click to open editor
   const onNodeDoubleClick = useCallback(
     (event: React.MouseEvent, node: Node) => {
       event.stopPropagation();
 
-      // CRITICAL FIX: Need to construct a Note object from the Node
-      // Nodes have structure: { id, data: { title, content, ... }, position, ... }
-      // Notes have structure: { id, title, content, positionX, positionY, ... }
-      let note: Note | undefined;
-
-      // First, check initialNotes for a Note object with metadata like createdAt, updatedAt
-      const initialNote = initialNotes.find(n => n.id === node.id);
-      if (initialNote) {
-        note = initialNote;
-      }
-
-      // Always construct Note object from current node data (most up-to-date)
-      note = {
-        id: node.id,
-        title: (node.data as any).title || 'Untitled Note',
-        content: (node.data as any).content || '',
-        positionX: node.position.x,
-        positionY: node.position.y,
-        width: typeof node.style?.width === 'number' ? node.style.width : 300,
-        height: typeof node.style?.height === 'number' ? node.style.height : 200,
-        fontFamily: (node.data as any).fontFamily,
-        fontSize: (node.data as any).fontSize,
-        createdAt: initialNote?.createdAt,
-        updatedAt: initialNote?.updatedAt,
-      };
-
+      const note = getNoteFromNode(node);
       setEditingNote(note);
       setIsEditorOpen(true);
     },
-    [nodes, initialNotes]
+    [getNoteFromNode]
   );
 
   // Handle saving note content from editor
@@ -835,6 +840,37 @@ function ReactFlowCanvasInner({
   // Get current zoom percentage for display
   const zoomPercentage = Math.round(viewport.zoom * 100);
 
+  // Track fullscreen state
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Listen for fullscreen changes to update state and apply theme-aware background
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const fullscreen = !!document.fullscreenElement;
+      setIsFullscreen(fullscreen);
+      
+      // Apply theme-aware background color when entering/exiting fullscreen
+      const canvasElement = document.querySelector('.react-flow') as HTMLElement;
+      if (canvasElement) {
+        if (fullscreen) {
+          canvasElement.style.backgroundColor = theme === 'dark' ? '#1E293B' : '#FAFAFA';
+        } else {
+          canvasElement.style.backgroundColor = '';
+        }
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, [theme]);
+
+  // Determine background color based on theme and fullscreen state
+  const backgroundColor = isFullscreen
+    ? (theme === 'dark' ? '#1E293B' : '#FAFAFA')
+    : undefined;
+
   return (
     <div className="relative w-full h-full">
       <ReactFlow
@@ -843,6 +879,7 @@ function ReactFlowCanvasInner({
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
+        onNodeClick={onNodeClick}
         onNodeDragStop={onNodeDragStop}
         onNodeDoubleClick={onNodeDoubleClick}
         onPaneClick={onPaneClick}
@@ -857,6 +894,7 @@ function ReactFlowCanvasInner({
         zoomOnDoubleClick={false}
         selectionOnDrag
         className="bg-[#FAFAFA] dark:bg-[#1E293B]"
+        style={backgroundColor ? { backgroundColor } : undefined}
       >
         <Background
           variant={BackgroundVariant.Dots}
