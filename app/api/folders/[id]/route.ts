@@ -138,21 +138,17 @@ export async function DELETE(
 
     const hasCanvases = existingFolder.canvases.length > 0;
 
-    if (hasCanvases && !moveCanvasesToRoot) {
-      return NextResponse.json(
-        {
-          error: 'Folder contains canvases',
-          message: 'This folder contains canvases. Please specify whether to move canvases to root or delete them.',
-          canvasCount: existingFolder.canvases.length,
-        },
-        { status: 409 }
-      );
-    }
-
+    // If folder has canvases and moveCanvasesToRoot is true, move canvases to root
+    // If folder has canvases and moveCanvasesToRoot is false, delete the canvases
     if (hasCanvases && moveCanvasesToRoot) {
       await prisma.canvas.updateMany({
         where: { folderId: id },
         data: { folderId: null },
+      });
+    } else if (hasCanvases && !moveCanvasesToRoot) {
+      // Delete all canvases in the folder (cascade will handle notes and connections)
+      await prisma.canvas.deleteMany({
+        where: { folderId: id },
       });
     }
 
@@ -162,7 +158,9 @@ export async function DELETE(
       success: true,
       message: hasCanvases && moveCanvasesToRoot
         ? 'Folder deleted and canvases moved to root'
-        : 'Folder deleted',
+        : hasCanvases && !moveCanvasesToRoot
+          ? 'Folder and all canvases deleted'
+          : 'Folder deleted',
     });
   } catch (error) {
     console.error('Error deleting folder:', error);
