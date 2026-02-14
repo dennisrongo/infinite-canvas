@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { getOrRestoreDEK } from '@/lib/dek';
-import { decryptNote, isEncryptedData } from '@/lib/encryption';
+import { decryptNote, isEncryptedData, decrypt } from '@/lib/encryption';
 
 // Maximum search query length to prevent performance issues
 const MAX_SEARCH_QUERY_LENGTH = 1000;
@@ -85,12 +85,14 @@ export async function POST(request: NextRequest) {
     const validSortOrders = ['asc', 'desc'];
     const sortDirection = validSortOrders.includes(sortOrder) ? sortOrder : 'desc';
 
-    // Use raw SQL query for better performance with large datasets
-    // This avoids fetching all notes and filtering in JavaScript
-    const startTime = Date.now();
-    const searchPattern = `%${searchTerms}%`;
+    // Get DEK for decryption
+    const dek = await getOrRestoreDEK(session.userId);
 
-    // Build the query conditionally based on parameters (PostgreSQL $N placeholders)
+    // Since notes are encrypted, we need to fetch and decrypt first, then filter
+    // This is necessary because the search terms can't match encrypted content
+    const startTime = Date.now();
+
+    // Build query parameters
     const params: any[] = [session.userId];
     let whereSQL = 'WHERE c.user_id = $1';
 
@@ -98,11 +100,6 @@ export async function POST(request: NextRequest) {
       params.push(canvasId);
       whereSQL += ' AND n.canvas_id = $' + params.length;
     }
-
-    const titleIdx = params.length + 1;
-    const contentIdx = params.length + 2;
-    whereSQL += ` AND (n.title ILIKE $${titleIdx} OR n.content ILIKE $${contentIdx})`;
-    params.push(searchPattern, searchPattern);
 
     if (dateFilter) {
       const dateThreshold = getDateFilterThreshold(dateFilter);
@@ -112,86 +109,122 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Get total count of matching notes (for pagination info)
-    const countQuery = `
-      SELECT COUNT(*) as count
-      FROM notes n
-      INNER JOIN canvases c ON n.canvas_id = c.id
-      ${whereSQL}
-    `;
-
-    const countResult = await prisma.$queryRawUnsafe<Array<{ count: bigint }>>(
-      countQuery,
-      ...params
-    );
-    const totalCount = Number(countResult[0]?.count || 0);
-
-    // Get paginated results with sorting
+    // Order by field mapping
     const orderByField = getFieldMapping(sortField);
     const orderDirection = sortDirection === 'asc' ? 'ASC' : 'DESC';
+
+    // Fetch notes (without search filter - we'll filter after decryption)
+    // If canvasId is specified, scope to that canvas for better performance
+    // Otherwise, fetch a reasonable limit from all canvases
+    const fetchLimit = canvasId ? MAX_RESULTS * 3 : MAX_RESULTS * 2;
 
     const notesQuery = `
       SELECT
         n.id,
         n.title,
         n.content,
+        n.is_encrypted as "isEncrypted",
         n.position_x as "positionX",
         n.position_y as "positionY",
         n.created_at as "createdAt",
         n.updated_at as "updatedAt",
         c.id as "canvasId",
-        c.name as "canvasName"
+        c.name as "canvasName",
+        c.is_encrypted as "canvasIsEncrypted"
       FROM notes n
       INNER JOIN canvases c ON n.canvas_id = c.id
       ${whereSQL}
       ORDER BY ${orderByField} ${orderDirection}
-      LIMIT ${MAX_RESULTS}
+      LIMIT ${fetchLimit}
     `;
 
-    const notes = await prisma.$queryRawUnsafe(notesQuery, ...params);
+    const notes = await prisma.$queryRawUnsafe<any[]>(notesQuery, ...params);
 
-    const searchTime = Date.now() - startTime;
+    // Normalize search terms for case-insensitive matching
+    const normalizedSearchTerms = searchTerms.toLowerCase();
 
-    // Get DEK for decryption
-    const dek = await getOrRestoreDEK(session.userId);
+    // Decrypt and filter results
+    const results: Array<{
+      id: string;
+      title: string;
+      content: string;
+      contentPreview: string;
+      canvasId: string;
+      canvasName: string;
+      positionX: number;
+      positionY: number;
+      createdAt: Date;
+      updatedAt: Date;
+    }> = [];
 
-    // Format results (decrypt if needed)
-    const results = (notes as any[]).map((note) => {
+    for (const note of notes) {
       let title = note.title;
       let content = note.content;
+      let canvasName = note.canvasName;
+      let isEncrypted = note.isEncrypted;
 
-      // Try to decrypt if we have a DEK and the data looks encrypted
+      // Try to decrypt note title and content if we have a DEK
       if (dek && isEncryptedData(title) && isEncryptedData(content)) {
         try {
           const decrypted = decryptNote(title, content, dek);
           title = decrypted.title;
           content = decrypted.content;
+          isEncrypted = true;
         } catch (decryptError) {
           console.error('Failed to decrypt note during search:', note.id, decryptError);
           // Keep encrypted values if decryption fails
         }
+      } else if (!dek && isEncryptedData(title || '')) {
+        // No DEK but data is encrypted - skip this note
+        continue;
       }
 
-      return {
-        id: note.id,
-        title,
-        content,
-        contentPreview: content
-          ? content.substring(0, 150) + (content.length > 150 ? '...' : '')
-          : '',
-        canvasId: note.canvasId,
-        canvasName: note.canvasName,
-        positionX: Number(note.positionX),
-        positionY: Number(note.positionY),
-        createdAt: new Date(note.createdAt as string | Date),
-        updatedAt: new Date(note.updatedAt as string | Date),
-      };
-    });
+      // Try to decrypt canvas name if encrypted
+      if (dek && (note.canvasIsEncrypted || isEncryptedData(canvasName || ''))) {
+        try {
+          if (isEncryptedData(canvasName)) {
+            const canvasNameData = JSON.parse(canvasName);
+            canvasName = decrypt(canvasNameData, dek);
+          }
+        } catch (canvasDecryptError) {
+          console.error('Failed to decrypt canvas name during search:', note.canvasId, canvasDecryptError);
+        }
+      }
+
+      // Check if decrypted content matches search terms
+      const titleLower = title?.toLowerCase() || '';
+      const contentLower = content?.toLowerCase() || '';
+
+      if (titleLower.includes(normalizedSearchTerms) || contentLower.includes(normalizedSearchTerms)) {
+        results.push({
+          id: note.id,
+          title,
+          content,
+          contentPreview: content
+            ? content.substring(0, 150) + (content.length > 150 ? '...' : '')
+            : '',
+          canvasId: note.canvasId,
+          canvasName,
+          positionX: Number(note.positionX),
+          positionY: Number(note.positionY),
+          createdAt: new Date(note.createdAt),
+          updatedAt: new Date(note.updatedAt),
+        });
+
+        // Stop once we have enough results
+        if (results.length >= MAX_RESULTS) {
+          break;
+        }
+      }
+    }
+
+    const searchTime = Date.now() - startTime;
+    const totalCount = results.length;
 
     return NextResponse.json({
       results,
       totalCount,
-      hasMore: totalCount > MAX_RESULTS,
+      hasMore: false, // Since we filtered in-memory, we can't know if there are more
       searchTime,
       ...(wasTruncated && {
         warning: `Search query was truncated to ${MAX_SEARCH_QUERY_LENGTH} characters for performance.`
