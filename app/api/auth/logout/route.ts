@@ -35,7 +35,8 @@ export async function POST() {
       cookieStore.delete('auth_token');
     }
 
-    return NextResponse.redirect(new URL('/auth/login', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'));
+    // Return success JSON - frontend handles redirect via router.push()
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Logout error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
