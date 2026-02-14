@@ -75,6 +75,10 @@ function CanvasPageContent() {
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   // Track whether we've seeded local state from query data for this canvasId
   const [seededCanvasId, setSeededCanvasId] = useState<string | null>(null);
+  // Track pending deep link - stores note ID when URL param exists but notes aren't loaded yet
+  const [pendingDeepLinkNoteId, setPendingDeepLinkNoteId] = useState<string | null>(null);
+  // Track if we should open editor for deep link - set when deep link is successfully processed
+  const [shouldOpenEditorForDeepLink, setShouldOpenEditorForDeepLink] = useState(false);
 
   // Feature #175: Hook for cancellable requests to handle late API responses
   const { cancellableFetch, abortAllRequests, isMounted, cleanup } = useCancellableRequest();
@@ -82,6 +86,9 @@ function CanvasPageContent() {
 
   // Get note ID from URL query parameter for deep linking
   const noteIdParam = searchParams?.get('note');
+  
+  // Track if we've already processed a deep link to prevent duplicate processing
+  const deepLinkProcessedRef = useRef<string | null>(null);
 
   // Feature #175: Clean up on unmount
   useEffect(() => {
@@ -185,25 +192,76 @@ function CanvasPageContent() {
       setError(null);
       setCanvasDeleted(false);
       setSelectedNoteId(null);
+      setShouldOpenEditorForDeepLink(false);
     }
   }, [canvasId, seededCanvasId]);
 
   // Handle deep linking to specific note
   useEffect(() => {
-    if (noteIdParam && notes.length > 0) {
-      const targetNote = notes.find(n => n.id === noteIdParam);
+    // Reset tracking when URL param is cleared - allows re-clicking same search result
+    if (!noteIdParam) {
+      deepLinkProcessedRef.current = null;
+      return;
+    }
+
+    // Skip if we've already processed this specific note ID
+    if (deepLinkProcessedRef.current === noteIdParam) return;
+
+    // If notes aren't loaded yet, store as pending
+    if (notes.length === 0) {
+      setPendingDeepLinkNoteId(noteIdParam);
+      return;
+    }
+
+    // Notes are loaded, process the deep link
+    const targetNote = notes.find(n => n.id === noteIdParam);
+    if (targetNote) {
+      // Mark as processed to prevent duplicate processing
+      deepLinkProcessedRef.current = noteIdParam;
+      setSelectedNoteId(noteIdParam);
+      setShouldOpenEditorForDeepLink(true);
+      showToast(`Opened note: ${targetNote.title}`, 'success');
+    } else {
+      // Mark as processed even if not found to avoid repeated attempts
+      deepLinkProcessedRef.current = noteIdParam;
+      showToast('Note not found', 'error');
+    }
+
+    // Clear the ?note= param from URL after handling so re-clicking
+    // the same search result will trigger the deep link again
+    const newUrl = window.location.pathname;
+    window.history.replaceState({}, '', newUrl);
+  }, [noteIdParam, notes, showToast]);
+
+  // Handle pending deep link when notes become available
+  useEffect(() => {
+    if (pendingDeepLinkNoteId && notes.length > 0) {
+      // Check if we've already processed this note
+      if (deepLinkProcessedRef.current === pendingDeepLinkNoteId) {
+        setPendingDeepLinkNoteId(null);
+        return;
+      }
+
+      const targetNote = notes.find(n => n.id === pendingDeepLinkNoteId);
       if (targetNote) {
-        setSelectedNoteId(noteIdParam);
+        // Mark as processed to prevent duplicate processing
+        deepLinkProcessedRef.current = pendingDeepLinkNoteId;
+        setSelectedNoteId(pendingDeepLinkNoteId);
+        setShouldOpenEditorForDeepLink(true);
+        setPendingDeepLinkNoteId(null);
         showToast(`Opened note: ${targetNote.title}`, 'success');
       } else {
+        // Mark as processed even if not found
+        deepLinkProcessedRef.current = pendingDeepLinkNoteId;
+        setPendingDeepLinkNoteId(null);
         showToast('Note not found', 'error');
       }
-      // Clear the ?note= param from URL after handling so re-clicking
-      // the same search result will trigger the deep link again
+
+      // Clear the ?note= param from URL
       const newUrl = window.location.pathname;
       window.history.replaceState({}, '', newUrl);
     }
-  }, [noteIdParam, notes, showToast]);
+  }, [pendingDeepLinkNoteId, notes, showToast]);
 
   // Handle visibility change - check if canvas still exists when returning to tab
   // Feature #174: Detect when canvas was deleted in another tab
@@ -655,7 +713,7 @@ function CanvasPageContent() {
         initialConnections={connections}
         initialViewport={viewport || undefined}
         selectedNoteId={selectedNoteId || undefined}
-        openEditorOnLoad={!!noteIdParam}
+        openEditorOnLoad={shouldOpenEditorForDeepLink}
         onNoteCreate={handleNoteCreate}
         onNoteUpdate={handleNoteUpdate}
         onNoteDelete={handleNoteDelete}

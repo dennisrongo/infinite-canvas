@@ -99,7 +99,8 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
     setSearchQuery('');
     setFocusedIndex(-1);
     // Include note ID query parameter to auto-open editor
-    router.push(`/canvas/${result.canvasId}?note=${result.id}`);
+    // Use result.noteId (actual note ID), not result.id (search index row ID)
+    router.push(`/canvas/${result.canvasId}?note=${result.noteId}`);
   }, [router]);
 
   // Format date for display

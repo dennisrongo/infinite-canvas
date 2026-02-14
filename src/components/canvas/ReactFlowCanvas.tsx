@@ -193,7 +193,7 @@ function ReactFlowCanvasInner({
         setTimeout(() => {
           setEditingNote(targetNote);
           setIsEditorOpen(true);
-        }, 300); // Reduced delay - viewport animates for 500ms but we can start opening earlier
+        }, 300);
       }
     }
     // Reset opened note ref when selectedNoteId is cleared or openEditorOnLoad becomes false
