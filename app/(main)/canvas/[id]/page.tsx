@@ -8,6 +8,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useToast } from '@/contexts/ToastContext';
 import { CanvasSkeleton } from '@/components/ui/SkeletonLoader';
 import { useCancellableRequest } from '@/hooks/useCancellableRequest';
+import { useDebounce } from '@/hooks/useDebounce';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCanvas, useConnections, useRenameCanvas } from '@/hooks/api/useCanvases';
 import { canvasKeys } from '@/lib/queryKeys';
@@ -65,6 +66,9 @@ function CanvasPageContent() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
   const [viewport, setViewport] = useState<{ x: number; y: number; zoom: number } | null>(null);
+  // Debounce viewport updates to prevent excessive API calls during pan/zoom
+  const debouncedViewport = useDebounce(viewport, 500);
+  const prevDebouncedViewportRef = useRef<{ x: number; y: number; zoom: number } | null>(null);
   const [canvas, setCanvas] = useState<Canvas | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [canvasDeleted, setCanvasDeleted] = useState(false);
@@ -358,33 +362,62 @@ function CanvasPageContent() {
     }
   }, [showToast, cancellableFetch, cleanup, refetchCanvas]);
 
-  const handleViewportChange = useCallback(async (newViewport: { x: number; y: number; zoom: number }) => {
-    const requestKey = `updateViewport-${canvasId}`;
-    try {
-      // Feature #175: Use cancellable fetch - viewport changes are frequent
-      const res = await cancellableFetch(requestKey, `/api/canvases/${canvasId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          viewportX: newViewport.x,
-          viewportY: newViewport.y,
-          zoom: newViewport.zoom,
-        }),
-      });
-      // Feature #174: Handle canvas deleted case - silently fail for viewport updates
-      if (res && !res.ok && res.status === 404) {
-        // Canvas was deleted, will be caught by next refetchCanvas call
-        console.warn('Canvas was deleted while updating viewport');
-      }
-    } catch (error) {
-      // Feature #175: Silently handle cancelled viewport updates (they happen frequently)
-      if (error instanceof Error && error.message === 'Request cancelled') {
-        // Expected - user panned/zoomed quickly
-        return;
-      }
-      console.error('Error saving viewport state:', error);
+  // Viewport change handler - updates local state immediately (debounced API call via useEffect)
+  const handleViewportChange = useCallback((newViewport: { x: number; y: number; zoom: number }) => {
+    setViewport(newViewport);
+  }, []);
+
+  // Debounced viewport API update - only fires after user stops panning/zooming for 500ms
+  useEffect(() => {
+    // Skip if no debounced viewport or if it hasn't changed from previous
+    if (!debouncedViewport) return;
+
+    // Skip initial render (viewport seeded from server data)
+    const prev = prevDebouncedViewportRef.current;
+    if (!prev) {
+      prevDebouncedViewportRef.current = debouncedViewport;
+      return;
     }
-  }, [canvasId, cancellableFetch]);
+
+    // Skip if viewport hasn't actually changed
+    if (
+      prev.x === debouncedViewport.x &&
+      prev.y === debouncedViewport.y &&
+      prev.zoom === debouncedViewport.zoom
+    ) {
+      return;
+    }
+
+    // Update ref and make API call
+    prevDebouncedViewportRef.current = debouncedViewport;
+
+    const saveViewport = async () => {
+      const requestKey = `updateViewport-${canvasId}`;
+      try {
+        const res = await cancellableFetch(requestKey, `/api/canvases/${canvasId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            viewportX: debouncedViewport.x,
+            viewportY: debouncedViewport.y,
+            zoom: debouncedViewport.zoom,
+          }),
+        });
+        // Feature #174: Handle canvas deleted case - silently fail for viewport updates
+        if (res && !res.ok && res.status === 404) {
+          console.warn('Canvas was deleted while updating viewport');
+        }
+      } catch (error) {
+        // Feature #175: Silently handle cancelled viewport updates
+        if (error instanceof Error && error.message === 'Request cancelled') {
+          return;
+        }
+        console.error('Error saving viewport state:', error);
+      }
+    };
+
+    saveViewport();
+  }, [debouncedViewport, canvasId, cancellableFetch]);
 
   const handleNoteDelete = useCallback(async (noteId: string) => {
     const requestKey = `deleteNote-${noteId}`;

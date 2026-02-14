@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
@@ -12,6 +12,116 @@ import { sanitizeMarkdown } from '@/lib/sanitization';
 import { useToast } from '@/contexts/ToastContext';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { formatDateTime, formatRelativeTime } from '@/lib/date';
+
+// Static remark/rehype plugins - moved outside component to avoid recreation on each render
+const remarkPlugins = [remarkGfm];
+const rehypePlugins = [rehypeHighlight, rehypeSanitize];
+
+// Memoized markdown preview component to prevent unnecessary re-renders
+interface MemoizedMarkdownPreviewProps {
+  content: string;
+  fontFamily: string;
+  fontSize: number;
+  viewMode: 'edit' | 'preview' | 'split';
+  linkedNoteTitles: Set<string>;
+  onNoteLinkClick: (noteTitle: string) => void;
+  remarkPlugins: typeof remarkPlugins;
+  rehypePlugins: typeof rehypePlugins;
+}
+
+const MemoizedMarkdownPreview = React.memo(function MemoizedMarkdownPreview({
+  content,
+  fontFamily,
+  fontSize,
+  viewMode,
+  linkedNoteTitles,
+  onNoteLinkClick,
+  remarkPlugins,
+  rehypePlugins,
+}: MemoizedMarkdownPreviewProps) {
+  // Memoize the rendered markdown based on content and styling
+  const markdownElement = useMemo(() => (
+    <ReactMarkdown
+      remarkPlugins={remarkPlugins}
+      rehypePlugins={rehypePlugins}
+      components={{
+        // Custom renderer for wiki-style [[links]]
+        p: ({ children }) => {
+          // Check if children contain [[link]] syntax
+          const childStr = String(children);
+          if (childStr.includes('[[')) {
+            // Replace [[Note Title]] with a clickable link
+            const parts = childStr.split(/(\[\[[^\]]+\]\])/g);
+            return (
+              <>
+                {parts.map((part, i) => {
+                  const linkMatch = part.match(/\[\[([^\]]+)\]\]/);
+                  if (linkMatch) {
+                    const noteTitle = linkMatch[1];
+                    const isLinkedNote = linkedNoteTitles.has(noteTitle);
+                    return (
+                      <a
+                        key={i}
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          onNoteLinkClick(noteTitle);
+                        }}
+                        className={`font-medium ${
+                          isLinkedNote
+                            ? 'text-[#3B82F6] hover:text-[#2563EB] underline'
+                            : 'text-[#64748B] dark:text-[#94A3B8] hover:text-[#3B82F6] underline decoration-dashed'
+                        }`}
+                        title={isLinkedNote ? `Jump to "${noteTitle}"` : `Note "${noteTitle}" not found in this canvas`}
+                      >
+                        {noteTitle}
+                      </a>
+                    );
+                  }
+                  return part;
+                })}
+              </>
+            );
+          }
+          return <>{children}</>;
+        },
+      }}
+    >
+      {content || '*Empty note - start typing to add content*'}
+    </ReactMarkdown>
+  ), [content, linkedNoteTitles, onNoteLinkClick, remarkPlugins, rehypePlugins]);
+
+  return (
+    <div
+      className={`w-full px-3 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg bg-white dark:bg-[#0F172A] text-[#1E293B] dark:text-[#F1F5F9] prose prose-sm dark:prose-invert max-w-none overflow-y-auto ${
+        viewMode === 'split' ? 'mt-2 h-[400px]' : 'min-h-[500px]'
+      }`}
+      style={{
+        fontFamily: fontFamily.includes(',') ? fontFamily : `"${fontFamily}", sans-serif`,
+        fontSize: `${fontSize}px`,
+      }}
+    >
+      {markdownElement}
+    </div>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison for linkedNoteTitles Set
+  if (prevProps.content !== nextProps.content) return false;
+  if (prevProps.fontFamily !== nextProps.fontFamily) return false;
+  if (prevProps.fontSize !== nextProps.fontSize) return false;
+  if (prevProps.viewMode !== nextProps.viewMode) return false;
+
+  // Compare function reference - if parent passes new function, re-render
+  if (prevProps.onNoteLinkClick !== nextProps.onNoteLinkClick) return false;
+
+  // Compare Sets by size and values
+  if (prevProps.linkedNoteTitles.size !== nextProps.linkedNoteTitles.size) return false;
+  for (const title of prevProps.linkedNoteTitles) {
+    if (!nextProps.linkedNoteTitles.has(title)) return false;
+  }
+
+  return true;
+});
 
 interface Note {
   id: string;
@@ -558,64 +668,16 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
 
             {/* Preview Mode */}
             {(viewMode === 'preview' || viewMode === 'split') && (
-              <div
-                className={`w-full px-3 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg bg-white dark:bg-[#0F172A] text-[#1E293B] dark:text-[#F1F5F9] prose prose-sm dark:prose-invert max-w-none overflow-y-auto ${
-                  viewMode === 'split' ? 'mt-2 h-[400px]' : 'min-h-[500px]'
-                }`}
-                style={{
-                  fontFamily: fontFamily.includes(',') ? fontFamily : `"${fontFamily}", sans-serif`,
-                  fontSize: `${fontSize}px`,
-                }}
-              >
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeHighlight, rehypeSanitize]}
-                  components={{
-                    // Custom renderer for wiki-style [[links]]
-                    p: ({ children }) => {
-                      // Check if children contain [[link]] syntax
-                      const childStr = String(children);
-                      if (childStr.includes('[[')) {
-                        // Replace [[Note Title]] with a clickable link
-                        const parts = childStr.split(/(\[\[[^\]]+\]\])/g);
-                        return (
-                          <>
-                            {parts.map((part, i) => {
-                              const linkMatch = part.match(/\[\[([^\]]+)\]\]/);
-                              if (linkMatch) {
-                                const noteTitle = linkMatch[1];
-                                const isLinkedNote = linkedNoteTitles.has(noteTitle);
-                                return (
-                                  <a
-                                    key={i}
-                                    href="#"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      handleNoteLinkClick(noteTitle);
-                                    }}
-                                    className={`font-medium ${
-                                      isLinkedNote
-                                        ? 'text-[#3B82F6] hover:text-[#2563EB] underline'
-                                        : 'text-[#64748B] dark:text-[#94A3B8] hover:text-[#3B82F6] underline decoration-dashed'
-                                    }`}
-                                    title={isLinkedNote ? `Jump to "${noteTitle}"` : `Note "${noteTitle}" not found in this canvas`}
-                                  >
-                                    {noteTitle}
-                                  </a>
-                                );
-                              }
-                              return part;
-                            })}
-                          </>
-                        );
-                      }
-                      return <>{children}</>;
-                    },
-                  }}
-                >
-                  {content || '*Empty note - start typing to add content*'}
-                </ReactMarkdown>
-              </div>
+              <MemoizedMarkdownPreview
+                content={content}
+                fontFamily={fontFamily}
+                fontSize={fontSize}
+                viewMode={viewMode}
+                linkedNoteTitles={linkedNoteTitles}
+                onNoteLinkClick={handleNoteLinkClick}
+                remarkPlugins={remarkPlugins}
+                rehypePlugins={rehypePlugins}
+              />
             )}
 
             {pastingImage && (

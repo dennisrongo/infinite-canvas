@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 
 interface NoteNodeProps {
@@ -35,48 +35,51 @@ function getAccentForId(id: string): { border: string; dot: string } {
   return NOTE_ACCENT_COLORS[index];
 }
 
-export default function NoteNode({ data, selected, id }: NoteNodeProps) {
+// Generate content preview (extracted for memoization)
+function generateContentPreview(content: string): string {
+  if (!content || content.trim() === '') {
+    return '';
+  }
+
+  // Remove markdown syntax for plain text preview
+  const plainText = content
+    // Remove headers
+    .replace(/^#{1,6}\s+/gm, '')
+    // Remove bold/italic
+    .replace(/\*\*\*/g, '').replace(/\*\*/g, '').replace(/\*/g, '')
+    .replace(/___/g, '').replace(/__/g, '').replace(/_/g, '')
+    // Remove links
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    // Remove code blocks
+    .replace(/```[\s\S]*?```/g, '[Code]')
+    .replace(/`([^`]+)`/g, '$1')
+    // Remove images
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '[Image]')
+    // Remove wiki links
+    .replace(/\[\[([^\]]+)\]\]/g, '$1')
+    // Clean up extra whitespace
+    .replace(/\n\s*\n/g, '\n')
+    .trim();
+
+  // Split into lines and take first 3
+  const lines = plainText.split('\n').filter(line => line.trim() !== '');
+  const previewLines = lines.slice(0, 3);
+
+  // Join with ellipsis if there's more content
+  const preview = previewLines.join(' ');
+  const hasMore = lines.length > 3 || preview.length < plainText.length;
+
+  return hasMore ? preview + '...' : preview;
+}
+
+const NoteNode = memo(function NoteNode({ data, selected, id }: NoteNodeProps) {
   const [isResizing, setIsResizing] = useState(false);
   const [size, setSize] = useState({ width: 300, height: 200 });
   const nodeRef = useRef<HTMLDivElement>(null);
   const resizeStartRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
 
-  // Get preview of content (first 2-3 lines, strip markdown)
-  const contentPreview = (() => {
-    if (!data.content || data.content.trim() === '') {
-      return '';
-    }
-
-    // Remove markdown syntax for plain text preview
-    const plainText = data.content
-      // Remove headers
-      .replace(/^#{1,6}\s+/gm, '')
-      // Remove bold/italic
-      .replace(/\*\*\*/g, '').replace(/\*\*/g, '').replace(/\*/g, '')
-      .replace(/___/g, '').replace(/__/g, '').replace(/_/g, '')
-      // Remove links
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-      // Remove code blocks
-      .replace(/```[\s\S]*?```/g, '[Code]')
-      .replace(/`([^`]+)`/g, '$1')
-      // Remove images
-      .replace(/!\[([^\]]*)\]\([^)]+\)/g, '[Image]')
-      // Remove wiki links
-      .replace(/\[\[([^\]]+)\]\]/g, '$1')
-      // Clean up extra whitespace
-      .replace(/\n\s*\n/g, '\n')
-      .trim();
-
-    // Split into lines and take first 3
-    const lines = plainText.split('\n').filter(line => line.trim() !== '');
-    const previewLines = lines.slice(0, 3);
-
-    // Join with ellipsis if there's more content
-    const preview = previewLines.join(' ');
-    const hasMore = lines.length > 3 || preview.length < plainText.length;
-
-    return hasMore ? preview + '...' : preview;
-  })();
+  // Get preview of content (memoized)
+  const contentPreview = useMemo(() => generateContentPreview(data.content), [data.content]);
 
   // Handle resize start
   const handleResizeStart = (e: React.MouseEvent, corner: string) => {
@@ -301,4 +304,12 @@ export default function NoteNode({ data, selected, id }: NoteNodeProps) {
         )}
     </div>
   );
-}
+}, (prevProps, nextProps) => (
+  prevProps.id === nextProps.id &&
+  prevProps.selected === nextProps.selected &&
+  prevProps.data.title === nextProps.data.title &&
+  prevProps.data.content === nextProps.data.content &&
+  prevProps.data.onDuplicate === nextProps.data.onDuplicate
+));
+
+export default NoteNode;

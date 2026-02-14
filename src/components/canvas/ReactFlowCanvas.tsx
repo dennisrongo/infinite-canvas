@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import {
   ReactFlow,
   Background,
@@ -20,9 +21,38 @@ import {
 import '@xyflow/react/dist/style.css';
 import NoteNode from './NoteNode';
 import FloatingEdge from './FloatingEdge';
-import NoteEditor from './NoteEditor';
 import { useTheme } from '@/contexts/ThemeContext';
 import DeleteConfirmationModal from './DeleteConfirmationModal';
+
+// Loading skeleton for NoteEditor
+function NoteEditorSkeleton() {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-[#1E293B] rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col mx-4 animate-pulse">
+        <div className="p-4 border-b border-[#E2E8F0] dark:border-[#475569]">
+          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-24 mb-2"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-48"></div>
+        </div>
+        <div className="flex-1 p-4">
+          <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
+          <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded"></div>
+        </div>
+        <div className="p-4 border-t border-[#E2E8F0] dark:border-[#475569]">
+          <div className="flex justify-end gap-3">
+            <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+            <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Lazy load NoteEditor - it's only needed when editing a note
+const NoteEditor = dynamic(() => import('./NoteEditor'), {
+  ssr: false,
+  loading: () => <NoteEditorSkeleton />,
+});
 
 interface Note {
   id: string;

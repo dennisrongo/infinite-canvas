@@ -19,27 +19,30 @@ vi.mock('next/headers', () => ({
   cookies: vi.fn(),
 }))
 
-// Mock jsonwebtoken functions before mocking the module
-const mockSign = vi.fn(() => 'mock-jwt-token')
-const mockVerify = vi.fn((token: string) => {
-  if (token === 'valid-token') {
-    return { userId: 'user-123', email: 'test@example.com' }
-  }
-  if (token === 'expired-token') {
-    const error: any = new Error('Token expired')
-    error.name = 'TokenExpiredError'
+// Use vi.hoisted to define mocks before module loading
+const { mockSign, mockVerify } = vi.hoisted(() => {
+  const mockSign = vi.fn(() => 'mock-jwt-token')
+  const mockVerify = vi.fn((token: string) => {
+    if (token === 'valid-token') {
+      return { userId: 'user-123', email: 'test@example.com' }
+    }
+    if (token === 'expired-token') {
+      const error: any = new Error('Token expired')
+      error.name = 'TokenExpiredError'
+      throw error
+    }
+    const error: any = new Error('Invalid token')
+    error.name = 'JsonWebTokenError'
     throw error
-  }
-  const error: any = new Error('Invalid token')
-  error.name = 'JsonWebTokenError'
-  throw error
+  })
+  return { mockSign, mockVerify }
 })
 
 vi.mock('jsonwebtoken', () => ({
-  sign: () => mockSign,
+  sign: mockSign,
   verify: mockVerify,
   default: {
-    sign: () => mockSign,
+    sign: mockSign,
     verify: mockVerify,
   },
 }))

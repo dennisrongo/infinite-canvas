@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { timingSafeEqual } from 'crypto';
 
 /**
  * CSRF Protection Module
@@ -50,6 +51,38 @@ export async function getCSRFToken(): Promise<string> {
 }
 
 /**
+ * Constant-time string comparison to prevent timing attacks
+ * Uses padded buffer approach to ensure constant execution time
+ * regardless of input length differences
+ */
+function constantTimeEquals(a: string, b: string): boolean {
+  // Handle empty string edge case
+  if (!a || !b) {
+    return a === b;
+  }
+
+  const bufferA = Buffer.from(a, 'utf8');
+  const bufferB = Buffer.from(b, 'utf8');
+
+  // Pad both buffers to the same length to ensure constant-time comparison
+  // This prevents timing leaks from length differences
+  const maxLen = Math.max(bufferA.length, bufferB.length);
+  const paddedA = Buffer.alloc(maxLen);
+  const paddedB = Buffer.alloc(maxLen);
+
+  bufferA.copy(paddedA);
+  bufferB.copy(paddedB);
+
+  // Compare lengths after padding (constant time since we already did the work)
+  const lengthsMatch = bufferA.length === bufferB.length;
+
+  // Always perform the comparison (constant time)
+  const valuesMatch = timingSafeEqual(paddedA, paddedB);
+
+  return lengthsMatch && valuesMatch;
+}
+
+/**
  * Validate CSRF token from request
  * Checks for token in x-csrf-token header
  */
@@ -68,21 +101,8 @@ export async function validateCSRFToken(request: Request): Promise<boolean> {
     return false;
   }
 
-  // Compare tokens using constant-time comparison
-  // Note: timingSafeEqual may not be available in all environments
-  // Use a simple comparison with length check as fallback
-  if (cookieToken.length !== headerToken.length) {
-    return false;
-  }
-
-  // Simple character-by-character comparison
-  // (In production with Node.js 20+, use crypto.timingSafeEqual if available)
-  for (let i = 0; i < cookieToken.length; i++) {
-    if (cookieToken[i] !== headerToken[i]) {
-      return false;
-    }
-  }
-  return true;
+  // Use constant-time comparison to prevent timing attacks
+  return constantTimeEquals(cookieToken, headerToken);
 }
 
 /**

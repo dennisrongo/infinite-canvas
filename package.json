@@ -12,13 +12,20 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "test:api": "vitest run --config vitest.config.api.ts",
+    "test:api:watch": "vitest --config vitest.config.api.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "analyze": "ANALYZE=true next build"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@prisma/client": "^6.1.0",
+    "@sentry/nextjs": "^10.38.0",
     "@tailwindcss/typography": "^0.5.19",
     "@tanstack/react-query": "^5.90.21",
     "@types/dompurify": "^3.0.5",
@@ -38,6 +45,8 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^16.1.6",
+    "@playwright/test": "^1.58.2",
     "@tanstack/react-query-devtools": "^5.91.3",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.5",

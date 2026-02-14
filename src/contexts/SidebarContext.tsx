@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
 
 // Types
 interface Canvas {
@@ -256,7 +256,7 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
     setOnTitleChange(() => onTitleChangeCallback ?? null);
   }, []);
 
-  const value: SidebarContextType = {
+  const value: SidebarContextType = useMemo(() => ({
     // Sidebar state
     sidebarOpen,
     sidebarCollapsed,
@@ -317,7 +317,68 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
     setNewCanvasFolderId,
     openImportModal,
     closeImportModal,
-  };
+  }), [
+    // Sidebar state
+    sidebarOpen,
+    sidebarCollapsed,
+    canvasTitle,
+    onExportClick,
+    onTitleChange,
+    setSidebarOpen,
+    toggleSidebar,
+    setSidebarCollapsed,
+    toggleSidebarCollapsed,
+    setCanvasHeader,
+
+    // Modal states
+    showNewFolderModal,
+    newFolderName,
+    showDeleteModal,
+    folderToDelete,
+    deleteMoveToRoot,
+    showRenameModal,
+    folderToRename,
+    renameName,
+    showMoveModal,
+    canvasToMove,
+    moveTargetFolderId,
+    showCanvasDeleteModal,
+    canvasToDelete,
+    showCanvasRenameModal,
+    canvasToRename,
+    canvasRenameName,
+    showNewCanvasModal,
+    newCanvasName,
+    newCanvasFolderId,
+    showImportModal,
+
+    // Folder modal actions
+    openNewFolderModal,
+    closeNewFolderModal,
+    setNewFolderName,
+    openDeleteFolderModal,
+    closeDeleteFolderModal,
+    setDeleteMoveToRoot,
+    openRenameFolderModal,
+    closeRenameFolderModal,
+    setRenameName,
+
+    // Canvas modal actions
+    openMoveCanvasModal,
+    closeMoveCanvasModal,
+    setMoveTargetFolderId,
+    openDeleteCanvasModal,
+    closeDeleteCanvasModal,
+    openRenameCanvasModal,
+    closeRenameCanvasModal,
+    setCanvasRenameName,
+    openNewCanvasModal,
+    closeNewCanvasModal,
+    setNewCanvasName,
+    setNewCanvasFolderId,
+    openImportModal,
+    closeImportModal,
+  ]);
 
   return (
     <SidebarContext.Provider value={value}>
