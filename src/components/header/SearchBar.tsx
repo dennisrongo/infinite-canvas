@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useSearch } from '@/hooks/api/useSearch';
 import { Search, SlidersHorizontal } from 'lucide-react';
+import { escapeAndHighlight } from '@/lib/sanitize';
 
 interface SearchBarProps {
   currentCanvasId?: string;
@@ -57,28 +58,12 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
     }
   }, [searchResults, debouncedSearchQuery, searching]);
 
-  // Helper function to highlight search terms in text
-  const highlightTerms = (text: string, query: string) => {
-    if (!query.trim() || !text) return text;
-
-    const terms = query.trim().split(/\s+/).filter(term => term.length > 0);
-    let highlightedText = text;
-
-    terms.forEach(term => {
-      const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-      // Use CSS class for highlight color instead of inline style
-      highlightedText = highlightedText.replace(regex, '<mark class="search-highlight">$1</mark>');
-    });
-
-    return highlightedText;
-  };
-
-  // Memoize highlighted results
+  // Memoize highlighted results using the escapeAndHighlight utility
   const highlightedResults = useMemo(() => {
     return searchResults.map(result => ({
       ...result,
-      highlightedTitle: highlightTerms(result.title, searchQuery),
-      highlightedContent: highlightTerms(result.contentPreview || '', searchQuery)
+      highlightedTitle: escapeAndHighlight(result.title, searchQuery),
+      highlightedContent: escapeAndHighlight(result.contentPreview || '', searchQuery)
     }));
   }, [searchResults, searchQuery]);
 

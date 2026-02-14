@@ -5,6 +5,7 @@ import { noteUpdateSchema, isValidUUID } from '@/lib/validation';
 import { ZodError } from 'zod';
 import { getDEK, cacheDEK } from '@/lib/dek-cache';
 import { encryptNote, decryptNote, isEncryptedData } from '@/lib/encryption';
+import { indexNote, removeFromIndex } from '@/lib/search-index';
 
 /**
  * Get the DEK for the current user
@@ -216,6 +217,27 @@ export async function PUT(
       data: updateData,
     });
 
+    // Sync search index with the updated note
+    // We need the plaintext title and content for the index
+    let indexTitle = updatedNote.title;
+    let indexContent = updatedNote.content;
+
+    if (updatedNote.isEncrypted && dek && isEncryptedData(updatedNote.title) && isEncryptedData(updatedNote.content)) {
+      try {
+        const decrypted = decryptNote(updatedNote.title, updatedNote.content, dek);
+        indexTitle = decrypted.title;
+        indexContent = decrypted.content;
+      } catch {
+        // Use encrypted values if decryption fails
+      }
+    }
+
+    // Update the search index
+    await indexNote(noteId, session.userId, updatedNote.canvasId, indexTitle, indexContent).catch((err) => {
+      console.error('Failed to update search index:', err);
+      // Don't fail the request if index update fails
+    });
+
     // Return decrypted note to client
     let responseNote = updatedNote;
     if (updatedNote.isEncrypted && dek && isEncryptedData(updatedNote.title) && isEncryptedData(updatedNote.content)) {
@@ -296,6 +318,12 @@ export async function DELETE(
     // Delete note
     await prisma.note.delete({
       where: { id: noteId },
+    });
+
+    // Remove from search index
+    await removeFromIndex(noteId).catch((err) => {
+      console.error('Failed to remove from search index:', err);
+      // Don't fail the request if index removal fails
     });
 
     return NextResponse.json({

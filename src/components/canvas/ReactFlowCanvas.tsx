@@ -1085,14 +1085,16 @@ function ReactFlowCanvasInner({
       )}
 
       {/* Note Editor Modal */}
-      <NoteEditor
-        note={editingNote}
-        isOpen={isEditorOpen}
-        onClose={handleEditorClose}
-        onSave={handleNoteContentSave}
-        canvasId={canvasId}
-        onNavigateToNote={handleNavigateToNote}
-      />
+      {isEditorOpen && (
+        <NoteEditor
+          note={editingNote}
+          isOpen={isEditorOpen}
+          onClose={handleEditorClose}
+          onSave={handleNoteContentSave}
+          canvasId={canvasId}
+          onNavigateToNote={handleNavigateToNote}
+        />
+      )}
 
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal

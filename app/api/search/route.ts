@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { getOrRestoreDEK } from '@/lib/dek';
-import { decryptNote, isEncryptedData, decrypt } from '@/lib/encryption';
+import { search, rebuildIndex, getCanvasNameForSearch } from '@/lib/search-index';
 
 // Maximum search query length to prevent performance issues
 const MAX_SEARCH_QUERY_LENGTH = 1000;
@@ -10,6 +8,7 @@ const MAX_SEARCH_QUERY_LENGTH = 1000;
 // Maximum number of results to return (for performance and UX)
 const MAX_RESULTS = 50;
 
+// POST /api/search - Search notes using the search index
 export async function POST(request: NextRequest) {
   try {
     // Verify user is authenticated
@@ -19,7 +18,33 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { query, canvasId, sortBy = 'updatedAt', sortOrder = 'desc', dateFilter } = body;
+    const { 
+      query, 
+      canvasId, 
+      sortBy = 'updatedAt', 
+      sortOrder = 'desc', 
+      dateFilter,
+      offset = 0,
+      limit = MAX_RESULTS,
+      rebuildIndex: rebuildIndexRequested 
+    } = body;
+
+    // Handle rebuild index request (for initial setup or manual rebuild)
+    if (rebuildIndexRequested) {
+      try {
+        const result = await rebuildIndex(session.userId);
+        return NextResponse.json({ 
+          message: 'Index rebuilt successfully',
+          indexed: result.indexed,
+          failed: result.failed,
+        });
+      } catch (indexError) {
+        console.error('Failed to rebuild search index:', indexError);
+        return NextResponse.json({ 
+          error: 'Failed to rebuild search index' 
+        }, { status: 500 });
+      }
+    }
 
     if (!query || typeof query !== 'string') {
       return NextResponse.json({ error: 'Query is required' }, { status: 400 });
@@ -38,45 +63,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ results: [] });
     }
 
-    // Build where clause base - user must own the canvas
-    const whereClause: any = {
-      canvas: {
-        userId: session.userId,
-      },
-    };
-
-    // If canvasId is provided, search only in that canvas
-    if (canvasId) {
-      whereClause.canvasId = canvasId;
-    }
-
-    // Add date filter if specified
-    if (dateFilter) {
-      const now = new Date();
-      switch (dateFilter) {
-        case 'today':
-          whereClause.updatedAt = {
-            gte: new Date(now.setHours(0, 0, 0, 0)),
-          };
-          break;
-        case 'week':
-          whereClause.updatedAt = {
-            gte: new Date(now.setDate(now.getDate() - 7)),
-          };
-          break;
-        case 'month':
-          whereClause.updatedAt = {
-            gte: new Date(now.setMonth(now.getMonth() - 1)),
-          };
-          break;
-        case 'year':
-          whereClause.updatedAt = {
-            gte: new Date(now.setFullYear(now.getFullYear() - 1)),
-          };
-          break;
-      }
-    }
-
     // Validate sortBy field
     const validSortFields = ['createdAt', 'updatedAt', 'title'];
     const sortField = validSortFields.includes(sortBy) ? sortBy : 'updatedAt';
@@ -85,147 +71,45 @@ export async function POST(request: NextRequest) {
     const validSortOrders = ['asc', 'desc'];
     const sortDirection = validSortOrders.includes(sortOrder) ? sortOrder : 'desc';
 
-    // Get DEK for decryption
-    const dek = await getOrRestoreDEK(session.userId);
-
-    // Since notes are encrypted, we need to fetch and decrypt first, then filter
-    // This is necessary because the search terms can't match encrypted content
-    const startTime = Date.now();
-
-    // Build query parameters
-    const params: any[] = [session.userId];
-    let whereSQL = 'WHERE c.user_id = $1';
-
-    if (canvasId) {
-      params.push(canvasId);
-      whereSQL += ' AND n.canvas_id = $' + params.length;
-    }
-
-    if (dateFilter) {
-      const dateThreshold = getDateFilterThreshold(dateFilter);
-      if (dateThreshold) {
-        params.push(dateThreshold.toISOString());
-        whereSQL += ' AND n.updated_at >= $' + params.length + '::timestamp';
+    // Perform search using the search index
+    const searchResult = await search(
+      session.userId,
+      searchTerms,
+      {
+        canvasId,
+        sortBy: sortField,
+        sortOrder: sortDirection,
+        limit: Math.min(limit, MAX_RESULTS),
+        offset,
+        dateFilter,
       }
-    }
+    );
 
-    // Order by field mapping
-    const orderByField = getFieldMapping(sortField);
-    const orderDirection = sortDirection === 'asc' ? 'ASC' : 'DESC';
-
-    // Fetch notes (without search filter - we'll filter after decryption)
-    // If canvasId is specified, scope to that canvas for better performance
-    // Otherwise, fetch a reasonable limit from all canvases
-    const fetchLimit = canvasId ? MAX_RESULTS * 3 : MAX_RESULTS * 2;
-
-    const notesQuery = `
-      SELECT
-        n.id,
-        n.title,
-        n.content,
-        n.is_encrypted as "isEncrypted",
-        n.position_x as "positionX",
-        n.position_y as "positionY",
-        n.created_at as "createdAt",
-        n.updated_at as "updatedAt",
-        c.id as "canvasId",
-        c.name as "canvasName",
-        c.is_encrypted as "canvasIsEncrypted"
-      FROM notes n
-      INNER JOIN canvases c ON n.canvas_id = c.id
-      ${whereSQL}
-      ORDER BY ${orderByField} ${orderDirection}
-      LIMIT ${fetchLimit}
-    `;
-
-    const notes = await prisma.$queryRawUnsafe<any[]>(notesQuery, ...params);
-
-    // Normalize search terms for case-insensitive matching
-    const normalizedSearchTerms = searchTerms.toLowerCase();
-
-    // Decrypt and filter results
-    const results: Array<{
-      id: string;
-      title: string;
-      content: string;
-      contentPreview: string;
-      canvasId: string;
-      canvasName: string;
-      positionX: number;
-      positionY: number;
-      createdAt: Date;
-      updatedAt: Date;
-    }> = [];
-
-    for (const note of notes) {
-      let title = note.title;
-      let content = note.content;
-      let canvasName = note.canvasName;
-      let isEncrypted = note.isEncrypted;
-
-      // Try to decrypt note title and content if we have a DEK
-      if (dek && isEncryptedData(title) && isEncryptedData(content)) {
-        try {
-          const decrypted = decryptNote(title, content, dek);
-          title = decrypted.title;
-          content = decrypted.content;
-          isEncrypted = true;
-        } catch (decryptError) {
-          console.error('Failed to decrypt note during search:', note.id, decryptError);
-          // Keep encrypted values if decryption fails
+    // Get canvas names for each result (if needed for display)
+    // We do this in parallel with the search results
+    const canvasIds = [...new Set(searchResult.results.map(r => r.canvasId))];
+    const canvasNamesMap = new Map<string, string>();
+    
+    await Promise.all(
+      canvasIds.map(async (canvasId) => {
+        const name = await getCanvasNameForSearch(canvasId, session.userId);
+        if (name) {
+          canvasNamesMap.set(canvasId, name);
         }
-      } else if (!dek && isEncryptedData(title || '')) {
-        // No DEK but data is encrypted - skip this note
-        continue;
-      }
+      })
+    );
 
-      // Try to decrypt canvas name if encrypted
-      if (dek && (note.canvasIsEncrypted || isEncryptedData(canvasName || ''))) {
-        try {
-          if (isEncryptedData(canvasName)) {
-            const canvasNameData = JSON.parse(canvasName);
-            canvasName = decrypt(canvasNameData, dek);
-          }
-        } catch (canvasDecryptError) {
-          console.error('Failed to decrypt canvas name during search:', note.canvasId, canvasDecryptError);
-        }
-      }
-
-      // Check if decrypted content matches search terms
-      const titleLower = title?.toLowerCase() || '';
-      const contentLower = content?.toLowerCase() || '';
-
-      if (titleLower.includes(normalizedSearchTerms) || contentLower.includes(normalizedSearchTerms)) {
-        results.push({
-          id: note.id,
-          title,
-          content,
-          contentPreview: content
-            ? content.substring(0, 150) + (content.length > 150 ? '...' : '')
-            : '',
-          canvasId: note.canvasId,
-          canvasName,
-          positionX: Number(note.positionX),
-          positionY: Number(note.positionY),
-          createdAt: new Date(note.createdAt),
-          updatedAt: new Date(note.updatedAt),
-        });
-
-        // Stop once we have enough results
-        if (results.length >= MAX_RESULTS) {
-          break;
-        }
-      }
-    }
-
-    const searchTime = Date.now() - startTime;
-    const totalCount = results.length;
+    // Add canvas names to results
+    const resultsWithCanvasNames = searchResult.results.map(result => ({
+      ...result,
+      canvasName: canvasNamesMap.get(result.canvasId) || 'Unknown Canvas',
+    }));
 
     return NextResponse.json({
-      results,
-      totalCount,
-      hasMore: false, // Since we filtered in-memory, we can't know if there are more
-      searchTime,
+      results: resultsWithCanvasNames,
+      totalCount: searchResult.totalCount,
+      hasMore: searchResult.hasMore,
+      searchTime: searchResult.searchTime,
       ...(wasTruncated && {
         warning: `Search query was truncated to ${MAX_SEARCH_QUERY_LENGTH} characters for performance.`
       })
@@ -236,29 +120,10 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Helper function to get date filter threshold
-function getDateFilterThreshold(dateFilter: string): Date | null {
-  const now = new Date();
-  switch (dateFilter) {
-    case 'today':
-      return new Date(now.setHours(0, 0, 0, 0));
-    case 'week':
-      return new Date(now.setDate(now.getDate() - 7));
-    case 'month':
-      return new Date(now.setMonth(now.getMonth() - 1));
-    case 'year':
-      return new Date(now.setFullYear(now.getFullYear() - 1));
-    default:
-      return null;
-  }
-}
-
-// Helper function to map sort field to database column
-function getFieldMapping(sortField: string): string {
-  const fieldMap: Record<string, string> = {
-    createdAt: 'n.created_at',
-    updatedAt: 'n.updated_at',
-    title: 'n.title',
-  };
-  return fieldMap[sortField] || 'n.updated_at';
+// GET /api/search - Health check and index status
+export async function GET() {
+  return NextResponse.json({ 
+    status: 'ok',
+    message: 'Search API is running. Use POST to search.'
+  });
 }

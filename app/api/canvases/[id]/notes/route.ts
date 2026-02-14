@@ -5,6 +5,7 @@ import { noteCreateSchema, isValidUUID } from '@/lib/validation';
 import { ZodError } from 'zod';
 import { getDEK, cacheDEK } from '@/lib/dek-cache';
 import { encryptNote, decryptNote, isEncryptedData } from '@/lib/encryption';
+import { indexNote } from '@/lib/search-index';
 
 /**
  * Get the DEK for the current user
@@ -125,6 +126,12 @@ export async function POST(
       });
 
       return { note, title: trimmedTitle, content: validatedData.content };
+    });
+
+    // Index the note in the search index (outside transaction)
+    // We have the plaintext title and content in result
+    await indexNote(result.note.id, session.userId, canvasId, result.title, result.content).catch((err) => {
+      console.error('Failed to index new note:', err);
     });
 
     // Return decrypted note to client

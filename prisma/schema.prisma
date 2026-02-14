@@ -109,12 +109,53 @@ model Note {
   isEncrypted       Boolean          @default(false) @map("is_encrypted")
   encryptionVersion Int?             @map("encryption_version")
 
+  // Search index reference
+  searchIndex       NoteSearchIndex?
+  tokens            NoteToken[]
+
   @@index([canvasId])
   @@index([title])
   @@index([updatedAt])
   @@index([canvasId, updatedAt])
   @@index([canvasId, createdAt])
   @@map("notes")
+}
+
+// Search index using HMAC-based tokenization
+// Tokens are hashed with user-specific HMAC key, no plaintext stored
+// This provides secure keyword search without exposing content in DB
+model NoteSearchIndex {
+  id                String   @id @default(uuid())
+  noteId            String   @unique @map("note_id")
+  userId            String   @map("user_id")
+  canvasId          String   @map("canvas_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  note              Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([canvasId])
+  @@map("note_search_index")
+}
+
+// Token index for secure search - stores hashes of tokens as strings
+// Each token from note content is hashed (hex encoded), enabling fast lookups
+// without storing plaintext keywords in the database
+model NoteToken {
+  id          String   @id @default(uuid())
+  noteId      String   @map("note_id")
+  userId      String   @map("user_id")
+  tokenHash   String   @map("token_hash") // HMAC-SHA256 hash as hex string (64 chars)
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  note        Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@unique([noteId, tokenHash]) // Prevent duplicate tokens per note
+  @@index([tokenHash]) // Fast lookup by token hash
+  @@index([noteId]) // Fast cleanup when note is deleted
+  @@index([userId, tokenHash]) // Fast user-scoped search
+  @@map("note_tokens")
 }
 
 model NoteConnection {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { indexNote } from '@/lib/search-index';
 
 // POST /api/canvases/import - Import canvas from JSON
 export async function POST(request: NextRequest) {
@@ -100,6 +101,11 @@ export async function POST(request: NextRequest) {
         // Store the mapping using array index as key
         const index = canvasData.notes.indexOf(noteData);
         noteIdMap.set(String(index), note.id);
+
+        // Index the note in the search index
+        await indexNote(note.id, session.userId, canvas.id, noteData.title, noteData.content || '').catch((err) => {
+          console.error('Failed to index imported note:', err);
+        });
 
         // Create images if present
         if (noteData.images && Array.isArray(noteData.images)) {

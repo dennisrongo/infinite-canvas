@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { isValidUUID } from '@/lib/validation';
+import { indexNote } from '@/lib/search-index';
 
 // POST /api/notes/:noteId/duplicate - Create a copy of a note
 export async function POST(
@@ -60,6 +61,35 @@ export async function POST(
         fontFamily: originalNote.fontFamily,
         fontSize: originalNote.fontSize,
       },
+    });
+
+    // Index the new note in the search index
+    // The original note might be encrypted, so we need to handle that
+    let indexTitle = duplicateNote.title;
+    let indexContent = duplicateNote.content;
+    
+    // If the original was encrypted, the duplicate will be too
+    if (originalNote.isEncrypted) {
+      // For duplicates, we can't easily decrypt without the DEK
+      // The search index will be updated when the user opens/edits the note
+      // For now, try to use the stored values (they won't match well if encrypted)
+      const { isEncryptedData, decryptNote } = await import('@/lib/encryption');
+      const { getOrRestoreDEK } = await import('@/lib/dek');
+      
+      const dek = await getOrRestoreDEK(session.userId);
+      if (dek && isEncryptedData(duplicateNote.title) && isEncryptedData(duplicateNote.content)) {
+        try {
+          const decrypted = decryptNote(duplicateNote.title, duplicateNote.content, dek);
+          indexTitle = decrypted.title;
+          indexContent = decrypted.content;
+        } catch {
+          // Keep encrypted values if decryption fails
+        }
+      }
+    }
+
+    await indexNote(duplicateNote.id, session.userId, duplicateNote.canvasId, indexTitle, indexContent).catch((err) => {
+      console.error('Failed to index duplicated note:', err);
     });
 
     return NextResponse.json({
