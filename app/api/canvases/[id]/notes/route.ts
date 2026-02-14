@@ -61,79 +61,78 @@ export async function POST(
     const body = await request.json();
     const { id } = body;
 
-    // Verify the canvas belongs to the user
-    const canvas = await prisma.canvas.findFirst({
-      where: {
-        id: canvasId,
-        userId: session.userId,
-      },
-    });
-
-    if (!canvas) {
-      return NextResponse.json(
-        { error: 'Canvas not found' },
-        { status: 404 }
-      );
-    }
-
     // Validate and sanitize input using Zod schema
     const validatedData = noteCreateSchema.parse(body);
 
-    // Check for duplicate title within the same canvas
-    const trimmedTitle = validatedData.title.trim() || 'Untitled Note';
-    const existingNote = await prisma.note.findFirst({
-      where: {
-        canvasId,
-        title: trimmedTitle,
-      },
-    });
-
-    if (existingNote) {
-      return NextResponse.json(
-        {
-          error: 'A note with this title already exists in this canvas. Please use a unique title.',
-          field: 'title'
+    // Use transaction to combine canvas validation, duplicate check, and creation
+    // This ensures atomic operation and reduces database round-trips
+    const result = await prisma.$transaction(async (tx) => {
+      // Verify the canvas belongs to the user (single query)
+      const canvas = await tx.canvas.findFirst({
+        where: {
+          id: canvasId,
+          userId: session.userId,
         },
-        { status: 409 }
-      );
-    }
+        select: { id: true }, // Only select needed fields
+      });
 
-    // Create note with sanitized data
-    // Check if DEK is available for encryption
-    const dek = await getOrRestoreDEK(session.userId);
-    let noteTitle = trimmedTitle;
-    let noteContent = validatedData.content;
-    let isEncrypted = false;
+      if (!canvas) {
+        throw new Error('CANVAS_NOT_FOUND');
+      }
 
-    if (dek) {
-      // Encrypt the note content
-      const encrypted = encryptNote(trimmedTitle, validatedData.content, dek);
-      noteTitle = encrypted.encryptedTitle;
-      noteContent = encrypted.encryptedContent;
-      isEncrypted = true;
-    }
+      // Check for duplicate title within the same canvas
+      const trimmedTitle = validatedData.title.trim() || 'Untitled Note';
+      const existingNote = await tx.note.findFirst({
+        where: {
+          canvasId,
+          title: trimmedTitle,
+        },
+        select: { id: true }, // Only select needed fields
+      });
 
-    const note = await prisma.note.create({
-      data: {
-        id: id || undefined, // Use provided ID for restore, otherwise generate new
-        canvasId,
-        title: noteTitle,
-        content: noteContent, // Already sanitized by Zod schema
-        positionX: validatedData.positionX,
-        positionY: validatedData.positionY,
-        width: validatedData.width,
-        height: validatedData.height,
-        isEncrypted,
-        encryptionVersion: isEncrypted ? 1 : null,
-      },
+      if (existingNote) {
+        throw new Error('DUPLICATE_TITLE');
+      }
+
+      // Check if DEK is available for encryption
+      const dek = await getOrRestoreDEK(session.userId);
+      let noteTitle = trimmedTitle;
+      let noteContent = validatedData.content;
+      let isEncrypted = false;
+
+      if (dek) {
+        // Encrypt the note content
+        const encrypted = encryptNote(trimmedTitle, validatedData.content, dek);
+        noteTitle = encrypted.encryptedTitle;
+        noteContent = encrypted.encryptedContent;
+        isEncrypted = true;
+      }
+
+      // Create the note
+      const note = await tx.note.create({
+        data: {
+          id: id || undefined,
+          canvasId,
+          title: noteTitle,
+          content: noteContent,
+          positionX: validatedData.positionX,
+          positionY: validatedData.positionY,
+          width: validatedData.width,
+          height: validatedData.height,
+          isEncrypted,
+          encryptionVersion: isEncrypted ? 1 : null,
+        },
+      });
+
+      return { note, title: trimmedTitle, content: validatedData.content };
     });
 
     // Return decrypted note to client
     return NextResponse.json({
       note: {
-        ...note,
-        title: trimmedTitle,
-        content: validatedData.content,
+        ...result.note,
+        title: result.title,
+        content: result.content,
       }
     }, { status: 201 });
   } catch (error) {
@@ -147,6 +146,24 @@ export async function POST(
       );
     }
 
+    if (error instanceof Error) {
+      if (error.message === 'CANVAS_NOT_FOUND') {
+        return NextResponse.json(
+          { error: 'Canvas not found' },
+          { status: 404 }
+        );
+      }
+      if (error.message === 'DUPLICATE_TITLE') {
+        return NextResponse.json(
+          {
+            error: 'A note with this title already exists in this canvas. Please use a unique title.',
+            field: 'title'
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     console.error('Error creating note:', error);
     return NextResponse.json(
       { error: 'Failed to create note' },
@@ -154,6 +171,10 @@ export async function POST(
     );
   }
 }
+
+// Default and maximum pagination limits
+const DEFAULT_LIMIT = 100;
+const MAX_LIMIT = 500;
 
 // GET /api/canvases/:id/notes - Get all notes in a canvas
 export async function GET(
@@ -180,29 +201,47 @@ export async function GET(
       );
     }
 
-    // Verify the canvas belongs to the user
-    const canvas = await prisma.canvas.findFirst({
-      where: {
-        id: canvasId,
-        userId: session.userId,
-      },
-    });
+    // Parse pagination query parameters
+    const { searchParams } = new URL(request.url);
+    const limit = Math.min(
+      parseInt(searchParams.get('limit') || String(DEFAULT_LIMIT), 10),
+      MAX_LIMIT
+    );
+    const offset = parseInt(searchParams.get('offset') || '0', 10);
 
-    if (!canvas) {
-      return NextResponse.json(
-        { error: 'Canvas not found' },
-        { status: 404 }
-      );
-    }
-
-    // Get notes
+    // Verify the canvas belongs to the user AND fetch notes in a single query
+    // This combines canvas validation + note fetch into one database call
     const notes = await prisma.note.findMany({
       where: {
         canvasId,
+        canvas: {
+          userId: session.userId,
+        },
       },
       orderBy: {
         createdAt: 'asc',
       },
+      take: limit,
+      skip: offset,
+    });
+
+    // If no notes returned, check if canvas exists (for proper error message)
+    if (notes.length === 0 && offset === 0) {
+      const canvasExists = await prisma.canvas.findFirst({
+        where: { id: canvasId, userId: session.userId },
+        select: { id: true },
+      });
+      if (!canvasExists) {
+        return NextResponse.json(
+          { error: 'Canvas not found' },
+          { status: 404 }
+        );
+      }
+    }
+
+    // Get total count for pagination metadata (only when needed)
+    const totalCount = await prisma.note.count({
+      where: { canvasId },
     });
 
     // Decrypt notes if DEK is available
@@ -256,7 +295,16 @@ export async function GET(
       return note;
     });
 
-    return NextResponse.json({ notes: decryptedNotes });
+    // Return pagination metadata along with notes
+    return NextResponse.json({ 
+      notes: decryptedNotes,
+      pagination: {
+        total: totalCount,
+        limit,
+        offset,
+        hasMore: offset + notes.length < totalCount,
+      }
+    });
   } catch (error) {
     console.error('Error fetching notes:', error);
     return NextResponse.json(

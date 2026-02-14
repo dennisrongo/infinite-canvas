@@ -5,6 +5,10 @@ import { isValidUUID } from '@/lib/validation';
 import { getOrRestoreDEK, decryptNameWithDEK } from '@/lib/dek';
 import { decryptNote, isEncryptedData, encrypt } from '@/lib/encryption';
 
+// Default and maximum pagination limits
+const DEFAULT_LIMIT = 100;
+const MAX_LIMIT = 500;
+
 // GET /api/canvases/:id - Get a single canvas with notes and connections
 export async function GET(
   request: NextRequest,
@@ -30,6 +34,16 @@ export async function GET(
       );
     }
 
+    // Parse pagination and include query parameters
+    const { searchParams } = new URL(request.url);
+    const limit = Math.min(
+      parseInt(searchParams.get('limit') || String(DEFAULT_LIMIT), 10),
+      MAX_LIMIT
+    );
+    const offset = parseInt(searchParams.get('offset') || '0', 10);
+    const includeNotes = searchParams.get('includeNotes') !== 'false';
+    const includeConnections = searchParams.get('includeConnections') !== 'false';
+
     const canvas = await prisma.canvas.findFirst({
       where: {
         id: canvasId,
@@ -43,12 +57,21 @@ export async function GET(
             isEncrypted: true,
           },
         },
-        notes: {
-          orderBy: {
-            createdAt: 'asc',
+        ...(includeNotes && {
+          notes: {
+            orderBy: {
+              createdAt: 'asc',
+            },
+            take: limit,
+            skip: offset,
           },
-        },
-        connections: true,
+        }),
+        ...(includeConnections && {
+          connections: {
+            take: limit,
+            skip: offset,
+          },
+        }),
       },
     });
 
@@ -58,6 +81,17 @@ export async function GET(
         { status: 404 }
       );
     }
+
+    // Get counts for pagination metadata (run in parallel with main query)
+    const [notesCount, connectionsCount] = await Promise.all([
+      prisma.note.count({ where: { canvasId } }),
+      prisma.noteConnection.count({ where: { canvasId } }),
+    ]);
+    
+    const pagination = {
+      notes: { total: notesCount, limit, offset, hasMore: offset + (canvas.notes?.length || 0) < notesCount },
+      connections: { total: connectionsCount, limit, offset, hasMore: offset + (canvas.connections?.length || 0) < connectionsCount },
+    };
 
     // Get DEK for decryption
     const dek = await getOrRestoreDEK(session.userId);
@@ -103,7 +137,10 @@ export async function GET(
       return note;
     });
 
-    return NextResponse.json({ canvas: { ...canvas, name: canvasName, folder: folderDecrypted, notes: decryptedNotes } });
+    return NextResponse.json({ 
+      canvas: { ...canvas, name: canvasName, folder: folderDecrypted, notes: decryptedNotes },
+      pagination
+    });
   } catch (error) {
     console.error('Error fetching canvas:', error);
     return NextResponse.json(

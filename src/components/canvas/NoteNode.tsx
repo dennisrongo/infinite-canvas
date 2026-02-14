@@ -146,59 +146,33 @@ const NoteNode = memo(function NoteNode({ data, selected, id }: NoteNodeProps) {
       }}
     >
         <div className="px-4 py-3">
-          {/* Connection handles - each side has a visible source handle (drag from) and
-              an invisible target handle (drop onto). Using Strict mode so RF correctly
-              resolves source→target on the exact side you drag to. */}
+          {/* Connection handles - source handles for dragging connections to other nodes */}
           {/* Top */}
           <Handle
             type="source"
             position={Position.Top}
-            id="top-src"
-            className="!w-3 !h-3 !bg-purple-500 !border-2 !border-white dark:!border-gray-800 !opacity-0 group-hover:!opacity-100 !transition-opacity !duration-200 hover:!scale-150 !cursor-crosshair"
-          />
-          <Handle
-            type="target"
-            position={Position.Top}
-            id="top-tgt"
+            id="top"
             className="!w-3 !h-3 !bg-purple-500 !border-2 !border-white dark:!border-gray-800 !opacity-0 group-hover:!opacity-100 !transition-opacity !duration-200 hover:!scale-150 !cursor-crosshair"
           />
           {/* Bottom */}
           <Handle
             type="source"
             position={Position.Bottom}
-            id="bottom-src"
-            className="!w-3 !h-3 !bg-purple-500 !border-2 !border-white dark:!border-gray-800 !opacity-0 group-hover:!opacity-100 !transition-opacity !duration-200 hover:!scale-150 !cursor-crosshair"
-          />
-          <Handle
-            type="target"
-            position={Position.Bottom}
-            id="bottom-tgt"
+            id="bottom"
             className="!w-3 !h-3 !bg-purple-500 !border-2 !border-white dark:!border-gray-800 !opacity-0 group-hover:!opacity-100 !transition-opacity !duration-200 hover:!scale-150 !cursor-crosshair"
           />
           {/* Right */}
           <Handle
             type="source"
             position={Position.Right}
-            id="right-src"
-            className="!w-3 !h-3 !bg-purple-500 !border-2 !border-white dark:!border-gray-800 !opacity-0 group-hover:!opacity-100 !transition-opacity !duration-200 hover:!scale-150 !cursor-crosshair"
-          />
-          <Handle
-            type="target"
-            position={Position.Right}
-            id="right-tgt"
+            id="right"
             className="!w-3 !h-3 !bg-purple-500 !border-2 !border-white dark:!border-gray-800 !opacity-0 group-hover:!opacity-100 !transition-opacity !duration-200 hover:!scale-150 !cursor-crosshair"
           />
           {/* Left */}
           <Handle
             type="source"
             position={Position.Left}
-            id="left-src"
-            className="!w-3 !h-3 !bg-purple-500 !border-2 !border-white dark:!border-gray-800 !opacity-0 group-hover:!opacity-100 !transition-opacity !duration-200 hover:!scale-150 !cursor-crosshair"
-          />
-          <Handle
-            type="target"
-            position={Position.Left}
-            id="left-tgt"
+            id="left"
             className="!w-3 !h-3 !bg-purple-500 !border-2 !border-white dark:!border-gray-800 !opacity-0 group-hover:!opacity-100 !transition-opacity !duration-200 hover:!scale-150 !cursor-crosshair"
           />
 

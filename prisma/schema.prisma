@@ -111,6 +111,9 @@ model Note {
 
   @@index([canvasId])
   @@index([title])
+  @@index([updatedAt])
+  @@index([canvasId, updatedAt])
+  @@index([canvasId, createdAt])
   @@map("notes")
 }
 

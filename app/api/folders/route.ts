@@ -4,23 +4,51 @@ import { prisma } from '@/lib/prisma';
 import { getOrRestoreDEK, decryptNameWithDEK } from '@/lib/dek';
 import { encrypt } from '@/lib/encryption';
 
-export async function GET() {
+interface FolderWithCanvases {
+  id: string;
+  name: string;
+  order: number;
+  createdAt: Date;
+  updatedAt: Date;
+  userId: string;
+  isEncrypted: boolean;
+  encryptionVersion: number | null;
+  canvases?: Array<{
+    id: string;
+    name: string;
+    order: number;
+    createdAt: Date;
+    updatedAt: Date;
+    isEncrypted: boolean;
+  }>;
+}
+
+export async function GET(request: NextRequest) {
   try {
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Parse query parameters for selective fetching
+    const { searchParams } = new URL(request.url);
+    const includeCanvases = searchParams.get('includeCanvases') !== 'false'; // Default to true for backward compatibility
+
+    // Use type assertion for conditional include
+    const include = includeCanvases
+      ? {
+          canvases: {
+            select: { id: true, name: true, updatedAt: true, createdAt: true, order: true, isEncrypted: true },
+            orderBy: { order: 'asc' as const },
+          },
+        }
+      : undefined;
+
     const folders = await prisma.folder.findMany({
       where: { userId: session.userId },
-      include: {
-        canvases: {
-          select: { id: true, name: true, updatedAt: true, createdAt: true, order: true, isEncrypted: true },
-          orderBy: { order: 'asc' },
-        },
-      },
+      include,
       orderBy: { order: 'asc' },
-    });
+    }) as FolderWithCanvases[];
 
     // Get DEK for decryption
     const dek = await getOrRestoreDEK(session.userId);
@@ -31,13 +59,15 @@ export async function GET() {
         ? decryptNameWithDEK(folder.name, folder.isEncrypted, dek)
         : { name: folder.isEncrypted ? '[Please log in to view]' : folder.name };
       
-      // Decrypt canvas names inside folder
-      const decryptedCanvases = folder.canvases.map((canvas) => {
-        const { name: canvasName } = dek
-          ? decryptNameWithDEK(canvas.name, canvas.isEncrypted, dek)
-          : { name: canvas.isEncrypted ? '[Please log in to view]' : canvas.name };
-        return { ...canvas, name: canvasName };
-      });
+      // Decrypt canvas names inside folder (if canvases were included)
+      const decryptedCanvases = folder.canvases
+        ? folder.canvases.map((canvas) => {
+            const { name: canvasName } = dek
+              ? decryptNameWithDEK(canvas.name, canvas.isEncrypted, dek)
+              : { name: canvas.isEncrypted ? '[Please log in to view]' : canvas.name };
+            return { ...canvas, name: canvasName };
+          })
+        : [];
       
       return { ...folder, name: decryptedName, canvases: decryptedCanvases };
     });

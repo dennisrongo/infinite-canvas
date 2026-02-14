@@ -80,8 +80,22 @@ export async function POST(request: NextRequest) {
       // Continue without CSRF validation if module fails
     }
 
+    // Select only required fields for authentication - reduces data transfer
     const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase() },
+      select: {
+        id: true,
+        email: true,
+        passwordHash: true,
+        passwordVersion: true,
+        displayName: true,
+        encryptionSalt: true,
+        wrappedDek: true,
+        dekVersion: true,
+        kdfIterations: true,
+        kdfMemoryCost: true,
+        kdfParallelism: true,
+      },
     });
 
     if (!user) {
