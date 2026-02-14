@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { hashPassword, validatePassword, validateEmail, generateToken, setSessionCookie } from '@/lib/auth';
+import { hashPassword, validatePassword, validateEmail, generateToken, setSessionCookie, createDEKToken, getDEKCookieOptions } from '@/lib/auth';
 import { checkRateLimit, getIdentifier, rateLimitConfigs } from '@/lib/rate-limit';
+import {
+  generateSalt,
+  generateDEK,
+  deriveKEK,
+  wrapDEK,
+  getDefaultKDFParams,
+} from '@/lib/encryption';
+import { cacheDEK } from '@/lib/dek-cache';
 
 export async function POST(request: NextRequest) {
   try {
@@ -77,14 +85,32 @@ export async function POST(request: NextRequest) {
 
     const passwordHash = await hashPassword(password);
 
+    // Initialize encryption for the new user
+    const encryptionSalt = generateSalt();
+    const kdfParams = getDefaultKDFParams();
+    const dek = generateDEK();
+    const kek = await deriveKEK(password, encryptionSalt, kdfParams);
+    const wrappedDek = wrapDEK(dek, kek);
+
     const user = await prisma.user.create({
       data: {
         email: email.toLowerCase(),
         passwordHash,
         displayName: email.split('@')[0],
         passwordVersion: 0, // Initialize password version
+        // Encryption fields
+        encryptionSalt,
+        wrappedDek: JSON.stringify(wrappedDek),
+        dekVersion: 1,
+        kdfIterations: kdfParams.iterations,
+        kdfMemoryCost: kdfParams.memoryCost,
+        kdfParallelism: kdfParams.parallelism,
       },
     });
+
+    // Cache the DEK for immediate use
+    cacheDEK(user.id, dek);
+    const dekToken = createDEKToken(dek);
 
     await prisma.userSettings.create({
       data: { userId: user.id, theme: 'light' },
@@ -111,6 +137,9 @@ export async function POST(request: NextRequest) {
       maxAge: 60 * 60 * 24 * 7,
       path: '/',
     });
+
+    // Set DEK cookie
+    response.cookies.set('dek_token', dekToken, getDEKCookieOptions());
 
     return addRateLimitHeaders(response, rateLimitResult);
   } catch (error) {

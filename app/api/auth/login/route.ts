@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyPassword, validateEmail, generateToken } from '@/lib/auth';
+import { verifyPassword, validateEmail, generateToken, createDEKToken, getDEKCookieOptions } from '@/lib/auth';
 import { validateCSRFToken } from '@/lib/csrf';
 import { checkRateLimit, getIdentifier, rateLimitConfigs } from '@/lib/rate-limit';
+import {
+  deriveKEK,
+  unwrapDEK,
+  wrapDEK,
+  generateSalt,
+  generateDEK,
+  getDefaultKDFParams,
+  EncryptedData,
+} from '@/lib/encryption';
+import { cacheDEK } from '@/lib/dek-cache';
 
 export async function POST(request: NextRequest) {
   try {
@@ -97,6 +107,56 @@ export async function POST(request: NextRequest) {
       data: { lastLogin: new Date() },
     });
 
+    // Store DEK token to set in cookie later
+    let dekToken: string | null = null;
+
+    // Derive KEK and cache DEK if user has encryption enabled
+    if (user.encryptionSalt && user.wrappedDek) {
+      try {
+        const kek = await deriveKEK(password, user.encryptionSalt, {
+          iterations: user.kdfIterations ?? undefined,
+          memoryCost: user.kdfMemoryCost ?? undefined,
+          parallelism: user.kdfParallelism ?? undefined,
+        });
+        const wrappedDEK: EncryptedData = JSON.parse(user.wrappedDek);
+        const dek = unwrapDEK(wrappedDEK, kek);
+        cacheDEK(user.id, dek);
+        dekToken = createDEKToken(dek);
+      } catch (encryptionError) {
+        // Log error but don't fail login - user can still access unencrypted notes
+        console.error('Failed to initialize encryption on login:', encryptionError);
+      }
+    } else {
+      // Initialize encryption for existing users who don't have it yet
+      try {
+        const encryptionSalt = generateSalt();
+        const kdfParams = getDefaultKDFParams();
+        const dek = generateDEK();
+        const kek = await deriveKEK(password, encryptionSalt, kdfParams);
+        const wrappedDek = wrapDEK(dek, kek);
+
+        // Update user with encryption fields
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            encryptionSalt,
+            wrappedDek: JSON.stringify(wrappedDek),
+            dekVersion: 1,
+            kdfIterations: kdfParams.iterations,
+            kdfMemoryCost: kdfParams.memoryCost,
+            kdfParallelism: kdfParams.parallelism,
+          },
+        });
+
+        // Cache the DEK for immediate use
+        cacheDEK(user.id, dek);
+        dekToken = createDEKToken(dek);
+      } catch (initError) {
+        console.error('Failed to initialize encryption for existing user:', initError);
+        // Continue without encryption - user can still access unencrypted notes
+      }
+    }
+
     const token = generateToken({
       userId: user.id,
       email: user.email,
@@ -107,7 +167,7 @@ export async function POST(request: NextRequest) {
       user: { id: user.id, email: user.email, displayName: user.displayName },
     });
 
-    // Set the cookie explicitly on the response
+    // Set the auth cookie explicitly on the response
     // If rememberMe is true, use 7 days; otherwise use a session cookie (expires when browser closes)
     const maxAge = rememberMe ? 60 * 60 * 24 * 7 : undefined; // 7 days if rememberMe, else session cookie
 
@@ -118,6 +178,11 @@ export async function POST(request: NextRequest) {
       maxAge,
       path: '/',
     });
+
+    // Set DEK cookie on the response if we have a token
+    if (dekToken) {
+      response.cookies.set('dek_token', dekToken, getDEKCookieOptions());
+    }
 
     return addRateLimitHeaders(response, rateLimitResult);
   } catch (error) {

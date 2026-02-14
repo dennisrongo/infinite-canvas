@@ -1,8 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
+import { getSession, getDEKCookie } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { noteUpdateSchema, isValidUUID } from '@/lib/validation';
 import { ZodError } from 'zod';
+import { getDEK, cacheDEK } from '@/lib/dek-cache';
+import { encryptNote, decryptNote, isEncryptedData } from '@/lib/encryption';
+
+/**
+ * Get the DEK for the current user
+ * First checks memory cache, then falls back to cookie
+ */
+async function getOrRestoreDEK(userId: string): Promise<Buffer | null> {
+  // First check memory cache
+  let dek = getDEK(userId);
+
+  if (dek) {
+    return dek;
+  }
+
+  // Try to restore from cookie
+  dek = await getDEKCookie();
+
+  if (dek) {
+    // Cache it in memory for future requests
+    cacheDEK(userId, dek);
+    return dek;
+  }
+
+  return null;
+}
 
 // PUT /api/notes/:noteId - Update note content or position
 export async function PUT(
@@ -56,35 +82,62 @@ export async function PUT(
 
     // Build update data object
     const updateData: any = {};
+    const dek = await getOrRestoreDEK(session.userId);
+
+    // Determine if this note should be encrypted
+    const shouldEncrypt = dek !== null;
+
+    // If note is already encrypted but we don't have DEK, we can't update content/title
+    if (note.isEncrypted && !dek && (validatedData.title !== undefined || validatedData.content !== undefined)) {
+      return NextResponse.json(
+        { error: 'Cannot update encrypted note. Please log in again to refresh your session.' },
+        { status: 403 }
+      );
+    }
 
     if (validatedData.title !== undefined) {
       const trimmedTitle = validatedData.title.trim() || 'Untitled Note';
 
-      // Check for duplicate title within the same canvas (excluding current note)
-      const existingNote = await prisma.note.findFirst({
-        where: {
-          canvasId: note.canvasId,
-          title: trimmedTitle,
-          id: { not: noteId }, // Exclude current note
-        },
-      });
-
-      if (existingNote) {
-        return NextResponse.json(
-          {
-            error: 'A note with this title already exists in this canvas. Please use a unique title.',
-            field: 'title'
+      // For duplicate title check, we need to compare with decrypted titles
+      // This is a limitation - we can only check against unencrypted notes
+      // or notes we can decrypt with the current DEK
+      if (!note.isEncrypted) {
+        const existingNote = await prisma.note.findFirst({
+          where: {
+            canvasId: note.canvasId,
+            title: trimmedTitle,
+            id: { not: noteId }, // Exclude current note
+            isEncrypted: false, // Only check unencrypted notes
           },
-          { status: 409 }
-        );
+        });
+
+        if (existingNote) {
+          return NextResponse.json(
+            {
+              error: 'A note with this title already exists in this canvas. Please use a unique title.',
+              field: 'title'
+            },
+            { status: 409 }
+          );
+        }
       }
 
-      updateData.title = trimmedTitle;
+      if (shouldEncrypt) {
+        // We'll encrypt both title and content together below
+        // Just store the plaintext for now
+        updateData._plaintextTitle = trimmedTitle;
+      } else {
+        updateData.title = trimmedTitle;
+      }
     }
 
     if (validatedData.content !== undefined) {
-      // Content is already sanitized by the Zod schema
-      updateData.content = validatedData.content;
+      if (shouldEncrypt) {
+        // Store plaintext content for encryption step
+        updateData._plaintextContent = validatedData.content;
+      } else {
+        updateData.content = validatedData.content;
+      }
     }
 
     if (validatedData.positionX !== undefined) {
@@ -111,13 +164,74 @@ export async function PUT(
       updateData.fontSize = validatedData.fontSize;
     }
 
+    // Handle encryption for title/content updates
+    if (dek && (updateData._plaintextTitle !== undefined || updateData._plaintextContent !== undefined)) {
+      // Get the plaintext title and content
+      let plaintextTitle = updateData._plaintextTitle;
+      let plaintextContent = updateData._plaintextContent;
+
+      // If title wasn't updated, get current title (decrypt if needed)
+      if (plaintextTitle === undefined) {
+        if (note.isEncrypted && isEncryptedData(note.title)) {
+          try {
+            const decrypted = decryptNote(note.title, note.content, dek);
+            plaintextTitle = decrypted.title;
+          } catch {
+            plaintextTitle = note.title; // Fallback to stored value
+          }
+        } else {
+          plaintextTitle = note.title;
+        }
+      }
+
+      // If content wasn't updated, get current content (decrypt if needed)
+      if (plaintextContent === undefined) {
+        if (note.isEncrypted && isEncryptedData(note.content)) {
+          try {
+            const decrypted = decryptNote(note.title, note.content, dek);
+            plaintextContent = decrypted.content;
+          } catch {
+            plaintextContent = note.content; // Fallback to stored value
+          }
+        } else {
+          plaintextContent = note.content;
+        }
+      }
+
+      // Encrypt the title and content
+      const encrypted = encryptNote(plaintextTitle, plaintextContent, dek);
+      updateData.title = encrypted.encryptedTitle;
+      updateData.content = encrypted.encryptedContent;
+      updateData.isEncrypted = true;
+      updateData.encryptionVersion = 1;
+
+      // Remove temporary plaintext fields
+      delete updateData._plaintextTitle;
+      delete updateData._plaintextContent;
+    }
+
     // Update note
     const updatedNote = await prisma.note.update({
       where: { id: noteId },
       data: updateData,
     });
 
-    return NextResponse.json({ note: updatedNote });
+    // Return decrypted note to client
+    let responseNote = updatedNote;
+    if (updatedNote.isEncrypted && dek && isEncryptedData(updatedNote.title) && isEncryptedData(updatedNote.content)) {
+      try {
+        const decrypted = decryptNote(updatedNote.title, updatedNote.content, dek);
+        responseNote = {
+          ...updatedNote,
+          title: decrypted.title,
+          content: decrypted.content,
+        };
+      } catch {
+        // Return encrypted note if decryption fails
+      }
+    }
+
+    return NextResponse.json({ note: responseNote });
   } catch (error) {
     if (error instanceof ZodError) {
       return NextResponse.json(

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { isValidUUID } from '@/lib/validation';
+import { getOrRestoreDEK } from '@/lib/dek';
+import { encrypt } from '@/lib/encryption';
 
 export async function PUT(
   request: NextRequest,
@@ -61,13 +63,38 @@ export async function PUT(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    // Check if DEK is available for encryption
+    const dek = await getOrRestoreDEK(session.userId);
+    let folderName = trimmedName;
+    let isEncrypted = existingFolder.isEncrypted;
+    let encryptionVersion = existingFolder.encryptionVersion;
+
+    // Only encrypt if we have a DEK and the folder is not already encrypted
+    // This preserves existing encryption status
+    if (dek && !isEncrypted) {
+      const encrypted = encrypt(trimmedName, dek);
+      folderName = JSON.stringify(encrypted);
+      isEncrypted = true;
+      encryptionVersion = 1;
+    }
+
     const folder = await prisma.folder.update({
       where: { id },
-      data: { name: trimmedName },
+      data: { 
+        name: folderName,
+        isEncrypted,
+        encryptionVersion,
+      },
       include: { canvases: true },
     });
 
-    return NextResponse.json({ folder });
+    // Return decrypted name to client
+    return NextResponse.json({ 
+      folder: {
+        ...folder,
+        name: trimmedName,
+      }
+    });
   } catch (error) {
     console.error('Error updating folder:', error);
     return NextResponse.json({ error: 'Failed to update folder' }, { status: 500 });

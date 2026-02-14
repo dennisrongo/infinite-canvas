@@ -5,7 +5,6 @@ import dynamic from 'next/dynamic';
 import {
   ReactFlow,
   Background,
-  Controls,
   MiniMap,
   useNodesState,
   useEdgesState,
@@ -17,6 +16,7 @@ import {
   BackgroundVariant,
   useReactFlow,
   ReactFlowProvider,
+  useViewport,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import NoteNode from './NoteNode';
@@ -132,7 +132,8 @@ function ReactFlowCanvasInner({
   showEmptyState,
 }: ReactFlowCanvasProps) {
   const { theme } = useTheme();
-  const { screenToFlowPosition, setViewport, getViewport, fitView } = useReactFlow();
+  const { screenToFlowPosition, setViewport, getViewport, fitView, zoomIn, zoomOut } = useReactFlow();
+  const viewport = useViewport();
   const prevInitialNotes = useRef<Note[]>(initialNotes);
   const isRestoringViewportRef = useRef(false);
   const [undoStack, setUndoStack] = React.useState<UndoAction[]>([]);
@@ -217,7 +218,6 @@ function ReactFlowCanvasInner({
     data: {
       title: note.title || 'Untitled Note',
       content: note.content || '',
-      onDuplicate: handleNoteDuplicate,
       fontFamily: note.fontFamily,
       fontSize: note.fontSize,
     },
@@ -552,7 +552,6 @@ function ReactFlowCanvasInner({
           data: {
             title: note.title || 'Untitled Note',
             content: note.content || '',
-            onDuplicate: handleNoteDuplicate,
             fontFamily: note.fontFamily,
             fontSize: note.fontSize,
           },
@@ -785,6 +784,16 @@ function ReactFlowCanvasInner({
     return () => window.removeEventListener('nodeResize', handleResize);
   }, [nodes, onNoteUpdate]);
 
+  // Handler to zoom in
+  const handleZoomIn = useCallback(() => {
+    zoomIn({ duration: 200 });
+  }, [zoomIn]);
+
+  // Handler to zoom out
+  const handleZoomOut = useCallback(() => {
+    zoomOut({ duration: 200 });
+  }, [zoomOut]);
+
   // Handler to reset zoom to 100% (Feature #52)
   const handleResetZoom = useCallback(() => {
     const currentViewport = getViewport();
@@ -809,78 +818,25 @@ function ReactFlowCanvasInner({
     fitView({ padding: 0.2, duration: 300 });
   }, [fitView]);
 
-  // Custom control button for reset zoom
-  const ResetZoomControl = () => (
-    <button
-      onClick={handleResetZoom}
-      className="react-flow__controls-button"
-      title="Reset zoom to 100%"
-      aria-label="Reset zoom to 100%"
-      style={{
-        border: 'none',
-        background: 'inherit',
-        padding: '0',
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-      }}
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <text x="6" y="17" fontSize="12" fontWeight="bold" fill="currentColor">1:1</text>
-      </svg>
-    </button>
-  );
+  // Handler for fullscreen toggle
+  const handleFullscreen = useCallback(() => {
+    const canvasElement = document.querySelector('.react-flow') as HTMLElement;
+    if (!canvasElement) return;
 
-  // Custom control button for zoom to fit (Feature #50)
-  const FitViewControl = () => (
-    <button
-      onClick={handleFitView}
-      className="react-flow__controls-button"
-      title="Zoom to fit all notes"
-      aria-label="Zoom to fit all notes"
-      style={{
-        border: 'none',
-        background: 'inherit',
-        padding: '0',
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-      }}
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
-      </svg>
-    </button>
-  );
+    if (!document.fullscreenElement) {
+      canvasElement.requestFullscreen().catch((err) => {
+        console.error('Fullscreen error:', err);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  }, []);
+
+  // Get current zoom percentage for display
+  const zoomPercentage = Math.round(viewport.zoom * 100);
 
   return (
-    <>
+    <div className="relative w-full h-full">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -908,10 +864,6 @@ function ReactFlowCanvasInner({
           size={1}
           color={theme === 'dark' ? '#475569' : '#CBD5E1'}
         />
-        <Controls>
-          <FitViewControl />
-          <ResetZoomControl />
-        </Controls>
         <MiniMap
           nodeColor={(node) => {
             // Use purple-tinted colors for note nodes in minimap (Stitch design)
@@ -925,6 +877,151 @@ function ReactFlowCanvasInner({
           ariaLabel="Canvas minimap"
         />
       </ReactFlow>
+
+      {/* Canvas Controls (Stitch design) - positioned bottom left */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '16px',
+          left: '16px',
+          display: 'flex',
+          flexDirection: 'row',
+          gap: '8px',
+          backgroundColor: theme === 'dark' ? '#1f2937' : '#ffffff',
+          padding: '6px',
+          borderRadius: '8px',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          border: `1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}`,
+          zIndex: 20,
+        }}
+      >
+        {/* Zoom Out Button */}
+        <button
+          onClick={handleZoomOut}
+          title="Zoom out"
+          aria-label="Zoom out"
+          style={{
+            width: '24px',
+            height: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: theme === 'dark' ? '#374151' : '#ffffff',
+            border: `1px solid ${theme === 'dark' ? '#4b5563' : '#e5e7eb'}`,
+            borderRadius: '6px',
+            cursor: 'pointer',
+            color: theme === 'dark' ? '#9ca3af' : '#6b7280',
+          }}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        </button>
+
+        {/* Zoom Percentage */}
+        <button
+          onClick={handleResetZoom}
+          title="Reset zoom to 100%"
+          aria-label="Reset zoom to 100%"
+          style={{
+            minWidth: '44px',
+            height: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            color: theme === 'dark' ? '#9ca3af' : '#6b7280',
+            fontSize: '12px',
+            fontWeight: 500,
+          }}
+        >
+          {zoomPercentage}%
+        </button>
+
+        {/* Fit View Button */}
+        <button
+          onClick={handleFitView}
+          title="Zoom to fit all notes"
+          aria-label="Zoom to fit all notes"
+          style={{
+            width: '24px',
+            height: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: theme === 'dark' ? '#374151' : '#ffffff',
+            border: `1px solid ${theme === 'dark' ? '#4b5563' : '#e5e7eb'}`,
+            borderRadius: '6px',
+            cursor: 'pointer',
+            color: theme === 'dark' ? '#9ca3af' : '#6b7280',
+          }}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="14" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
+          </svg>
+        </button>
+
+        {/* Fullscreen Button */}
+        <button
+          onClick={handleFullscreen}
+          title="Toggle fullscreen"
+          aria-label="Toggle fullscreen"
+          style={{
+            width: '24px',
+            height: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: theme === 'dark' ? '#374151' : '#ffffff',
+            border: `1px solid ${theme === 'dark' ? '#4b5563' : '#e5e7eb'}`,
+            borderRadius: '6px',
+            cursor: 'pointer',
+            color: theme === 'dark' ? '#9ca3af' : '#6b7280',
+          }}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+            <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+            <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+            <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+          </svg>
+        </button>
+      </div>
 
       {/* Empty State Overlay - shows when there are no notes */}
       {showEmptyState && (
@@ -966,7 +1063,7 @@ function ReactFlowCanvasInner({
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
       />
-    </>
+    </div>
   );
 }
 

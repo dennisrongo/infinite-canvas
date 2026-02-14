@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { isValidUUID, sanitizeUrlParam } from '@/lib/validation';
+import { isValidUUID } from '@/lib/validation';
+import { getOrRestoreDEK, decryptNameWithDEK } from '@/lib/dek';
+import { decryptNote, isEncryptedData, encrypt } from '@/lib/encryption';
 
 // GET /api/canvases/:id - Get a single canvas with notes and connections
 export async function GET(
@@ -38,6 +40,7 @@ export async function GET(
           select: {
             id: true,
             name: true,
+            isEncrypted: true,
           },
         },
         notes: {
@@ -56,7 +59,51 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ canvas });
+    // Get DEK for decryption
+    const dek = await getOrRestoreDEK(session.userId);
+
+    // Decrypt canvas name
+    const { name: canvasName } = dek
+      ? decryptNameWithDEK(canvas.name, canvas.isEncrypted, dek)
+      : { name: canvas.isEncrypted ? '[Please log in to view]' : canvas.name };
+
+    // Decrypt folder name if exists
+    let folderDecrypted = canvas.folder;
+    if (canvas.folder) {
+      const { name: folderName } = dek
+        ? decryptNameWithDEK(canvas.folder.name, canvas.folder.isEncrypted, dek)
+        : { name: canvas.folder.isEncrypted ? '[Please log in to view]' : canvas.folder.name };
+      folderDecrypted = { ...canvas.folder, name: folderName };
+    }
+
+    // Decrypt note titles and content
+    const decryptedNotes = canvas.notes.map((note) => {
+      if (note.isEncrypted && dek) {
+        const titleIsEncrypted = isEncryptedData(note.title);
+        const contentIsEncrypted = isEncryptedData(note.content);
+
+        if (titleIsEncrypted && contentIsEncrypted) {
+          try {
+            const decrypted = decryptNote(note.title, note.content, dek);
+            return {
+              ...note,
+              title: decrypted.title,
+              content: decrypted.content,
+            };
+          } catch (error) {
+            console.error('Failed to decrypt note:', note.id, error);
+            return {
+              ...note,
+              title: '[Decryption Error]',
+              content: '[Unable to decrypt this note]',
+            };
+          }
+        }
+      }
+      return note;
+    });
+
+    return NextResponse.json({ canvas: { ...canvas, name: canvasName, folder: folderDecrypted, notes: decryptedNotes } });
   } catch (error) {
     console.error('Error fetching canvas:', error);
     return NextResponse.json(
@@ -168,9 +215,23 @@ export async function PUT(
 
     // Update canvas
     const updateData: Record<string, unknown> = {};
+    
+    // Handle name encryption
     if (name !== undefined) {
-      updateData.name = name.trim();
+      const trimmedName = name.trim();
+      const dek = await getOrRestoreDEK(session.userId);
+      
+      if (dek && !existingCanvas.isEncrypted) {
+        // Encrypt the name if we have a DEK and it's not already encrypted
+        const encrypted = encrypt(trimmedName, dek);
+        updateData.name = JSON.stringify(encrypted);
+        updateData.isEncrypted = true;
+        updateData.encryptionVersion = 1;
+      } else {
+        updateData.name = trimmedName;
+      }
     }
+    
     if (folderId !== undefined) {
       updateData.folderId = folderId;
     }

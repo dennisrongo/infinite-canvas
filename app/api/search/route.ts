@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { getOrRestoreDEK } from '@/lib/dek';
+import { decryptNote, isEncryptedData } from '@/lib/encryption';
 
 // Maximum search query length to prevent performance issues
 const MAX_SEARCH_QUERY_LENGTH = 1000;
@@ -150,21 +152,41 @@ export async function POST(request: NextRequest) {
 
     const searchTime = Date.now() - startTime;
 
-    // Format results
-    const results = (notes as any[]).map((note) => ({
-      id: note.id,
-      title: note.title,
-      content: note.content,
-      contentPreview: note.content
-        ? note.content.substring(0, 150) + (note.content.length > 150 ? '...' : '')
-        : '',
-      canvasId: note.canvasId,
-      canvasName: note.canvasName,
-      positionX: Number(note.positionX),
-      positionY: Number(note.positionY),
-      createdAt: new Date(note.createdAt as string | Date),
-      updatedAt: new Date(note.updatedAt as string | Date),
-    }));
+    // Get DEK for decryption
+    const dek = await getOrRestoreDEK(session.userId);
+
+    // Format results (decrypt if needed)
+    const results = (notes as any[]).map((note) => {
+      let title = note.title;
+      let content = note.content;
+
+      // Try to decrypt if we have a DEK and the data looks encrypted
+      if (dek && isEncryptedData(title) && isEncryptedData(content)) {
+        try {
+          const decrypted = decryptNote(title, content, dek);
+          title = decrypted.title;
+          content = decrypted.content;
+        } catch (decryptError) {
+          console.error('Failed to decrypt note during search:', note.id, decryptError);
+          // Keep encrypted values if decryption fails
+        }
+      }
+
+      return {
+        id: note.id,
+        title,
+        content,
+        contentPreview: content
+          ? content.substring(0, 150) + (content.length > 150 ? '...' : '')
+          : '',
+        canvasId: note.canvasId,
+        canvasName: note.canvasName,
+        positionX: Number(note.positionX),
+        positionY: Number(note.positionY),
+        createdAt: new Date(note.createdAt as string | Date),
+        updatedAt: new Date(note.updatedAt as string | Date),
+      };
+    });
 
     return NextResponse.json({
       results,

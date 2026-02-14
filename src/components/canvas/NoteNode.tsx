@@ -7,7 +7,6 @@ interface NoteNodeProps {
   data: {
     title: string;
     content: string;
-    onDuplicate?: (noteId: string) => void;
   };
   selected?: boolean;
   id: string;
@@ -238,43 +237,6 @@ const NoteNode = memo(function NoteNode({ data, selected, id }: NoteNodeProps) {
             </svg>
             Double-click to edit
           </div>
-
-          {/* Duplicate button - visible on hover, with touch-friendly sizing */}
-          {data.onDuplicate && (
-            <button
-              data-testid="duplicate-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                data.onDuplicate?.(id);
-              }}
-              className="absolute top-2 right-2 min-w-[44px] min-h-[44px] p-3 bg-purple-500 hover:bg-purple-600 text-white rounded-md opacity-0 group-hover:opacity-100 transition-all shadow-sm flex items-center justify-center"
-              title="Duplicate note"
-              style={{ opacity: selected ? 1 : 0 }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.opacity = '1';
-              }}
-              onMouseLeave={(e) => {
-                if (!selected) {
-                  e.currentTarget.style.opacity = '0';
-                }
-              }}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                />
-              </svg>
-            </button>
-          )}
         </div>
 
         {/* Resize handles - only show when selected */}
@@ -308,8 +270,7 @@ const NoteNode = memo(function NoteNode({ data, selected, id }: NoteNodeProps) {
   prevProps.id === nextProps.id &&
   prevProps.selected === nextProps.selected &&
   prevProps.data.title === nextProps.data.title &&
-  prevProps.data.content === nextProps.data.content &&
-  prevProps.data.onDuplicate === nextProps.data.onDuplicate
+  prevProps.data.content === nextProps.data.content
 ));
 
 export default NoteNode;

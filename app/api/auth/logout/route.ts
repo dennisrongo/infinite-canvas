@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
-import { verifyToken } from '@/lib/auth';
+import { verifyToken, clearDEKCookie } from '@/lib/auth';
+import { clearDEK } from '@/lib/dek-cache';
 
 export async function POST() {
   try {
@@ -12,6 +13,10 @@ export async function POST() {
       // Verify token and add to revoked list
       const payload = verifyToken(token);
       if (payload) {
+        // Clear the DEK from memory cache and cookie
+        clearDEK(payload.userId);
+        await clearDEKCookie();
+
         // Calculate expiration time (7 days from now as that's our token expiry)
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + 7);

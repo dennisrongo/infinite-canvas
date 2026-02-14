@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { getOrRestoreDEK, decryptNameWithDEK } from '@/lib/dek';
+import { encrypt } from '@/lib/encryption';
 
 export async function GET() {
   try {
@@ -13,14 +15,34 @@ export async function GET() {
       where: { userId: session.userId },
       include: {
         canvases: {
-          select: { id: true, name: true, updatedAt: true, createdAt: true, order: true },
+          select: { id: true, name: true, updatedAt: true, createdAt: true, order: true, isEncrypted: true },
           orderBy: { order: 'asc' },
         },
       },
       orderBy: { order: 'asc' },
     });
 
-    return NextResponse.json({ folders });
+    // Get DEK for decryption
+    const dek = await getOrRestoreDEK(session.userId);
+
+    const decryptedFolders = folders.map((folder) => {
+      // Decrypt folder name
+      const { name: decryptedName } = dek
+        ? decryptNameWithDEK(folder.name, folder.isEncrypted, dek)
+        : { name: folder.isEncrypted ? '[Please log in to view]' : folder.name };
+      
+      // Decrypt canvas names inside folder
+      const decryptedCanvases = folder.canvases.map((canvas) => {
+        const { name: canvasName } = dek
+          ? decryptNameWithDEK(canvas.name, canvas.isEncrypted, dek)
+          : { name: canvas.isEncrypted ? '[Please log in to view]' : canvas.name };
+        return { ...canvas, name: canvasName };
+      });
+      
+      return { ...folder, name: decryptedName, canvases: decryptedCanvases };
+    });
+
+    return NextResponse.json({ folders: decryptedFolders });
   } catch (error) {
     console.error('Error fetching folders:', error);
     return NextResponse.json({ error: 'Failed to fetch folders' }, { status: 500 });
@@ -60,12 +82,35 @@ export async function POST(request: NextRequest) {
       console.warn(`Folder name is unusually long (${trimmedName.length} characters)`);
     }
 
+    // Check if DEK is available for encryption
+    const dek = await getOrRestoreDEK(session.userId);
+    let folderName = trimmedName;
+    let isEncrypted = false;
+
+    if (dek) {
+      // Encrypt the folder name
+      const encrypted = encrypt(trimmedName, dek);
+      folderName = JSON.stringify(encrypted);
+      isEncrypted = true;
+    }
+
     const folder = await prisma.folder.create({
-      data: { userId: session.userId, name: trimmedName },
+      data: { 
+        userId: session.userId, 
+        name: folderName,
+        isEncrypted,
+        encryptionVersion: isEncrypted ? 1 : null,
+      },
       include: { canvases: true },
     });
 
-    return NextResponse.json({ folder }, { status: 201 });
+    // Return decrypted name to client
+    return NextResponse.json({ 
+      folder: {
+        ...folder,
+        name: trimmedName,
+      }
+    }, { status: 201 });
   } catch (error) {
     console.error('Error creating folder:', error);
     return NextResponse.json({ error: 'Failed to create folder' }, { status: 500 });

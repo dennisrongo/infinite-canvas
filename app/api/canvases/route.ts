@@ -3,6 +3,8 @@ import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { validateCSRFToken } from '@/lib/csrf';
 import { checkRateLimit, getIdentifier, rateLimitConfigs } from '@/lib/rate-limit';
+import { getOrRestoreDEK, decryptNameWithDEK } from '@/lib/dek';
+import { encrypt } from '@/lib/encryption';
 
 // GET /api/canvases - Get all canvases for the current user
 export async function GET() {
@@ -25,6 +27,7 @@ export async function GET() {
           select: {
             id: true,
             name: true,
+            isEncrypted: true,
           },
         },
         _count: {
@@ -36,7 +39,28 @@ export async function GET() {
       orderBy: { order: 'asc' },
     });
 
-    return NextResponse.json({ canvases });
+    // Get DEK for decryption
+    const dek = await getOrRestoreDEK(session.userId);
+
+    const decryptedCanvases = canvases.map((canvas) => {
+      // Decrypt canvas name
+      const { name: canvasName } = dek
+        ? decryptNameWithDEK(canvas.name, canvas.isEncrypted, dek)
+        : { name: canvas.isEncrypted ? '[Please log in to view]' : canvas.name };
+      
+      // Decrypt folder name if exists
+      let folderDecrypted = canvas.folder;
+      if (canvas.folder) {
+        const { name: folderName } = dek
+          ? decryptNameWithDEK(canvas.folder.name, canvas.folder.isEncrypted, dek)
+          : { name: canvas.folder.isEncrypted ? '[Please log in to view]' : canvas.folder.name };
+        folderDecrypted = { ...canvas.folder, name: folderName };
+      }
+      
+      return { ...canvas, name: canvasName, folder: folderDecrypted };
+    });
+
+    return NextResponse.json({ canvases: decryptedCanvases });
   } catch (error) {
     console.error('Error fetching canvases:', error);
     return NextResponse.json(
@@ -151,11 +175,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Check if DEK is available for encryption
+    const dek = await getOrRestoreDEK(session.userId);
+    let canvasName = trimmedName;
+    let isEncrypted = false;
+
+    if (dek) {
+      // Encrypt the canvas name
+      const encrypted = encrypt(trimmedName, dek);
+      canvasName = JSON.stringify(encrypted);
+      isEncrypted = true;
+    }
+
     const canvas = await prisma.canvas.create({
       data: {
         userId: session.userId,
-        name: trimmedName,
+        name: canvasName,
         folderId: folderId || null,
+        isEncrypted,
+        encryptionVersion: isEncrypted ? 1 : null,
       },
       include: {
         folder: {
@@ -167,7 +205,13 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const response = NextResponse.json({ canvas }, { status: 201 });
+    // Return decrypted name to client
+    const response = NextResponse.json({ 
+      canvas: {
+        ...canvas,
+        name: trimmedName,
+      }
+    }, { status: 201 });
     return addRateLimitHeaders(response, rateLimitResult);
   } catch (error) {
     console.error('Error creating canvas:', error);

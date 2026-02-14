@@ -21,6 +21,14 @@ model User {
   passwordResetTokens PasswordResetToken[]
   settings            UserSettings?
 
+  // Encryption fields for note encryption at rest
+  encryptionSalt    String?  @map("encryption_salt")     // Base64 salt for Argon2id
+  wrappedDek        String?  @map("wrapped_dek")         // JSON: {ciphertext, iv, authTag, version}
+  dekVersion        Int?     @default(1) @map("dek_version")
+  kdfIterations     Int?     @map("kdf_iterations")      // Argon2id time cost
+  kdfMemoryCost     Int?     @map("kdf_memory_cost")     // Argon2id memory (KB)
+  kdfParallelism    Int?     @map("kdf_parallelism")     // Argon2id parallelism
+
   @@map("users")
 }
 
@@ -46,6 +54,10 @@ model Folder {
   canvases  Canvas[]
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // Encryption fields
+  isEncrypted       Boolean  @default(false) @map("is_encrypted")
+  encryptionVersion Int?    @map("encryption_version")
+
   @@index([userId])
   @@map("folders")
 }
@@ -65,6 +77,10 @@ model Canvas {
   user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   connections NoteConnection[]
   notes       Note[]
+
+  // Encryption fields
+  isEncrypted       Boolean          @default(false) @map("is_encrypted")
+  encryptionVersion Int?             @map("encryption_version")
 
   @@index([userId])
   @@index([folderId])
@@ -88,6 +104,10 @@ model Note {
   targetConnections NoteConnection[] @relation("TargetNote")
   sourceConnections NoteConnection[] @relation("SourceNote")
   canvas            Canvas           @relation(fields: [canvasId], references: [id], onDelete: Cascade)
+
+  // Encryption fields
+  isEncrypted       Boolean          @default(false) @map("is_encrypted")
+  encryptionVersion Int?             @map("encryption_version")
 
   @@index([canvasId])
   @@index([title])
