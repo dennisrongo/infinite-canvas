@@ -53,7 +53,7 @@ function CanvasPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showToast } = useToast();
-  const { setCanvasHeader } = useSidebar();
+  const { setCanvasHeader, openImportModal } = useSidebar();
   const canvasId = params.id as string;
   const queryClient = useQueryClient();
 
@@ -158,10 +158,10 @@ function CanvasPageContent() {
   // Set canvas header - runs once when canvas is seeded and on name changes
   useEffect(() => {
     if (canvas) {
-      setCanvasHeader(canvas.name, handleExport, handleTitleChange);
+      setCanvasHeader(handleExport, openImportModal);
     }
     return () => {
-      setCanvasHeader(null, null, null);
+      setCanvasHeader(null, null);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canvas?.name, setCanvasHeader]);

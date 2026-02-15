@@ -300,6 +300,26 @@ export async function search(
     select: { id: true, title: true, content: true, isEncrypted: true, positionX: true, positionY: true },
   });
 
+  // Get canvas names for display
+  const canvasIds = [...new Set(searchResults.map(r => r.canvasId))];
+  const canvases = await prisma.canvas.findMany({
+    where: { id: { in: canvasIds } },
+    select: { id: true, name: true, isEncrypted: true },
+  });
+  const canvasMap = new Map<string, string>();
+  for (const canvas of canvases) {
+    if (canvas.isEncrypted && isEncryptedData(canvas.name) && dek) {
+      try {
+        const { decrypt } = await import('./encryption');
+        canvasMap.set(canvas.id, decrypt(JSON.parse(canvas.name), dek));
+      } catch {
+        canvasMap.set(canvas.id, '[Encrypted]');
+      }
+    } else {
+      canvasMap.set(canvas.id, canvas.name);
+    }
+  }
+
   const notesMap = new Map<string, { title: string; content: string; positionX: number; positionY: number }>();
 
   for (const note of notes) {
@@ -337,6 +357,7 @@ export async function search(
         content: noteData.content,
         contentPreview: noteData.content ? noteData.content.substring(0, 150) + (noteData.content.length > 150 ? '...' : '') : '',
         canvasId: row.canvasId,
+        canvasName: canvasMap.get(row.canvasId) || 'Unknown Canvas',
         positionX: noteData.positionX,
         positionY: noteData.positionY,
         createdAt: row.createdAt,
@@ -357,9 +378,20 @@ export async function getCanvasNameForSearch(canvasId: string, userId: string): 
 
   if (!canvas) return null;
 
-  if (canvas.isEncrypted) {
-    const dek = await getOrRestoreDEK(userId);
-    if (dek && isEncryptedData(canvas.name)) {
+  // If canvas is not encrypted, return the name directly
+  if (!canvas.isEncrypted) {
+    return canvas.name;
+  }
+
+  // Canvas is marked as encrypted - check if the name is actually encrypted
+  const dek = await getOrRestoreDEK(userId);
+  
+  // Only return "[Encrypted]" if BOTH conditions are met:
+  // 1. The canvas is marked as encrypted AND
+  // 2. The name actually looks like encrypted data
+  // If name is stored in plaintext (data inconsistency), return the plaintext name
+  if (canvas.name && isEncryptedData(canvas.name)) {
+    if (dek) {
       try {
         const { decrypt } = await import('./encryption');
         return decrypt(JSON.parse(canvas.name), dek);
@@ -367,9 +399,10 @@ export async function getCanvasNameForSearch(canvasId: string, userId: string): 
         return '[Encrypted]';
       }
     }
-    return '[Please log in]';
+    return '[Encrypted]';
   }
 
+  // Name is stored in plaintext despite isEncrypted flag - return the actual name
   return canvas.name;
 }
 

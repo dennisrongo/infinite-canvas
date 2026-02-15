@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useSearch } from '@/hooks/api/useSearch';
+import SearchScopeDropdown from './SearchScopeDropdown';
 import { Select } from '@/components/ui';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { escapeAndHighlight } from '@/lib/sanitize';
@@ -153,9 +154,10 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
 
   return (
     <div className="search-container relative flex-1 max-w-2xl ml-2 md:ml-8">
-      <div className="relative">
+      {/* Unified search bar container */}
+      <div className="relative flex items-center h-10 bg-white dark:bg-dark-input rounded-lg">
         {/* Search Icon */}
-        <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-light-text-secondary dark:text-dark-text-secondary">
+        <div className="flex-shrink-0 pl-3 text-light-text-secondary dark:text-dark-text-secondary">
           <Search className="w-5 h-5" />
         </div>
 
@@ -166,35 +168,32 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search notes... (Ctrl+K)"
-          className="search-input type-nav w-full pl-10 pr-24 py-2 border border-light-note-border dark:border-dark-note-border rounded-lg bg-white dark:bg-dark-input text-light-text dark:text-dark-text focus:outline-none focus:border-light-primary dark:focus:border-dark-primary"
+          className="search-input flex-1 h-full px-3 py-2 bg-transparent text-light-text dark:text-dark-text placeholder:text-light-text-tertiary dark:placeholder:text-dark-text-tertiary focus:outline-none text-sm border-none"
         />
 
-        {/* Scope Selector and Filter Button */}
-        <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
-          {currentCanvasId && (
-            <Select
-              id="search-scope"
-              options={[
-                { label: 'All Canvases', value: 'all' },
-                { label: 'This Canvas', value: 'current' },
-              ]}
-              value={searchScope}
-              onChange={(val) => setSearchScope(val as 'all' | 'current')}
-              showLabel={false}
-              className="w-32 text-sm"
-            />
-          )}
+        {/* Divider between input and scope dropdown */}
+        <div className="flex-shrink-0 w-px h-6 bg-light-note-border dark:bg-dark-note-border" />
 
-          {/* Filter Toggle Button */}
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="type-meta flex items-center gap-1 px-2 py-1 border border-light-note-border dark:border-dark-note-border rounded bg-white dark:bg-dark-bg text-light-text-secondary dark:text-dark-text-tertiary hover:bg-light-hover dark:hover:bg-dark-hover transition focus:outline-none"
-            title="Filter and sort options"
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5" />
-            <span>Filters</span>
-          </button>
-        </div>
+        {/* Scope Selector */}
+        {currentCanvasId && (
+          <SearchScopeDropdown
+            value={searchScope}
+            onChange={(val) => setSearchScope(val)}
+          />
+        )}
+
+        {/* Divider between scope dropdown and filter button */}
+        <div className="flex-shrink-0 w-px h-6 bg-light-note-border dark:bg-dark-note-border" />
+
+        {/* Filter Toggle Button */}
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className="flex-shrink-0 h-full px-3 flex items-center gap-1.5 text-sm text-light-text-secondary dark:text-dark-text-secondary hover:bg-light-hover dark:hover:bg-dark-hover transition focus:outline-none"
+          title="Filter and sort options"
+        >
+          <SlidersHorizontal className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Filters</span>
+        </button>
       </div>
 
       {/* Filter Panel */}
@@ -301,7 +300,7 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
         <div
           role="listbox"
           aria-label="Search results"
-          className="absolute mt-2 w-full bg-white dark:bg-dark-bg border border-light-note-border dark:border-dark-note-border rounded-lg shadow-lg max-h-96 overflow-y-auto z-[70]"
+          className="absolute mt-2 w-full md:w-96 bg-white dark:bg-dark-bg border border-light-note-border dark:border-dark-note-border rounded-lg shadow-lg max-h-96 overflow-y-auto z-[70]"
         >
           {searchWarning && (
             <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-sm">
@@ -332,7 +331,7 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
                   <div className="flex items-start justify-between gap-3 w-full">
                     <div className="flex-1 min-w-0">
                       <div
-                        className="type-nav text-light-text dark:text-dark-text truncate"
+                        className="type-nav text-light-text dark:text-dark-text"
                         dangerouslySetInnerHTML={{ __html: result.highlightedTitle }}
                       />
                       <div
