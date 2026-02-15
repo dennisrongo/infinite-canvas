@@ -24,6 +24,9 @@ import FloatingEdge from './FloatingEdge';
 import { useTheme } from '@/contexts/ThemeContext';
 import DeleteConfirmationModal from './DeleteConfirmationModal';
 
+// Timeout for fallback clearing of note creation loading state (in ms)
+const NOTE_CREATION_TIMEOUT_MS = 2000;
+
 // Loading skeleton for NoteEditor
 function NoteEditorSkeleton() {
   return (
@@ -102,6 +105,7 @@ interface ReactFlowCanvasProps {
   onConnectionDelete?: (connectionId: string) => void;
   onNoteDuplicate?: (noteId: string) => void;
   onNavigateToNote?: (noteTitle: string) => void;
+  onNoteCreating?: (isCreating: boolean) => void;
   showEmptyState?: boolean;
 }
 
@@ -151,6 +155,7 @@ function ReactFlowCanvasInner({
   onConnectionDelete,
   onNoteDuplicate,
   onNavigateToNote,
+  onNoteCreating,
   showEmptyState,
 }: ReactFlowCanvasProps) {
   const { theme } = useTheme();
@@ -362,6 +367,18 @@ function ReactFlowCanvasInner({
   // Refs for double-click detection
   const lastClickTime = useRef(0);
   const lastClickPosition = useRef({ x: 0, y: 0 });
+  // Cooldown to prevent multiple rapid note creations
+  const isCreatingNoteRef = useRef(false);
+  // Track timeouts for cleanup
+  const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
+
+  // Clear all tracked timeouts on unmount
+  useEffect(() => {
+    return () => {
+      timeoutRefs.current.forEach(clearTimeout);
+      timeoutRefs.current = [];
+    };
+  }, []);
 
   // Handle click on canvas and detect double-click
   const onPaneClick = useCallback(
@@ -379,15 +396,39 @@ function ReactFlowCanvasInner({
 
       // Check if this is a double-click (within 300ms and close in position)
       if (timeDiff < 300 && distance < 10) {
+        // Prevent multiple rapid note creations (cooldown)
+        if (isCreatingNoteRef.current) {
+          console.log('[onPaneClick] Note creation in progress, ignoring double-click');
+          return;
+        }
+        
         if (onNoteCreate) {
           try {
             const flowPosition = screenToFlowPosition({
               x: event.clientX,
               y: event.clientY,
             });
+            // Set cooldown to prevent rapid successive creations
+            isCreatingNoteRef.current = true;
+            // Notify parent that note creation is starting
+            if (onNoteCreating) {
+              onNoteCreating(true);
+            }
+            // Clear cooldown after a reasonable time (in case parent doesn't clear it)
+            const timeoutId = setTimeout(() => {
+              isCreatingNoteRef.current = false;
+              if (onNoteCreating) {
+                onNoteCreating(false);
+              }
+            }, NOTE_CREATION_TIMEOUT_MS);
+            timeoutRefs.current.push(timeoutId);
             onNoteCreate(flowPosition);
           } catch (error) {
             console.error('[onPaneClick] Error creating note:', error);
+            isCreatingNoteRef.current = false;
+            if (onNoteCreating) {
+              onNoteCreating(false);
+            }
           }
         }
       }
@@ -395,7 +436,7 @@ function ReactFlowCanvasInner({
       lastClickTime.current = now;
       lastClickPosition.current = position;
     },
-    [onNoteCreate, screenToFlowPosition]
+    [onNoteCreate, onNoteCreating, screenToFlowPosition]
   );
 
   // Handle node drag end to update position in database
@@ -802,6 +843,11 @@ function ReactFlowCanvasInner({
           !(event.target as HTMLElement).isContentEditable
         ) {
           event.preventDefault();
+          // Prevent multiple rapid note creations (cooldown)
+          if (isCreatingNoteRef.current) {
+            console.log('[KeyDown] Note creation in progress, ignoring N key');
+            return;
+          }
           if (onNoteCreate) {
             try {
               // Get current viewport to center the new note
@@ -810,9 +856,28 @@ function ReactFlowCanvasInner({
               const centerX = -viewport.x + (window.innerWidth / 2) / viewport.zoom;
               const centerY = -viewport.y + (window.innerHeight / 2) / viewport.zoom;
 
+              // Set cooldown to prevent rapid successive creations
+              isCreatingNoteRef.current = true;
+              // Notify parent that note creation is starting
+              if (onNoteCreating) {
+                onNoteCreating(true);
+              }
+              // Clear cooldown after a reasonable time (in case parent doesn't clear it)
+              const timeoutId = setTimeout(() => {
+                isCreatingNoteRef.current = false;
+                if (onNoteCreating) {
+                  onNoteCreating(false);
+                }
+              }, NOTE_CREATION_TIMEOUT_MS);
+              timeoutRefs.current.push(timeoutId);
+
               onNoteCreate({ x: centerX, y: centerY });
             } catch (error) {
               console.error('[KeyDown] Error creating note with N key:', error);
+              isCreatingNoteRef.current = false;
+              if (onNoteCreating) {
+                onNoteCreating(false);
+              }
             }
           }
         }
@@ -828,6 +893,7 @@ function ReactFlowCanvasInner({
     onNoteDelete,
     setNodes,
     onNoteCreate,
+    onNoteCreating,
     getViewport,
     nodes,
     handleNodeDeleteRequest,

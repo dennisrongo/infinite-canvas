@@ -79,6 +79,8 @@ function CanvasPageContent() {
   const [pendingDeepLinkNoteId, setPendingDeepLinkNoteId] = useState<string | null>(null);
   // Track if we should open editor for deep link - set when deep link is successfully processed
   const [shouldOpenEditorForDeepLink, setShouldOpenEditorForDeepLink] = useState(false);
+  // Track if a note is currently being created (for loading indicator)
+  const [isCreatingNote, setIsCreatingNote] = useState(false);
 
   // Feature #175: Hook for cancellable requests to handle late API responses
   const { cancellableFetch, abortAllRequests, isMounted, cleanup } = useCancellableRequest();
@@ -277,9 +279,17 @@ function CanvasPageContent() {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [canvas, canvasDeleted, refetchCanvas]);
 
+  // Handle note creation loading state (callback from ReactFlowCanvas)
+  const handleNoteCreating = useCallback((isCreating: boolean) => {
+    setIsCreatingNote(isCreating);
+  }, []);
+
   const handleNoteCreate = useCallback(async (position: { x: number; y: number }) => {
     const requestKey = `createNote-${Date.now()}`;
     try {
+      // Show loading indicator
+      setIsCreatingNote(true);
+
       // Generate a unique title for "Untitled Note"
       const existingUntitledNotes = notes.filter(n => n.title.startsWith('Untitled Note'));
       let newTitle = 'Untitled Note';
@@ -336,8 +346,11 @@ function CanvasPageContent() {
       if (isMounted()) {
         showToast('Failed to create note. Please try again.', 'error');
       }
+    } finally {
+      // Always clear loading indicator when done
+      setIsCreatingNote(false);
     }
-  }, [canvasId, notes, showToast, cancellableFetch, cleanup]);
+  }, [canvasId, notes, showToast, cancellableFetch, cleanup, isMounted]);
 
   const handleNoteUpdate = useCallback(async (noteId: string, newPosition: { x: number; y: number }, newSize?: { width: number; height: number }, newTitle?: string, newContent?: string, newFontFamily?: string, newFontSize?: number) => {
     try {
@@ -722,8 +735,18 @@ function CanvasPageContent() {
         onNoteRestore={handleNoteRestore}
         onConnectionCreate={handleConnectionCreate}
         onConnectionDelete={handleConnectionDelete}
+        onNoteCreating={handleNoteCreating}
         showEmptyState={notes.length === 0}
       />
+      {/* Loading indicator when note is being created */}
+      {isCreatingNote && (
+        <div className="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center z-40 pointer-events-none">
+          <div className="bg-white dark:bg-[#1E293B] rounded-lg shadow-lg px-6 py-4 flex items-center gap-3">
+            <LoadingSpinner size="sm" />
+            <span className="text-sm text-gray-700 dark:text-gray-200">Creating note...</span>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

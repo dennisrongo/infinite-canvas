@@ -16,6 +16,10 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Infinite Canvas",
   description: "An infinite canvas note-taking application",
+  icons: {
+    icon: "/favicon.svg",
+    apple: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
