@@ -248,15 +248,6 @@ const NoteNode = memo(function NoteNode({ data, selected, id }: NoteNodeProps) {
             className="!w-3 !h-3 !bg-purple-500 !border-2 !border-white dark:!border-gray-800 !opacity-0 group-hover:!opacity-100 !transition-opacity !duration-200 hover:!scale-150 !cursor-crosshair"
           />
 
-          {/* Selected indicator - visible badge with icon for accessibility */}
-          {selected && (
-            <div data-testid="selected-indicator" className="absolute -top-3 -right-3 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center shadow-md" aria-label="Selected note">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-          )}
-
           {/* Title with accent dot and delete button */}
           <div className="flex items-center justify-between gap-2 mb-2">
             <div className="flex items-center gap-2 min-w-0 flex-1">
