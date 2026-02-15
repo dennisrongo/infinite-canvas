@@ -2,6 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { indexNote } from '@/lib/search-index';
+import { isEncryptedData, encryptNote, decryptNote } from '@/lib/encryption';
+import { getOrRestoreDEK, decryptNameWithDEK } from '@/lib/dek';
+
+// Current encryption version constant
+const CURRENT_ENCRYPTION_VERSION = 1;
+
+// Helper to check if content looks encrypted
+function looksLikeEncryptedContent(content: string): boolean {
+  if (!content || typeof content !== 'string') return false;
+  try {
+    const parsed = JSON.parse(content);
+    return isEncryptedData(content);
+  } catch {
+    return false;
+  }
+}
 
 // POST /api/canvases/import - Import canvas from JSON
 export async function POST(request: NextRequest) {
@@ -14,6 +30,9 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    // Get user's DEK for potential encryption/decryption
+    const dek = await getOrRestoreDEK(session.userId);
 
     const body = await request.json();
     const { importData, folderId } = body;
@@ -28,6 +47,20 @@ export async function POST(request: NextRequest) {
 
     const { canvas: canvasData } = importData;
 
+    // Check if canvas name is encrypted and decrypt if needed
+    let decryptedCanvasName = canvasData.name;
+    
+    if (isEncryptedData(canvasData.name) && dek) {
+      try {
+        const decrypted = decryptNameWithDEK(canvasData.name, true, dek);
+        if (decrypted.isDecrypted) {
+          decryptedCanvasName = decrypted.name;
+        }
+      } catch (error) {
+        console.error('Failed to decrypt canvas name during import:', error);
+      }
+    }
+
     // Validate canvas name
     if (!canvasData.name || typeof canvasData.name !== 'string') {
       return NextResponse.json(
@@ -36,7 +69,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const trimmedName = canvasData.name.trim();
+    const trimmedName = decryptedCanvasName.trim();
 
     if (trimmedName.length === 0 || trimmedName.length > 255) {
       return NextResponse.json(
@@ -84,17 +117,55 @@ export async function POST(request: NextRequest) {
           continue; // Skip invalid notes
         }
 
+        // DEBUG: Check if imported content looks encrypted
+        const titleLooksEncrypted = looksLikeEncryptedContent(noteData.title);
+        const contentLooksEncrypted = looksLikeEncryptedContent(noteData.content || '');
+        const isImportedEncrypted = titleLooksEncrypted || contentLooksEncrypted;
+
+        // Handle encryption: if imported content is encrypted, decrypt and re-encrypt for current user
+        let noteTitle = noteData.title;
+        let noteContent = noteData.content || '';
+        let noteIsEncrypted = false;
+        let decryptedTitle = noteData.title; // For indexing
+        let decryptedContent = noteData.content || ''; // For indexing
+
+        if (isImportedEncrypted) {
+          if (dek) {
+            // User has DEK - decrypt and re-encrypt for current user
+            try {
+              const decrypted = decryptNote(noteData.title, noteData.content || '', dek);
+              decryptedTitle = decrypted.title;
+              decryptedContent = decrypted.content;
+              
+              // Re-encrypt for current user
+              const reEncrypted = encryptNote(decryptedTitle, decryptedContent, dek);
+              noteTitle = reEncrypted.encryptedTitle;
+              noteContent = reEncrypted.encryptedContent;
+              noteIsEncrypted = true;
+            } catch (error) {
+              console.error('Failed to decrypt note during import:', error);
+              // Store as-is but mark as encrypted so frontend shows decryption error
+              noteIsEncrypted = true;
+            }
+          } else {
+            // No DEK available - store with isEncrypted flag so frontend shows appropriate message
+            noteIsEncrypted = true;
+          }
+        }
+
         const note = await prisma.note.create({
           data: {
             canvasId: canvas.id,
-            title: noteData.title,
-            content: noteData.content || '',
+            title: noteTitle,
+            content: noteContent,
             positionX: noteData.positionX || 0,
             positionY: noteData.positionY || 0,
             width: noteData.width || 300,
             height: noteData.height || 200,
             fontFamily: noteData.fontFamily || 'Inter',
             fontSize: noteData.fontSize || 14,
+            isEncrypted: noteIsEncrypted,
+            encryptionVersion: noteIsEncrypted ? CURRENT_ENCRYPTION_VERSION : null,
           },
         });
 
@@ -102,8 +173,10 @@ export async function POST(request: NextRequest) {
         const index = canvasData.notes.indexOf(noteData);
         noteIdMap.set(String(index), note.id);
 
-        // Index the note in the search index
-        await indexNote(note.id, session.userId, canvas.id, noteData.title, noteData.content || '').catch((err) => {
+        // Index the note in the search index (use decrypted content for indexing)
+        const indexTitle = noteIsEncrypted && dek ? decryptedTitle : (noteData.title || '');
+        const indexContent = noteIsEncrypted && dek ? decryptedContent : (noteData.content || '');
+        await indexNote(note.id, session.userId, canvas.id, indexTitle, indexContent).catch((err) => {
           console.error('Failed to index imported note:', err);
         });
 
@@ -173,9 +246,34 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Decrypt notes for response if user has DEK
+    let decryptedNotes = importedCanvas?.notes || [];
+    if (dek && importedCanvas?.notes) {
+      decryptedNotes = importedCanvas.notes.map((note) => {
+        if (note.isEncrypted) {
+          try {
+            const decrypted = decryptNote(note.title, note.content, dek);
+            return {
+              ...note,
+              title: decrypted.title,
+              content: decrypted.content,
+            };
+          } catch (error) {
+            console.error('Failed to decrypt note in response:', error);
+            return {
+              ...note,
+              title: '[Decryption Error]',
+              content: '[Unable to decrypt this note]',
+            };
+          }
+        }
+        return note;
+      });
+    }
+
     return NextResponse.json({
       message: 'Canvas imported successfully',
-      canvas: importedCanvas,
+      canvas: { ...importedCanvas, notes: decryptedNotes },
     });
   } catch (error) {
     console.error('Error importing canvas:', error);
