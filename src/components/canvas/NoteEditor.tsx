@@ -158,6 +158,7 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
   const [viewMode, setViewMode] = useState<'edit' | 'preview' | 'split'>('edit');
   const [pastingImage, setPastingImage] = useState(false);
   const [imageUploadProgress, setImageUploadProgress] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Link autocomplete state
@@ -500,22 +501,34 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-x-hidden">
-      <div className="bg-white dark:bg-[#1E293B] rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col mx-4 overflow-hidden">
-        {/* Header */}
-        <div className="p-4 border-b border-[#E2E8F0] dark:border-[#475569]">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg md:text-xl font-semibold text-[#1E293B] dark:text-[#F1F5F9]">
-              Edit Note
-            </h2>
-            <button
-              onClick={handleClose}
-              className="text-[#64748B] hover:text-[#1E293B] dark:hover:text-[#F1F5F9] transition"
-              aria-label="Close editor"
-            >
+      <div className={`bg-white dark:bg-[#1E293B] rounded-lg shadow-xl w-full max-w-4xl flex flex-col mx-4 overflow-hidden ${isFullscreen ? 'h-screen max-h-screen rounded-none' : 'max-h-[90vh]'}`}>
+        {/* Title with Close Button */}
+        <div className="flex items-center gap-2 px-4 pt-4 pb-2 border-b border-[#E2E8F0] dark:border-[#475569]">
+          <input
+            id="note-title"
+            type="text"
+            aria-label="Note title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Tab') {
+                e.preventDefault();
+                textareaRef.current?.focus();
+              }
+            }}
+            className="flex-1 px-3 py-2 text-xl font-semibold border-0 focus:outline-none bg-transparent text-[#1E293B] dark:text-[#F1F5F9] placeholder-[#94A3B8] dark:placeholder-[#64748B]"
+            placeholder="Note title... (Press Tab to move to content)"
+          />
+          <button
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            className="shrink-0 p-1 text-[#64748B] hover:text-[#1E293B] dark:hover:text-[#F1F5F9] transition"
+            aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+          >
+            {isFullscreen ? (
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
+                width="20"
+                height="20"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -523,37 +536,44 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
+                <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
               </svg>
-            </button>
-          </div>
-          {/* Timestamps and Status Row */}
-          <div className="flex items-center justify-between type-meta">
-            <div className="flex items-center gap-3 text-[#94A3B8] dark:text-[#64748B]">
-              {note?.createdAt && (
-                <span title={formatDateTime(note.createdAt)}>
-                  Created: {formatRelativeTime(note.createdAt)}
-                </span>
-              )}
-              {note?.updatedAt && (
-                <span title={formatDateTime(note.updatedAt)}>
-                  • Updated: {formatRelativeTime(note.updatedAt)}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              {saveStatus === 'saving' && (
-                <span className="type-nav text-[#64748B] dark:text-[#94A3B8]">Saving...</span>
-              )}
-              {saveStatus === 'saved' && (
-                <span className="type-nav text-green-600 dark:text-green-400">Saved ✓</span>
-              )}
-              {hasUnsavedChanges && saveStatus !== 'saving' && saveStatus !== 'saved' && (
-                <span className="type-nav text-amber-600 dark:text-amber-400">Unsaved changes</span>
-              )}
-            </div>
-          </div>
+            ) : (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+              </svg>
+            )}
+          </button>
+          <button
+            onClick={handleClose}
+            className="shrink-0 p-1 text-[#64748B] hover:text-[#1E293B] dark:hover:text-[#F1F5F9] transition"
+            aria-label="Close editor"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
         </div>
 
         {/* Rich Text Toolbar */}
@@ -569,30 +589,6 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
 
         {/* Editor Content */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4">
-          {/* Title Field */}
-          <div className="mb-4">
-            <label
-              htmlFor="note-title"
-              className="type-label block text-[#64748B] dark:text-[#94A3B8] mb-2"
-            >
-              Title
-            </label>
-            <input
-              id="note-title"
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Tab') {
-                  e.preventDefault();
-                  textareaRef.current?.focus();
-                }
-              }}
-              className="h3 w-full px-3 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3B82F6] bg-white dark:bg-[#0F172A] text-[#1E293B] dark:text-[#F1F5F9]"
-              placeholder="Enter note title... (Press Tab to move to content)"
-            />
-          </div>
-
           {/* Body Field */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -713,8 +709,31 @@ export default function NoteEditor({ note, isOpen, onClose, onSave, canvasId, on
 
         {/* Footer with action buttons */}
         <div className="flex items-center justify-between p-4 border-t border-[#E2E8F0] dark:border-[#475569]">
-          <div className="type-nav text-[#64748B] dark:text-[#94A3B8]">
-            Changes are saved manually or when closing
+          <div className="flex flex-col gap-1">
+            <div className="type-nav text-[#64748B] dark:text-[#94A3B8]">
+              Changes auto-save when closing
+            </div>
+            <div className="flex items-center gap-3 text-xs">
+              {saveStatus === 'saving' && (
+                <span className="text-[#64748B] dark:text-[#94A3B8]">Saving...</span>
+              )}
+              {saveStatus === 'saved' && (
+                <span className="text-green-600 dark:text-green-400">Saved ✓</span>
+              )}
+              {hasUnsavedChanges && saveStatus !== 'saving' && saveStatus !== 'saved' && (
+                <span className="text-amber-600 dark:text-amber-400">Unsaved changes</span>
+              )}
+              {note?.createdAt && (
+                <span className="text-[#94A3B8] dark:text-[#64748B]" title={formatDateTime(note.createdAt)}>
+                  Created: {formatRelativeTime(note.createdAt)}
+                </span>
+              )}
+              {note?.updatedAt && (
+                <span className="text-[#94A3B8] dark:text-[#64748B]" title={formatDateTime(note.updatedAt)}>
+                  Updated: {formatRelativeTime(note.updatedAt)}
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex gap-3">
             <button
