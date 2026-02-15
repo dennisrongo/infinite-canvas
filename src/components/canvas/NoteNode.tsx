@@ -279,20 +279,20 @@ const NoteNode = memo(function NoteNode({ data, selected, id }: NoteNodeProps) {
               </button>
               {/* Dropdown menu */}
               {showDropdown && (
-                <div className="absolute right-0 top-full mt-1 w-36 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
+                <div className="absolute right-0 top-full mt-1.5 w-44 bg-white/95 dark:bg-dark-bg/95 backdrop-blur-xl border border-light-note-border/60 dark:border-dark-note-border/60 rounded-xl shadow-xl py-1.5 z-50 animate-scale-in overflow-hidden">
                   <button
                     onClick={handleDuplicate}
-                    className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors"
+                    className="w-full px-4 py-2.5 text-left text-sm text-light-text dark:text-dark-text hover:bg-light-primary/8 dark:hover:bg-dark-primary/8 flex items-center gap-2.5 transition-colors"
                   >
-                    <Icon name="copy" size="xs" />
-                    Duplicate
+                    <Icon name="copy" size="xs" className="text-light-text-tertiary dark:text-dark-text-tertiary" />
+                    <span className="font-medium">Duplicate</span>
                   </button>
                   <button
                     onClick={handleDelete}
-                    className="w-full px-3 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 flex items-center gap-2 transition-colors"
+                    className="w-full px-4 py-2.5 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2.5 transition-colors"
                   >
-                    <Icon name="trash" size="xs" />
-                    Delete
+                    <Icon name="trash" size="xs" className="text-red-500 dark:text-red-400" />
+                    <span className="font-medium">Delete</span>
                   </button>
                 </div>
               )}

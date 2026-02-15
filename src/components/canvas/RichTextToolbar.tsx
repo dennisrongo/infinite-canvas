@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Select } from '@/components/ui';
 
 interface RichTextToolbarProps {
   onBold: () => void;
@@ -67,18 +68,14 @@ export default function RichTextToolbar({
         <label htmlFor="font-family" className="type-label text-[#64748B] dark:text-[#94A3B8]">
           Font:
         </label>
-        <select
+        <Select
           id="font-family"
+          options={FONT_FAMILIES.map(f => ({ label: f.name, value: f.value }))}
           value={fontFamily}
-          onChange={(e) => onFontFamilyChange(e.target.value)}
-          className="type-nav px-2 py-1.5 border border-[#E2E8F0] dark:border-[#475569] rounded bg-white dark:bg-[#0F172A] text-[#1E293B] dark:text-[#F1F5F9] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-        >
-          {FONT_FAMILIES.map((font) => (
-            <option key={font.value} value={font.value}>
-              {font.name}
-            </option>
-          ))}
-        </select>
+          onChange={onFontFamilyChange}
+          showLabel={false}
+          className="w-32"
+        />
       </div>
 
       {/* Font Size Dropdown */}
@@ -86,18 +83,14 @@ export default function RichTextToolbar({
         <label htmlFor="font-size" className="type-label text-[#64748B] dark:text-[#94A3B8]">
           Size:
         </label>
-        <select
+        <Select
           id="font-size"
-          value={fontSize}
-          onChange={(e) => onFontSizeChange(Number(e.target.value))}
-          className="type-nav px-2 py-1.5 border border-[#E2E8F0] dark:border-[#475569] rounded bg-white dark:bg-[#0F172A] text-[#1E293B] dark:text-[#F1F5F9] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-        >
-          {FONT_SIZES.map((size) => (
-            <option key={size} value={size}>
-              {size}px
-            </option>
-          ))}
-        </select>
+          options={FONT_SIZES.map(size => ({ label: `${size}px`, value: String(size) }))}
+          value={String(fontSize)}
+          onChange={(val) => onFontSizeChange(Number(val))}
+          showLabel={false}
+          className="w-20"
+        />
       </div>
     </div>
   );

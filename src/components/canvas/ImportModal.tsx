@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { Select } from '@/components/ui';
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -130,18 +131,14 @@ export default function ImportModal({ isOpen, onClose, onImport, folders }: Impo
             <label className="block text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9] mb-2">
               Import to Folder (Optional)
             </label>
-            <select
+            <Select
+              id="folder-select"
+              options={folders.map(folder => ({ label: folder.name, value: folder.id }))}
               value={selectedFolderId || ''}
-              onChange={(e) => setSelectedFolderId(e.target.value || null)}
-              className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-            >
-              <option value="">Root (No Folder)</option>
-              {folders.map((folder) => (
-                <option key={folder.id} value={folder.id}>
-                  {folder.name}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setSelectedFolderId(val || null)}
+              placeholder="Root (No Folder)"
+              showLabel={false}
+            />
           </div>
         </div>
 

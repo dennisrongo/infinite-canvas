@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useSearch } from '@/hooks/api/useSearch';
+import { Select } from '@/components/ui';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { escapeAndHighlight } from '@/lib/sanitize';
 
@@ -171,14 +172,17 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
         {/* Scope Selector and Filter Button */}
         <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
           {currentCanvasId && (
-            <select
+            <Select
+              id="search-scope"
+              options={[
+                { label: 'All Canvases', value: 'all' },
+                { label: 'This Canvas', value: 'current' },
+              ]}
               value={searchScope}
-              onChange={(e) => setSearchScope(e.target.value as 'all' | 'current')}
-              className="type-meta px-2 py-1 border border-light-note-border dark:border-dark-note-border rounded bg-white dark:bg-dark-bg text-light-text-secondary dark:text-dark-text-tertiary focus:outline-none"
-            >
-              <option value="all">All Canvases</option>
-              <option value="current">This Canvas</option>
-            </select>
+              onChange={(val) => setSearchScope(val as 'all' | 'current')}
+              showLabel={false}
+              className="w-32 text-sm"
+            />
           )}
 
           {/* Filter Toggle Button */}
@@ -202,15 +206,18 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
               <label className="block text-xs font-medium text-light-text-secondary dark:text-dark-text-tertiary mb-1">
                 Sort By
               </label>
-              <select
+              <Select
+                id="sort-by"
+                options={[
+                  { label: 'Last Modified', value: 'updatedAt' },
+                  { label: 'Date Created', value: 'createdAt' },
+                  { label: 'Title (A-Z)', value: 'title' },
+                ]}
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as 'createdAt' | 'updatedAt' | 'title')}
-                className="type-button w-full px-3 py-2 border border-light-note-border dark:border-dark-note-border rounded bg-white dark:bg-dark-input text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary"
-              >
-                <option value="updatedAt">Last Modified</option>
-                <option value="createdAt">Date Created</option>
-                <option value="title">Title (A-Z)</option>
-              </select>
+                onChange={(val) => setSortBy(val as 'createdAt' | 'updatedAt' | 'title')}
+                showLabel={false}
+                className="text-sm"
+              />
             </div>
 
             {/* Sort Order */}
@@ -218,14 +225,17 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
               <label className="block text-xs font-medium text-light-text-secondary dark:text-dark-text-tertiary mb-1">
                 Order
               </label>
-              <select
+              <Select
+                id="sort-order"
+                options={[
+                  { label: 'Newest First', value: 'desc' },
+                  { label: 'Oldest First', value: 'asc' },
+                ]}
                 value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-                className="type-button w-full px-3 py-2 border border-light-note-border dark:border-dark-note-border rounded bg-white dark:bg-dark-input text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary"
-              >
-                <option value="desc">Newest First</option>
-                <option value="asc">Oldest First</option>
-              </select>
+                onChange={(val) => setSortOrder(val as 'asc' | 'desc')}
+                showLabel={false}
+                className="text-sm"
+              />
             </div>
 
             {/* Date Filter */}
@@ -233,17 +243,20 @@ export default function SearchBar({ currentCanvasId }: SearchBarProps) {
               <label className="block text-xs font-medium text-light-text-secondary dark:text-dark-text-tertiary mb-1">
                 Date Range
               </label>
-              <select
+              <Select
+                id="date-filter"
+                options={[
+                  { label: 'All Time', value: 'all' },
+                  { label: 'Today', value: 'today' },
+                  { label: 'Last 7 Days', value: 'week' },
+                  { label: 'Last 30 Days', value: 'month' },
+                  { label: 'Last 365 Days', value: 'year' },
+                ]}
                 value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value as 'all' | 'today' | 'week' | 'month' | 'year')}
-                className="type-button w-full px-3 py-2 border border-light-note-border dark:border-dark-note-border rounded bg-white dark:bg-dark-input text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary"
-              >
-                <option value="all">All Time</option>
-                <option value="today">Today</option>
-                <option value="week">Last 7 Days</option>
-                <option value="month">Last 30 Days</option>
-                <option value="year">Last 365 Days</option>
-              </select>
+                onChange={(val) => setDateFilter(val as 'all' | 'today' | 'week' | 'month' | 'year')}
+                showLabel={false}
+                className="text-sm"
+              />
             </div>
           </div>
 
