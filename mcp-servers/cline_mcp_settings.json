@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "github.com/microsoft/playwright-mcp": {
+      "type": "stdio",
+      "command": "npx",
+      "timeout": 30,
+      "args": [
+        "-y",
+        "@playwright/mcp@latest",
+        "--headless"
+      ],
+      "disabled": false
+    }
+  }
+}
