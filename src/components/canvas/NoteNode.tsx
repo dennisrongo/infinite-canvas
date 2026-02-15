@@ -324,22 +324,22 @@ const NoteNode = memo(function NoteNode({ data, selected, id }: NoteNodeProps) {
           <>
             <div
               data-testid="resize-se"
-              className="absolute bottom-0 right-0 w-3 h-3 cursor-se-resize min-w-[44px] min-h-[44px]"
+              className="absolute bottom-0 right-0 w-3 h-3 cursor-se-resize"
               onMouseDown={(e) => handleResizeStart(e, 'se')}
             />
             <div
               data-testid="resize-sw"
-              className="absolute bottom-0 left-0 w-3 h-3 cursor-sw-resize min-w-[44px] min-h-[44px]"
+              className="absolute bottom-0 left-0 w-3 h-3 cursor-sw-resize"
               onMouseDown={(e) => handleResizeStart(e, 'sw')}
             />
             <div
               data-testid="resize-ne"
-              className="absolute top-0 right-0 w-3 h-3 cursor-ne-resize min-w-[44px] min-h-[44px]"
+              className="absolute top-0 right-0 w-3 h-3 cursor-ne-resize"
               onMouseDown={(e) => handleResizeStart(e, 'ne')}
             />
             <div
               data-testid="resize-nw"
-              className="absolute top-0 left-0 w-3 h-3 cursor-nw-resize min-w-[44px] min-h-[44px]"
+              className="absolute top-0 left-0 w-3 h-3 cursor-nw-resize"
               onMouseDown={(e) => handleResizeStart(e, 'nw')}
             />
           </>
