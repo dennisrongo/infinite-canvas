@@ -28,6 +28,8 @@ test_*.ts
 test_*.json
 cleanup.mjs
 *.png
+!docs/screenshots/*.png
+!public/favicon.svg
 
 # Debug logs
 *.log
