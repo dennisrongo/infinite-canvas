@@ -7,6 +7,14 @@ A sophisticated mind-mapping and note-taking web application that allows users t
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
+**[Live Demo](https://infinite-canvas-web.netlify.app/)** | **[Project Page](https://dennisrongo.github.io/open-canvas-web/)**
+
+## Screenshots
+
+| Landing Page | Login |
+|:---:|:---:|
+| ![Landing Page](public/screenshots/image.png) | ![Login Page](public/screenshots/image1.png) |
+
 ## Table of Contents
 
 - [Overview](#overview)

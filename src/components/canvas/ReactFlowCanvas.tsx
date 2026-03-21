@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import {
   ReactFlow,
@@ -210,8 +210,8 @@ function ReactFlowCanvasInner({
     }
   }, [onNoteDuplicate]);
 
-  // Convert notes from database to React Flow nodes
-  const initialNodes: Node[] = initialNotes.map((note) => ({
+  // Convert notes from database to React Flow nodes (memoized to prevent unnecessary recalculations)
+  const initialNodes: Node[] = useMemo(() => initialNotes.map((note) => ({
     id: note.id,
     type: 'noteNode',
     position: { x: note.positionX, y: note.positionY },
@@ -227,12 +227,12 @@ function ReactFlowCanvasInner({
     },
     // Mark the selected note for deep linking
     selected: selectedNoteId === note.id,
-  }));
+  })), [initialNotes, selectedNoteId]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
 
-  // Convert connections from database to React Flow edges
-  const initialEdges: Edge[] = (initialConnections || []).map((conn) => ({
+  // Convert connections from database to React Flow edges (memoized to prevent unnecessary recalculations)
+  const initialEdges: Edge[] = useMemo(() => (initialConnections || []).map((conn) => ({
     id: conn.id,
     source: conn.sourceNoteId,
     target: conn.targetNoteId,
@@ -240,7 +240,7 @@ function ReactFlowCanvasInner({
     animated: false,
     selectable: true, // Feature #49 - Allow edge selection
     deletable: true, // Feature #49 - Allow edge deletion
-  }));
+  })), [initialConnections]);
 
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 

@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Infinite Canvas - Think Spatially, Write Freely</title>
+  <meta name="description" content="A visual workspace for your best ideas. Connect notes, build mind maps, and organize research on an infinite glass canvas.">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface-hover: #1a1a26;
+      --border: #2a2a3a;
+      --text: #e8e8f0;
+      --text-muted: #8888a0;
+      --accent: #6366f1;
+      --accent-light: #818cf8;
+      --gradient-start: #6366f1;
+      --gradient-end: #d946ef;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: var(--accent-light); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* Nav */
+    .nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 2rem;
+      background: rgba(10, 10, 15, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-size: 1.25rem; font-weight: 700; color: var(--text);
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .nav-logo span {
+      background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .nav-links { display: flex; gap: 1.5rem; align-items: center; }
+    .nav-links a { color: var(--text-muted); font-size: 0.95rem; }
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.6rem 1.4rem; border-radius: 8px; font-weight: 600;
+      font-size: 0.95rem; transition: all 0.2s; border: none; cursor: pointer;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+      color: #fff;
+    }
+    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); text-decoration: none; }
+    .btn-outline {
+      background: transparent; color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent-light); text-decoration: none; }
+
+    /* Hero */
+    .hero {
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; text-align: center;
+      padding: 6rem 2rem 4rem;
+      background: radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.08) 0%, transparent 60%);
+    }
+    .hero h1 {
+      font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 800;
+      line-height: 1.1; margin-bottom: 1.5rem;
+    }
+    .hero h1 .gradient {
+      background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .hero p {
+      font-size: 1.2rem; color: var(--text-muted);
+      max-width: 600px; margin-bottom: 2.5rem;
+    }
+    .hero-buttons { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+
+    /* Screenshots */
+    .screenshots {
+      padding: 4rem 2rem 6rem;
+      max-width: 1200px; margin: 0 auto;
+    }
+    .screenshots h2 {
+      text-align: center; font-size: 2rem; margin-bottom: 0.75rem;
+    }
+    .screenshots .subtitle {
+      text-align: center; color: var(--text-muted);
+      margin-bottom: 3rem; font-size: 1.1rem;
+    }
+    .screenshot-grid {
+      display: grid; grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+    .screenshot-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px; overflow: hidden;
+      transition: transform 0.3s, border-color 0.3s;
+    }
+    .screenshot-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--accent);
+    }
+    .screenshot-card img {
+      width: 100%; display: block;
+    }
+    .screenshot-card .caption {
+      padding: 1.25rem 1.5rem;
+    }
+    .screenshot-card .caption h3 {
+      font-size: 1.1rem; margin-bottom: 0.35rem;
+    }
+    .screenshot-card .caption p {
+      color: var(--text-muted); font-size: 0.9rem;
+    }
+
+    /* Features */
+    .features {
+      padding: 5rem 2rem;
+      max-width: 1100px; margin: 0 auto;
+    }
+    .features h2 {
+      text-align: center; font-size: 2rem; margin-bottom: 3rem;
+    }
+    .features-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.75rem;
+      transition: border-color 0.2s;
+    }
+    .feature-card:hover { border-color: var(--accent); }
+    .feature-icon {
+      font-size: 1.75rem; margin-bottom: 0.75rem; display: block;
+    }
+    .feature-card h3 { font-size: 1.1rem; margin-bottom: 0.5rem; }
+    .feature-card p { color: var(--text-muted); font-size: 0.9rem; }
+
+    /* Tech Stack */
+    .tech {
+      padding: 5rem 2rem;
+      max-width: 900px; margin: 0 auto; text-align: center;
+    }
+    .tech h2 { font-size: 2rem; margin-bottom: 2rem; }
+    .tech-badges {
+      display: flex; flex-wrap: wrap; gap: 0.75rem;
+      justify-content: center;
+    }
+    .tech-badge {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 0.5rem 1rem;
+      font-size: 0.9rem; color: var(--text-muted);
+    }
+
+    /* CTA */
+    .cta {
+      padding: 5rem 2rem; text-align: center;
+      background: radial-gradient(ellipse at 50% 100%, rgba(99,102,241,0.08) 0%, transparent 60%);
+    }
+    .cta h2 { font-size: 2rem; margin-bottom: 1rem; }
+    .cta p { color: var(--text-muted); margin-bottom: 2rem; max-width: 500px; margin-inline: auto; }
+
+    /* Footer */
+    .footer {
+      padding: 2rem; text-align: center;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted); font-size: 0.85rem;
+    }
+    .footer a { color: var(--text-muted); }
+    .footer a:hover { color: var(--accent-light); }
+
+    @media (min-width: 768px) {
+      .screenshot-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="nav">
+    <div class="nav-logo"><span>Infinite Canvas</span></div>
+    <div class="nav-links">
+      <a href="#screenshots">Screenshots</a>
+      <a href="#features">Features</a>
+      <a href="#tech">Tech Stack</a>
+      <a href="https://github.com/dennisrongo/open-canvas-web" target="_blank">GitHub</a>
+      <a href="https://infinite-canvas-web.netlify.app/" class="btn btn-primary" target="_blank">Try it Live</a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <h1>Think Spatially,<br><span class="gradient">Write Freely.</span></h1>
+    <p>The visual workspace for your best ideas. Connect notes, build mind maps, and organize research on an infinite glass canvas.</p>
+    <div class="hero-buttons">
+      <a href="https://infinite-canvas-web.netlify.app/" class="btn btn-primary" target="_blank">Get Started</a>
+      <a href="https://github.com/dennisrongo/open-canvas-web" class="btn btn-outline" target="_blank">View Source</a>
+    </div>
+  </section>
+
+  <section class="screenshots" id="screenshots">
+    <h2>See it in Action</h2>
+    <p class="subtitle">A polished experience in both light and dark themes.</p>
+    <div class="screenshot-grid">
+      <div class="screenshot-card">
+        <img src="screenshots/image.png" alt="Infinite Canvas landing page in light theme" loading="lazy">
+        <div class="caption">
+          <h3>Landing Page</h3>
+          <p>Clean, modern landing page with an overview of the infinite canvas workspace.</p>
+        </div>
+      </div>
+      <div class="screenshot-card">
+        <img src="screenshots/image1.png" alt="Infinite Canvas login page in dark theme" loading="lazy">
+        <div class="caption">
+          <h3>Authentication</h3>
+          <p>Sleek login experience with dark theme support and visual canvas preview.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="features" id="features">
+    <h2>Features</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <span class="feature-icon">&#x1f5fa;&#xfe0f;</span>
+        <h3>Infinite Canvas</h3>
+        <p>Pan and zoom through an unlimited workspace. Your ideas have no boundaries.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">&#x270f;&#xfe0f;</span>
+        <h3>Rich Markdown Editing</h3>
+        <p>Full Markdown support with syntax highlighting for code blocks.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">&#x1f517;</span>
+        <h3>Visual Connections</h3>
+        <p>Create directed connections between notes to map relationships and ideas.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">&#x1f4c1;</span>
+        <h3>Folder Organization</h3>
+        <p>Organize your canvases into hierarchical folders to keep things tidy.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">&#x1f50d;</span>
+        <h3>Global Search</h3>
+        <p>Instantly search across all your notes and canvases in real time.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">&#x1f305;</span>
+        <h3>Light & Dark Themes</h3>
+        <p>Switch between light and dark modes with persistent preferences.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">&#x1f4f1;</span>
+        <h3>Responsive Design</h3>
+        <p>Works seamlessly on mobile, tablet, and desktop devices.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">&#x1f512;</span>
+        <h3>Secure by Default</h3>
+        <p>JWT auth, CSRF protection, rate limiting, and XSS prevention built in.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">&#x1f4e6;</span>
+        <h3>Import & Export</h3>
+        <p>Share canvases via JSON import/export. Your data, your way.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="tech" id="tech">
+    <h2>Built With</h2>
+    <div class="tech-badges">
+      <span class="tech-badge">Next.js 15</span>
+      <span class="tech-badge">React 19</span>
+      <span class="tech-badge">TypeScript</span>
+      <span class="tech-badge">Tailwind CSS</span>
+      <span class="tech-badge">@xyflow/react</span>
+      <span class="tech-badge">Prisma</span>
+      <span class="tech-badge">PostgreSQL</span>
+      <span class="tech-badge">JWT Auth</span>
+      <span class="tech-badge">Zod</span>
+    </div>
+  </section>
+
+  <section class="cta">
+    <h2>Ready to think visually?</h2>
+    <p>Start organizing your ideas on an infinite canvas today.</p>
+    <a href="https://infinite-canvas-web.netlify.app/" class="btn btn-primary" target="_blank">Try Infinite Canvas</a>
+  </section>
+
+  <footer class="footer">
+    <p>
+      <a href="https://github.com/dennisrongo/open-canvas-web">GitHub</a> &middot;
+      <a href="https://infinite-canvas-web.netlify.app/">Live Demo</a> &middot;
+      MIT License
+    </p>
+  </footer>
+
+</body>
+</html>
