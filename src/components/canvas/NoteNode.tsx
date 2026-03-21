@@ -2,11 +2,14 @@
 
 import React, { useState, useRef, useEffect, useMemo, memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
+import Icon from '@/components/ui/Icon';
 
 interface NoteNodeProps {
   data: {
     title: string;
     content: string;
+    onDelete?: (id: string) => void;
+    onDuplicate?: (id: string) => void;
   };
   selected?: boolean;
   id: string;
@@ -74,7 +77,9 @@ function generateContentPreview(content: string): string {
 const NoteNode = memo(function NoteNode({ data, selected, id }: NoteNodeProps) {
   const [isResizing, setIsResizing] = useState(false);
   const [size, setSize] = useState({ width: 300, height: 200 });
+  const [showDropdown, setShowDropdown] = useState(false);
   const nodeRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const resizeStartRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
 
   // Get preview of content (memoized)
@@ -132,6 +137,71 @@ const NoteNode = memo(function NoteNode({ data, selected, id }: NoteNodeProps) {
   // Get accent color for left border based on note ID
   const accent = useMemo(() => getAccentForId(id), [id]);
 
+  // Listen for global close menu events (from ReactFlowCanvas onPaneClick)
+  useEffect(() => {
+    const handleCloseMenu = () => {
+      setShowDropdown(false);
+    };
+
+    window.addEventListener('closeNodeMenu', handleCloseMenu);
+    return () => {
+      window.removeEventListener('closeNodeMenu', handleCloseMenu);
+    };
+  }, []);
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+
+    if (showDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDropdown]);
+
+  // Handle click on the node to close dropdown (but not on the dropdown itself)
+  const handleNodeClick = (e: React.MouseEvent) => {
+    // Only close if clicking directly on the node, not on child elements that should handle their own clicks
+    if (showDropdown && dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      // Check if the click was on the three-dot button or dropdown - those handle their own state
+      const target = e.target as HTMLElement;
+      const isOnDropdownButton = target.closest('button');
+      if (!isOnDropdownButton) {
+        setShowDropdown(false);
+      }
+    }
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowDropdown(false);
+    if (data.onDelete) {
+      data.onDelete(id);
+    }
+  };
+
+  const handleDuplicate = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowDropdown(false);
+    if (data.onDuplicate) {
+      data.onDuplicate(id);
+    }
+  };
+
+  // Handle right-click to show context menu
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowDropdown(true);
+  };
+
   return (
     <div
       ref={nodeRef}
@@ -144,6 +214,8 @@ const NoteNode = memo(function NoteNode({ data, selected, id }: NoteNodeProps) {
         width: `${size.width}px`,
         minHeight: `${size.height}px`,
       }}
+      onContextMenu={handleContextMenu}
+      onClick={handleNodeClick}
     >
         <div className="px-4 py-3">
           {/* Connection handles - source handles for dragging connections to other nodes */}
@@ -176,20 +248,45 @@ const NoteNode = memo(function NoteNode({ data, selected, id }: NoteNodeProps) {
             className="!w-3 !h-3 !bg-purple-500 !border-2 !border-white dark:!border-gray-800 !opacity-0 group-hover:!opacity-100 !transition-opacity !duration-200 hover:!scale-150 !cursor-crosshair"
           />
 
-          {/* Selected indicator - visible badge with icon for accessibility */}
-          {selected && (
-            <div data-testid="selected-indicator" className="absolute -top-3 -right-3 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center shadow-md" aria-label="Selected note">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-              </svg>
+          {/* Title with accent dot and delete button */}
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <div className={`w-2 h-2 rounded-full ${accent.dot} flex-shrink-0`} />
+              <div className="font-bold text-gray-800 dark:text-gray-100 text-base tracking-wide truncate">
+                {data.title || 'Untitled Note'}
+              </div>
             </div>
-          )}
-
-          {/* Title with accent dot */}
-          <div className="flex items-center gap-2 mb-2 pr-6">
-            <div className={`w-2 h-2 rounded-full ${accent.dot} flex-shrink-0`} />
-            <div className="font-bold text-gray-800 dark:text-gray-100 text-base tracking-wide truncate">
-              {data.title || 'Untitled Note'}
+            {/* Delete/Dropdown button - appears on hover */}
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDropdown(!showDropdown);
+                }}
+                className="opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 cursor-pointer"
+                aria-label="More options"
+              >
+                <Icon name="more-vertical" size="sm" className="text-gray-500 dark:text-gray-400" />
+              </button>
+              {/* Dropdown menu */}
+              {showDropdown && (
+                <div className="absolute right-0 top-full mt-1.5 w-44 bg-white/95 dark:bg-dark-bg/95 backdrop-blur-xl border border-light-note-border/60 dark:border-dark-note-border/60 rounded-xl shadow-xl py-1.5 z-50 animate-scale-in overflow-hidden">
+                  <button
+                    onClick={handleDuplicate}
+                    className="w-full px-4 py-2.5 text-left text-sm text-light-text dark:text-dark-text hover:bg-light-primary/8 dark:hover:bg-dark-primary/8 flex items-center gap-2.5 transition-colors"
+                  >
+                    <Icon name="copy" size="xs" className="text-light-text-tertiary dark:text-dark-text-tertiary" />
+                    <span className="font-medium">Duplicate</span>
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    className="w-full px-4 py-2.5 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2.5 transition-colors"
+                  >
+                    <Icon name="trash" size="xs" className="text-red-500 dark:text-red-400" />
+                    <span className="font-medium">Delete</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -218,22 +315,22 @@ const NoteNode = memo(function NoteNode({ data, selected, id }: NoteNodeProps) {
           <>
             <div
               data-testid="resize-se"
-              className="absolute bottom-0 right-0 w-3 h-3 cursor-se-resize min-w-[44px] min-h-[44px]"
+              className="absolute bottom-0 right-0 w-3 h-3 cursor-se-resize"
               onMouseDown={(e) => handleResizeStart(e, 'se')}
             />
             <div
               data-testid="resize-sw"
-              className="absolute bottom-0 left-0 w-3 h-3 cursor-sw-resize min-w-[44px] min-h-[44px]"
+              className="absolute bottom-0 left-0 w-3 h-3 cursor-sw-resize"
               onMouseDown={(e) => handleResizeStart(e, 'sw')}
             />
             <div
               data-testid="resize-ne"
-              className="absolute top-0 right-0 w-3 h-3 cursor-ne-resize min-w-[44px] min-h-[44px]"
+              className="absolute top-0 right-0 w-3 h-3 cursor-ne-resize"
               onMouseDown={(e) => handleResizeStart(e, 'ne')}
             />
             <div
               data-testid="resize-nw"
-              className="absolute top-0 left-0 w-3 h-3 cursor-nw-resize min-w-[44px] min-h-[44px]"
+              className="absolute top-0 left-0 w-3 h-3 cursor-nw-resize"
               onMouseDown={(e) => handleResizeStart(e, 'nw')}
             />
           </>
@@ -244,7 +341,9 @@ const NoteNode = memo(function NoteNode({ data, selected, id }: NoteNodeProps) {
   prevProps.id === nextProps.id &&
   prevProps.selected === nextProps.selected &&
   prevProps.data.title === nextProps.data.title &&
-  prevProps.data.content === nextProps.data.content
+  prevProps.data.content === nextProps.data.content &&
+  prevProps.data.onDelete === nextProps.data.onDelete &&
+  prevProps.data.onDuplicate === nextProps.data.onDuplicate
 ));
 
 export default NoteNode;

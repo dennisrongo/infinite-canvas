@@ -233,10 +233,8 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
           showMenuButton={true}
           onMenuClick={sidebar.toggleSidebar}
           sidebarCollapsed={sidebar.sidebarCollapsed}
-          title={sidebar.canvasTitle || undefined}
-          onTitleChange={sidebar.onTitleChange || undefined}
           onExportClick={sidebar.onExportClick || undefined}
-          onImportClick={isCanvasPage ? sidebar.openImportModal : undefined}
+          onImportClick={isCanvasPage ? (sidebar.onImportClick ?? undefined) : undefined}
         />
         {children}
       </div>

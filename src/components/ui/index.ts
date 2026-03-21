@@ -1,3 +1,7 @@
+// Select/Dropdown components
+export { default as Select } from './Select';
+export type { SelectProps, SelectOption } from './Select';
+
 // Modal components
 export { default as Modal } from './Modal';
 export type { ModalProps } from './Modal';

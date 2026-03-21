@@ -45,6 +45,7 @@ yarn-error.log*
 # OS
 .DS_Store
 Thumbs.db
+._*
 
 # Playwright
 .playwright-mcp/

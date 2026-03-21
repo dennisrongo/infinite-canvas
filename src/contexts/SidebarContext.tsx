@@ -61,9 +61,8 @@ interface SidebarContextType extends SidebarModalState {
   sidebarCollapsed: boolean;
 
   // Canvas header state (set by canvas page, read by layout's Header)
-  canvasTitle: string | null;
   onExportClick: (() => void) | null;
-  onTitleChange: ((newTitle: string) => Promise<void>) | null;
+  onImportClick: (() => void) | null;
 
   // Sidebar actions
   setSidebarOpen: (open: boolean) => void;
@@ -72,7 +71,7 @@ interface SidebarContextType extends SidebarModalState {
   toggleSidebarCollapsed: () => void;
 
   // Canvas header actions
-  setCanvasHeader: (title: string | null, onExport: (() => void) | null, onTitleChange?: ((newTitle: string) => Promise<void>) | null) => void;
+  setCanvasHeader: (onExport: (() => void) | null, onImport?: (() => void) | null) => void;
 
   // Folder modal actions
   openNewFolderModal: () => void;
@@ -116,9 +115,8 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Canvas header state
-  const [canvasTitle, setCanvasTitle] = useState<string | null>(null);
   const [onExportClick, setOnExportClick] = useState<(() => void) | null>(null);
-  const [onTitleChange, setOnTitleChange] = useState<((newTitle: string) => Promise<void>) | null>(null);
+  const [onImportClick, setOnImportClick] = useState<(() => void) | null>(null);
 
   // Modal states
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
@@ -250,19 +248,19 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Canvas header actions
-  const setCanvasHeader = useCallback((title: string | null, onExport: (() => void) | null, onTitleChangeCallback?: ((newTitle: string) => Promise<void>) | null) => {
-    setCanvasTitle(title);
-    setOnExportClick(() => onExport);
-    setOnTitleChange(() => onTitleChangeCallback ?? null);
+  // Note: We wrap callbacks in functions to ensure React always receives a function
+  // (not null) for event handlers. This is required since onClick expects a function.
+  const setCanvasHeader = useCallback((onExport: (() => void) | null, onImport?: (() => void) | null) => {
+    setOnExportClick(() => onExport ?? null);
+    setOnImportClick(() => onImport ?? null);
   }, []);
 
   const value: SidebarContextType = useMemo(() => ({
     // Sidebar state
     sidebarOpen,
     sidebarCollapsed,
-    canvasTitle,
     onExportClick,
-    onTitleChange,
+    onImportClick,
     setSidebarOpen,
     toggleSidebar,
     setSidebarCollapsed,
@@ -321,9 +319,8 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
     // Sidebar state
     sidebarOpen,
     sidebarCollapsed,
-    canvasTitle,
     onExportClick,
-    onTitleChange,
+    onImportClick,
     setSidebarOpen,
     toggleSidebar,
     setSidebarCollapsed,

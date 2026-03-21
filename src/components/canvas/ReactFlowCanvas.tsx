@@ -24,6 +24,9 @@ import FloatingEdge from './FloatingEdge';
 import { useTheme } from '@/contexts/ThemeContext';
 import DeleteConfirmationModal from './DeleteConfirmationModal';
 
+// Timeout for fallback clearing of note creation loading state (in ms)
+const NOTE_CREATION_TIMEOUT_MS = 2000;
+
 // Loading skeleton for NoteEditor
 function NoteEditorSkeleton() {
   return (
@@ -102,7 +105,30 @@ interface ReactFlowCanvasProps {
   onConnectionDelete?: (connectionId: string) => void;
   onNoteDuplicate?: (noteId: string) => void;
   onNavigateToNote?: (noteTitle: string) => void;
+  onNoteCreating?: (isCreating: boolean) => void;
   showEmptyState?: boolean;
+}
+
+interface CanvasNodeData {
+  title: string;
+  content: string;
+  fontFamily?: string | null;
+  fontSize?: number | null;
+  onDelete?: (id: string) => void;
+  onDuplicate?: (id: string) => void;
+}
+
+function getCanvasNodeData(node: Node): CanvasNodeData {
+  const data = (node.data ?? {}) as Record<string, unknown>;
+
+  return {
+    title: typeof data.title === 'string' ? data.title : 'Untitled Note',
+    content: typeof data.content === 'string' ? data.content : '',
+    fontFamily: typeof data.fontFamily === 'string' ? data.fontFamily : null,
+    fontSize: typeof data.fontSize === 'number' ? data.fontSize : null,
+    onDelete: typeof data.onDelete === 'function' ? (data.onDelete as (id: string) => void) : undefined,
+    onDuplicate: typeof data.onDuplicate === 'function' ? (data.onDuplicate as (id: string) => void) : undefined,
+  };
 }
 
 const nodeTypes = {
@@ -129,6 +155,7 @@ function ReactFlowCanvasInner({
   onConnectionDelete,
   onNoteDuplicate,
   onNavigateToNote,
+  onNoteCreating,
   showEmptyState,
 }: ReactFlowCanvasProps) {
   const { theme } = useTheme();
@@ -151,6 +178,7 @@ function ReactFlowCanvasInner({
     noteId: null,
     noteTitle: '',
   });
+  const nodesRef = useRef<Node[]>([]);
 
   // Reset opened note tracking when canvas changes
   useEffect(() => {
@@ -203,10 +231,21 @@ function ReactFlowCanvasInner({
     }
   }, [openEditorOnLoad, selectedNoteId, initialNotes]);
 
-  // Handler for duplicating a note
-  const handleNoteDuplicate = useCallback((noteId: string) => {
+  const handleNodeDeleteRequest = useCallback((id: string) => {
+    const nodeToDelete = nodesRef.current.find(n => n.id === id);
+    if (!nodeToDelete) return;
+
+    const nodeData = getCanvasNodeData(nodeToDelete);
+    setDeleteConfirmation({
+      isOpen: true,
+      noteId: id,
+      noteTitle: nodeData.title,
+    });
+  }, []);
+
+  const handleNodeDuplicateRequest = useCallback((id: string) => {
     if (onNoteDuplicate) {
-      onNoteDuplicate(noteId);
+      onNoteDuplicate(id);
     }
   }, [onNoteDuplicate]);
 
@@ -220,6 +259,8 @@ function ReactFlowCanvasInner({
       content: note.content || '',
       fontFamily: note.fontFamily,
       fontSize: note.fontSize,
+      onDelete: handleNodeDeleteRequest,
+      onDuplicate: handleNodeDuplicateRequest,
     },
     style: {
       width: note.width || 300,
@@ -230,6 +271,10 @@ function ReactFlowCanvasInner({
   })), [initialNotes, selectedNoteId]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+
+  useEffect(() => {
+    nodesRef.current = nodes;
+  }, [nodes]);
 
   // Convert connections from database to React Flow edges (memoized to prevent unnecessary recalculations)
   const initialEdges: Edge[] = useMemo(() => (initialConnections || []).map((conn) => ({
@@ -259,10 +304,11 @@ function ReactFlowCanvasInner({
         const nodeToDelete = nodes.find(n => n.id === change.id);
 
         if (nodeToDelete) {
+          const nodeData = getCanvasNodeData(nodeToDelete);
           setDeleteConfirmation({
             isOpen: true,
             noteId: change.id,
-            noteTitle: (nodeToDelete.data as any).title || 'Untitled Note',
+            noteTitle: nodeData.title,
           });
         }
       }
@@ -283,10 +329,11 @@ function ReactFlowCanvasInner({
     if (!nodeToDelete) return;
 
     // Save to undo stack before deleting
+    const nodeData = getCanvasNodeData(nodeToDelete);
     const note: Note = {
       id: nodeToDelete.id,
-      title: (nodeToDelete.data as any).title || 'Untitled Note',
-      content: (nodeToDelete.data as any).content || '',
+      title: nodeData.title,
+      content: nodeData.content,
       positionX: nodeToDelete.position.x,
       positionY: nodeToDelete.position.y,
       width: typeof nodeToDelete.style?.width === 'number' ? nodeToDelete.style.width : 300,
@@ -320,10 +367,25 @@ function ReactFlowCanvasInner({
   // Refs for double-click detection
   const lastClickTime = useRef(0);
   const lastClickPosition = useRef({ x: 0, y: 0 });
+  // Cooldown to prevent multiple rapid note creations
+  const isCreatingNoteRef = useRef(false);
+  // Track timeouts for cleanup
+  const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
+
+  // Clear all tracked timeouts on unmount
+  useEffect(() => {
+    return () => {
+      timeoutRefs.current.forEach(clearTimeout);
+      timeoutRefs.current = [];
+    };
+  }, []);
 
   // Handle click on canvas and detect double-click
   const onPaneClick = useCallback(
     (event: React.MouseEvent) => {
+      // Close any open node menus/dropdowns when clicking on the canvas
+      window.dispatchEvent(new Event('closeNodeMenu'));
+
       const now = Date.now();
       const timeDiff = now - lastClickTime.current;
       const position = { x: event.clientX, y: event.clientY };
@@ -334,15 +396,39 @@ function ReactFlowCanvasInner({
 
       // Check if this is a double-click (within 300ms and close in position)
       if (timeDiff < 300 && distance < 10) {
+        // Prevent multiple rapid note creations (cooldown)
+        if (isCreatingNoteRef.current) {
+          console.log('[onPaneClick] Note creation in progress, ignoring double-click');
+          return;
+        }
+        
         if (onNoteCreate) {
           try {
             const flowPosition = screenToFlowPosition({
               x: event.clientX,
               y: event.clientY,
             });
+            // Set cooldown to prevent rapid successive creations
+            isCreatingNoteRef.current = true;
+            // Notify parent that note creation is starting
+            if (onNoteCreating) {
+              onNoteCreating(true);
+            }
+            // Clear cooldown after a reasonable time (in case parent doesn't clear it)
+            const timeoutId = setTimeout(() => {
+              isCreatingNoteRef.current = false;
+              if (onNoteCreating) {
+                onNoteCreating(false);
+              }
+            }, NOTE_CREATION_TIMEOUT_MS);
+            timeoutRefs.current.push(timeoutId);
             onNoteCreate(flowPosition);
           } catch (error) {
             console.error('[onPaneClick] Error creating note:', error);
+            isCreatingNoteRef.current = false;
+            if (onNoteCreating) {
+              onNoteCreating(false);
+            }
           }
         }
       }
@@ -350,7 +436,7 @@ function ReactFlowCanvasInner({
       lastClickTime.current = now;
       lastClickPosition.current = position;
     },
-    [onNoteCreate, screenToFlowPosition]
+    [onNoteCreate, onNoteCreating, screenToFlowPosition]
   );
 
   // Handle node drag end to update position in database
@@ -366,16 +452,17 @@ function ReactFlowCanvasInner({
   // Helper function to construct a Note object from a Node
   const getNoteFromNode = useCallback((node: Node): Note => {
     const initialNote = initialNotes.find(n => n.id === node.id);
+    const nodeData = getCanvasNodeData(node);
     return {
       id: node.id,
-      title: (node.data as any).title || 'Untitled Note',
-      content: (node.data as any).content || '',
+      title: nodeData.title,
+      content: nodeData.content,
       positionX: node.position.x,
       positionY: node.position.y,
       width: typeof node.style?.width === 'number' ? node.style.width : 300,
       height: typeof node.style?.height === 'number' ? node.style.height : 200,
-      fontFamily: (node.data as any).fontFamily,
-      fontSize: (node.data as any).fontSize,
+      fontFamily: nodeData.fontFamily,
+      fontSize: nodeData.fontSize,
       createdAt: initialNote?.createdAt,
       updatedAt: initialNote?.updatedAt,
     };
@@ -460,8 +547,8 @@ function ReactFlowCanvasInner({
           positionY: targetNode.position.y,
           width: Number(targetNode.style?.width || 300),
           height: Number(targetNode.style?.height || 200),
-          fontFamily: (targetNode.data as any).fontFamily,
-          fontSize: (targetNode.data as any).fontSize,
+          fontFamily: getCanvasNodeData(targetNode).fontFamily,
+          fontSize: getCanvasNodeData(targetNode).fontSize,
         };
       }
 
@@ -559,6 +646,8 @@ function ReactFlowCanvasInner({
             content: note.content || '',
             fontFamily: note.fontFamily,
             fontSize: note.fontSize,
+            onDelete: handleNodeDeleteRequest,
+            onDuplicate: handleNodeDuplicateRequest,
           },
           style: {
             width: note.width || 300,
@@ -581,7 +670,7 @@ function ReactFlowCanvasInner({
 
     // Update ref for next comparison
     prevInitialNotes.current = initialNotes;
-  }, [initialNotes, setNodes, handleNoteDuplicate]);
+  }, [initialNotes, setNodes, handleNodeDeleteRequest, handleNodeDuplicateRequest]);
 
   // Update edges when initialConnections change
   useEffect(() => {
@@ -668,6 +757,8 @@ function ReactFlowCanvasInner({
               data: {
                 title: lastAction.note.title,
                 content: lastAction.note.content,
+                onDelete: handleNodeDeleteRequest,
+                onDuplicate: handleNodeDuplicateRequest,
               },
               style: {
                 width: lastAction.note.width,
@@ -733,7 +824,7 @@ function ReactFlowCanvasInner({
             setDeleteConfirmation({
               isOpen: true,
               noteId: nodeToDelete.id,
-              noteTitle: (nodeToDelete.data as any).title || 'Untitled Note',
+              noteTitle: getCanvasNodeData(nodeToDelete).title,
             });
           }
         }
@@ -752,6 +843,11 @@ function ReactFlowCanvasInner({
           !(event.target as HTMLElement).isContentEditable
         ) {
           event.preventDefault();
+          // Prevent multiple rapid note creations (cooldown)
+          if (isCreatingNoteRef.current) {
+            console.log('[KeyDown] Note creation in progress, ignoring N key');
+            return;
+          }
           if (onNoteCreate) {
             try {
               // Get current viewport to center the new note
@@ -760,9 +856,28 @@ function ReactFlowCanvasInner({
               const centerX = -viewport.x + (window.innerWidth / 2) / viewport.zoom;
               const centerY = -viewport.y + (window.innerHeight / 2) / viewport.zoom;
 
+              // Set cooldown to prevent rapid successive creations
+              isCreatingNoteRef.current = true;
+              // Notify parent that note creation is starting
+              if (onNoteCreating) {
+                onNoteCreating(true);
+              }
+              // Clear cooldown after a reasonable time (in case parent doesn't clear it)
+              const timeoutId = setTimeout(() => {
+                isCreatingNoteRef.current = false;
+                if (onNoteCreating) {
+                  onNoteCreating(false);
+                }
+              }, NOTE_CREATION_TIMEOUT_MS);
+              timeoutRefs.current.push(timeoutId);
+
               onNoteCreate({ x: centerX, y: centerY });
             } catch (error) {
               console.error('[KeyDown] Error creating note with N key:', error);
+              isCreatingNoteRef.current = false;
+              if (onNoteCreating) {
+                onNoteCreating(false);
+              }
             }
           }
         }
@@ -771,7 +886,19 @@ function ReactFlowCanvasInner({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undoStack, redoStack, onNoteRestore, onNoteDelete, setNodes, onNoteCreate, getViewport, nodes]);
+  }, [
+    undoStack,
+    redoStack,
+    onNoteRestore,
+    onNoteDelete,
+    setNodes,
+    onNoteCreate,
+    onNoteCreating,
+    getViewport,
+    nodes,
+    handleNodeDeleteRequest,
+    handleNodeDuplicateRequest,
+  ]);
 
   // Handle node resize events from NoteNode
   useEffect(() => {

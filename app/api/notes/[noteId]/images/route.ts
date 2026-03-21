@@ -6,6 +6,77 @@ import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 
+// GET /api/notes/:noteId/images - Get all images for a note
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ noteId: string }> }
+) {
+  try {
+    const session = await getSession();
+
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const { noteId } = await params;
+
+    // Security: Validate UUID format to prevent path traversal and injection attacks
+    if (!isValidUUID(noteId)) {
+      return NextResponse.json(
+        { error: 'Invalid note ID format' },
+        { status: 400 }
+      );
+    }
+
+    // Verify the note exists and belongs to the user's canvas
+    const note = await prisma.note.findFirst({
+      where: {
+        id: noteId,
+        canvas: {
+          userId: session.userId,
+        },
+      },
+    });
+
+    if (!note) {
+      return NextResponse.json(
+        { error: 'Note not found' },
+        { status: 404 }
+      );
+    }
+
+    // Get all images for the note
+    const images = await prisma.image.findMany({
+      where: {
+        noteId: noteId,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return NextResponse.json({
+      images: images.map((image) => ({
+        id: image.id,
+        url: image.storagePath,
+        fileName: image.fileName,
+        mimeType: image.mimeType,
+        sizeBytes: image.sizeBytes,
+        createdAt: image.createdAt,
+      })),
+    });
+  } catch (error) {
+    console.error('Error retrieving images:', error);
+    return NextResponse.json(
+      { error: 'Failed to retrieve images' },
+      { status: 500 }
+    );
+  }
+}
+
 // POST /api/notes/:noteId/images - Upload image to note
 export async function POST(
   request: NextRequest,

@@ -1,12 +1,24 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
+import { Select } from '@/components/ui';
 
 interface ImportModalProps {
   isOpen: boolean;
   onClose: () => void;
   onImport: (data: any, folderId?: string) => Promise<void>;
   folders: Array<{ id: string; name: string }>;
+}
+
+// Helper to check if content looks like encrypted JSON
+function isEncryptedData(content: string): boolean {
+  if (!content || typeof content !== 'string') return false;
+  try {
+    const parsed = JSON.parse(content);
+    return !!(parsed.ciphertext && parsed.iv && parsed.authTag);
+  } catch {
+    return false;
+  }
 }
 
 export default function ImportModal({ isOpen, onClose, onImport, folders }: ImportModalProps) {
@@ -35,6 +47,31 @@ export default function ImportModal({ isOpen, onClose, onImport, folders }: Impo
       reader.readAsText(file);
     }
   };
+
+  // Process notes for preview - detect encrypted content
+  const previewNotes = useMemo(() => {
+    if (!previewData?.canvas?.notes) return [];
+    return previewData.canvas.notes.slice(0, 5).map((note: any, index: number) => {
+      const titleEncrypted = isEncryptedData(note.title);
+      const contentEncrypted = isEncryptedData(note.content || '');
+      const isEncrypted = titleEncrypted || contentEncrypted;
+      
+      return {
+        ...note,
+        displayTitle: isEncrypted ? '[Encrypted - will be decrypted on import]' : (note.title || 'Untitled'),
+        isEncrypted,
+        hasContent: !!(note.content && note.content.trim()),
+      };
+    });
+  }, [previewData]);
+
+  // Check if canvas name is encrypted
+  const canvasNameEncrypted = useMemo(() => {
+    if (!previewData?.canvas?.name) return false;
+    return isEncryptedData(previewData.canvas.name);
+  }, [previewData]);
+
+  const displayCanvasName = canvasNameEncrypted ? '[Encrypted Canvas Name]' : (previewData?.canvas?.name || 'Unknown');
 
   const handleImport = async () => {
     if (!previewData || importing) return;
@@ -106,7 +143,14 @@ export default function ImportModal({ isOpen, onClose, onImport, folders }: Impo
               <div className="bg-[#F8FAFC] dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#475569] rounded-lg p-4 space-y-2">
                 <div className="text-sm">
                   <span className="font-medium text-[#1E293B] dark:text-[#F1F5F9]">Canvas Name:</span>{' '}
-                  <span className="text-[#64748B] dark:text-[#94A3B8]">{previewData.canvas?.name || 'Unknown'}</span>
+                  <span className={`text-[#64748B] dark:text-[#94A3B8] ${canvasNameEncrypted ? 'text-amber-600 dark:text-amber-400' : ''}`}>
+                    {displayCanvasName}
+                    {canvasNameEncrypted && (
+                      <span className="text-xs px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded ml-2">
+                        Encrypted
+                      </span>
+                    )}
+                  </span>
                 </div>
                 <div className="text-sm">
                   <span className="font-medium text-[#1E293B] dark:text-[#F1F5F9]">Notes:</span>{' '}
@@ -122,6 +166,37 @@ export default function ImportModal({ isOpen, onClose, onImport, folders }: Impo
                   </div>
                 )}
               </div>
+
+              {/* Note Preview List */}
+              {previewNotes.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9] mb-2">
+                    Notes Preview
+                  </h4>
+                  <div className="bg-[#F8FAFC] dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#475569] rounded-lg divide-y divide-[#E2E8F0] dark:divide-[#475569]">
+                    {previewNotes.map((note: any, index: number) => (
+                      <div key={index} className="p-3 flex items-center gap-2">
+                        <svg className="w-4 h-4 text-[#64748B] dark:text-[#94A3B8] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span className={`text-sm ${note.isEncrypted ? 'text-amber-600 dark:text-amber-400' : 'text-[#64748B] dark:text-[#94A3B8]'}`}>
+                          {note.displayTitle}
+                        </span>
+                        {note.isEncrypted && (
+                          <span className="text-xs px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded">
+                            Encrypted
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                    {previewData.canvas?.notes?.length > 5 && (
+                      <div className="p-3 text-xs text-[#64748B] dark:text-[#94A3B8]">
+                        +{previewData.canvas.notes.length - 5} more notes
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -130,18 +205,14 @@ export default function ImportModal({ isOpen, onClose, onImport, folders }: Impo
             <label className="block text-sm font-medium text-[#1E293B] dark:text-[#F1F5F9] mb-2">
               Import to Folder (Optional)
             </label>
-            <select
+            <Select
+              id="folder-select"
+              options={folders.map(folder => ({ label: folder.name, value: folder.id }))}
               value={selectedFolderId || ''}
-              onChange={(e) => setSelectedFolderId(e.target.value || null)}
-              className="w-full px-4 py-2 border border-[#E2E8F0] dark:border-[#475569] rounded-lg bg-white dark:bg-[#1E293B] text-[#1E293B] dark:text-[#F1F5F9] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-            >
-              <option value="">Root (No Folder)</option>
-              {folders.map((folder) => (
-                <option key={folder.id} value={folder.id}>
-                  {folder.name}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setSelectedFolderId(val || null)}
+              placeholder="Root (No Folder)"
+              showLabel={false}
+            />
           </div>
         </div>
 
